@@ -1,0 +1,127 @@
+/*
+ * Base Stylesheet for SR Latinoamerica League System
+ * Author: Gemini AI Developer
+ * Version: 1.0
+ */
+
+/* --- Variables de Color y Fuentes --- */
+:root {
+    --srl-red: #E60000; /* Rojo principal del logo */
+    --srl-dark-gray: #1a1a1a; /* Fondo oscuro */
+    --srl-medium-gray: #2c2c2c;
+    --srl-light-gray: #444444;
+    --srl-text-light: #f5f5f5;
+    --srl-text-dark: #333;
+    --srl-accent: #FFFFFF;
+
+    font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+}
+
+/* --- Estructura General del Contenedor de la App --- */
+.srl-app-container {
+    background-color: var(--srl-dark-gray);
+    color: var(--srl-text-light);
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.srl-app-container h1,
+.srl-app-container h2,
+.srl-app-container h3 {
+    border-left: 4px solid var(--srl-red);
+    padding-left: 15px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- Tablas (Clasificaciones, Resultados) --- */
+.srl-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.95em;
+}
+
+.srl-table thead {
+    background-color: var(--srl-medium-gray);
+}
+
+.srl-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.srl-table tbody tr {
+    border-bottom: 1px solid var(--srl-light-gray);
+    transition: background-color 0.2s ease-in-out;
+}
+
+.srl-table tbody tr:hover {
+    background-color: var(--srl-light-gray);
+}
+
+.srl-table td {
+    padding: 12px 15px;
+}
+
+.srl-table .position {
+    font-weight: bold;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.srl-table .points {
+    font-weight: bold;
+    color: var(--srl-red);
+    text-align: right;
+}
+
+/* --- Componentes del Panel de Admin --- */
+.srl-admin-panel {
+    background-color: #fff;
+    color: var(--srl-text-dark);
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.srl-admin-panel .form-group {
+    margin-bottom: 15px;
+}
+
+.srl-admin-panel label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.srl-admin-panel input[type="text"],
+.srl-admin-panel select,
+.srl-admin-panel textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* --- Botones --- */
+.srl-button {
+    background-color: var(--srl-red);
+    color: var(--srl-accent);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: background-color 0.3s ease;
+}
+
+.srl-button:hover {
+    background-color: #c00000;
+}
