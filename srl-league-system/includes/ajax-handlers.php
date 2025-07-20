@@ -12,6 +12,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 // Hook para la petición de subida de resultados
 add_action( 'wp_ajax_srl_upload_results_file', 'srl_handle_results_upload' );
+add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
 
 function srl_handle_results_upload() {
     // 1. Seguridad: Verificar el nonce
@@ -74,19 +75,31 @@ add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
 
 function srl_handle_get_events() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
-
     if ( ! isset( $_POST['championship_id'] ) ) {
         wp_send_json_error( ['message' => 'No se proporcionó ID de campeonato.'] );
     }
 
-    global $wpdb;
     $championship_id = intval( $_POST['championship_id'] );
-    $events = $wpdb->get_results(
-        $wpdb->prepare(
-            "SELECT id, name FROM {$wpdb->prefix}srl_events WHERE championship_id = %d ORDER BY event_date ASC",
-            $championship_id
-        )
-    );
+    
+    $args = [
+        'post_type'      => 'srl_event',
+        'post_parent'    => $championship_id,
+        'posts_per_page' => -1,
+        'orderby'        => 'title',
+        'order'          => 'ASC',
+        'fields'         => 'ids', // Solo necesitamos los IDs y títulos
+    ];
+    $event_posts = get_posts( $args );
 
+    $events = [];
+    if ( ! empty( $event_posts ) ) {
+        foreach ( $event_posts as $event_id ) {
+            $events[] = [
+                'id'   => $event_id,
+                'name' => get_the_title( $event_id ),
+            ];
+        }
+    }
+    
     wp_send_json_success( $events );
 }
