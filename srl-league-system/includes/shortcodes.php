@@ -99,9 +99,8 @@ function srl_render_standings_shortcode( $atts ) {
  * @return string El HTML del perfil del piloto.
  */
 function srl_render_driver_profile_shortcode( $atts ) {
-    // Obtener steam_id del shortcode o de la URL
     $atts = shortcode_atts( [ 'steam_id' => '' ], $atts, 'srl_driver_profile' );
-    $steam_id = ! empty( $atts['steam_id'] ) ? $atts['steam_id'] : ( $_GET['steam_id'] ?? '' );
+    $steam_id = ! empty( $atts['steam_id'] ) ? ( $_GET['steam_id'] ?? '' ) : ( $_GET['steam_id'] ?? '' );
 
     if ( empty( $steam_id ) ) {
         return '<p>Error: No se ha especificado un piloto.</p>';
@@ -110,24 +109,26 @@ function srl_render_driver_profile_shortcode( $atts ) {
     global $wpdb;
     $steam_id = sanitize_text_field( $steam_id );
 
-    // --- 1. Obtener datos del piloto y estadísticas globales pre-calculadas ---
     $driver = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}srl_drivers WHERE steam_id = %s", $steam_id ) );
     if ( ! $driver ) return '<p>Piloto no encontrado.</p>';
 
-    // --- 2. Calcular estadísticas detalladas (promedios, porcentajes) ---
-    $all_races = $wpdb->get_results( $wpdb->prepare( "
-        SELECT r.position, r.grid_position
+    // Lógica de cálculo de estadísticas mejorada
+    $all_race_results = $wpdb->get_results( $wpdb->prepare( "
+        SELECT r.position, r.grid_position, r.is_dnf
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
-        WHERE r.driver_id = %d AND s.session_type = 'Race' AND r.is_dnf = 0
+        WHERE r.driver_id = %d AND s.session_type = 'Race'
     ", $driver->id ) );
 
-    $total_races = count($all_races);
+    $total_starts = count( $all_race_results );
+    $finished_races = array_filter( $all_race_results, fn($r) => !$r->is_dnf );
+    $total_finished = count( $finished_races );
+
     $stats = [
-        'win_percentage' => $total_races > 0 ? ( $driver->victories_count / $total_races ) * 100 : 0,
-        'pole_percentage' => $total_races > 0 ? ( $driver->poles_count / $total_races ) * 100 : 0,
-        'avg_grid' => $total_races > 0 ? array_sum( array_column( $all_races, 'grid_position' ) ) / $total_races : 0,
-        'avg_finish' => $total_races > 0 ? array_sum( array_column( $all_races, 'position' ) ) / $total_races : 0,
+        'win_percentage' => $total_starts > 0 ? ( $driver->victories_count / $total_starts ) * 100 : 0,
+        'pole_percentage' => $total_starts > 0 ? ( $driver->poles_count / $total_starts ) * 100 : 0,
+        'avg_grid' => $total_starts > 0 ? array_sum( array_column( $all_race_results, 'grid_position' ) ) / $total_starts : 0,
+        'avg_finish' => $total_finished > 0 ? array_sum( array_column( $finished_races, 'position' ) ) / $total_finished : 0,
     ];
     
     ob_start();
@@ -135,45 +136,17 @@ function srl_render_driver_profile_shortcode( $atts ) {
     <div class="srl-app-container srl-driver-profile">
         <h1>Palmarés de <?php echo esc_html( $driver->full_name ); ?></h1>
         <p class="srl-steam-id">SteamID: <?php echo esc_html( $driver->steam_id ); ?></p>
-        
         <h2>Estadísticas Globales</h2>
         <div class="srl-stats-grid">
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo $driver->victories_count; ?></div>
-                <div class="stat-label">Victorias</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo $driver->podiums_count; ?></div>
-                <div class="stat-label">Podios</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo $driver->poles_count; ?></div>
-                <div class="stat-label">Poles</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div>
-                <div class="stat-label">Vueltas Rápidas</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo number_format( $stats['win_percentage'], 2 ); ?>%</div>
-                <div class="stat-label">% Victorias</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo number_format( $stats['pole_percentage'], 2 ); ?>%</div>
-                <div class="stat-label">% Poles</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div>
-                <div class="stat-label">Pos. Salida Prom.</div>
-            </div>
-            <div class="srl-stat-card">
-                <div class="stat-value"><?php echo number_format( $stats['avg_finish'], 2 ); ?></div>
-                <div class="stat-label">Pos. Llegada Prom.</div>
-            </div>
-             <div class="srl-stat-card">
-                <div class="stat-value"><?php echo $driver->dnfs_count; ?></div>
-                <div class="stat-label">Abandonos (DNF)</div>
-            </div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->victories_count; ?></div><div class="stat-label">Victorias</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->podiums_count; ?></div><div class="stat-label">Podios</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->poles_count; ?></div><div class="stat-label">Poles</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div><div class="stat-label">Vueltas Rápidas</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['win_percentage'], 2 ); ?>%</div><div class="stat-label">% Victorias</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['pole_percentage'], 2 ); ?>%</div><div class="stat-label">% Poles</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div><div class="stat-label">Pos. Salida Prom.</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_finish'], 2 ); ?></div><div class="stat-label">Pos. Llegada Prom.</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dnfs_count; ?></div><div class="stat-label">Abandonos (DNF)</div></div>
         </div>
     </div>
     <?php
