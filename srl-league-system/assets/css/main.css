@@ -188,6 +188,15 @@
 }
 
 /* --- NUEVO: Estilos para el Modal --- */
+
+
+/* --- NUEVO: Estilos para el Modal --- */
+.srl-modal-body .srl-modal-champ-name {
+    color: #aaa;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
 .srl-modal-overlay {
     position: fixed;
     top: 0;

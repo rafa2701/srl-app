@@ -54,3 +54,21 @@ function srl_public_enqueue_assets() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'srl_public_enqueue_assets' );
+/**
+ * Carga las plantillas personalizadas para los CPTs desde la carpeta /templates del plugin.
+ */
+function srl_include_template_function( $template ) {
+    if ( is_singular( 'srl_championship' ) ) {
+        $new_template = SRL_PLUGIN_PATH . 'templates/single-srl_championship.php';
+        if ( '' != $new_template ) {
+            return $new_template;
+        }
+    } elseif ( is_singular( 'srl_event' ) ) {
+        $new_template = SRL_PLUGIN_PATH . 'templates/single-srl_event.php';
+        if ( '' != $new_template ) {
+            return $new_template;
+        }
+    }
+    return $template;
+}
+add_filter( 'template_include', 'srl_include_template_function', 1 );

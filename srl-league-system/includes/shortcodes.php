@@ -26,69 +26,6 @@ add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
 
 
 /**
- * Renderiza la tabla de clasificación de un campeonato.
- */
-function srl_render_standings_shortcode( $atts ) {
-    $atts = shortcode_atts( [ 'championship_id' => 0, 'profile_page_url' => '/driver-profile/', ], $atts, 'srl_standings' );
-    $championship_id = intval( $atts['championship_id'] );
-    if ( ! $championship_id ) return '<p>Error: Debes especificar un ID de campeonato. Ej: [srl_standings championship_id="1"]</p>';
-    
-    global $wpdb;
-    $championship_post = get_post( $championship_id );
-    if ( ! $championship_post || 'srl_championship' !== get_post_type( $championship_post ) ) return '<p>Error: Campeonato no encontrado.</p>';
-    
-    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
-    $scoring_rules = json_decode( $scoring_rules_json, true );
-    $points_map = $scoring_rules['points'] ?? [];
-    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
-    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
-    
-    $event_ids = get_posts(['post_type' => 'srl_event', 'meta_key' => '_srl_parent_championship', 'meta_value' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
-    if ( empty($event_ids) ) return '<p>Aún no hay resultados para este campeonato.</p>';
-    
-    $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
-    $query = $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $event_ids );
-    $results = $wpdb->get_results( $query );
-    
-    if ( empty( $results ) ) return '<p>Aún no hay resultados para este campeonato.</p>';
-    
-    $standings = [];
-    foreach ( $results as $result ) {
-        $driver_id = $result->driver_id;
-        if ( ! isset( $standings[ $driver_id ] ) ) $standings[ $driver_id ] = [ 'name' => $result->full_name, 'steam_id' => $result->steam_id, 'points' => 0, 'races' => 0, 'wins' => 0 ];
-        $standings[ $driver_id ]['points'] += ($points_map[ $result->position ] ?? 0);
-        if ( $result->has_pole ) $standings[ $driver_id ]['points'] += $bonus_pole;
-        if ( $result->has_fastest_lap ) $standings[ $driver_id ]['points'] += $bonus_fastest_lap;
-        $standings[ $driver_id ]['races']++;
-        if ( $result->position == 1 ) $standings[ $driver_id ]['wins']++;
-    }
-    
-    uasort( $standings, fn($a, $b) => $b['points'] <=> $a['points'] ?: $b['wins'] <=> $a['wins'] );
-    
-    ob_start();
-    ?>
-    <div class="srl-app-container">
-        <h2>Clasificación de Pilotos - <?php echo esc_html( $championship_post->post_title ); ?></h2>
-        <table class="srl-table">
-            <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Victorias</th><th>Carreras</th><th class="points">Puntos</th></tr></thead>
-            <tbody>
-                <?php $pos = 1; foreach ( $standings as $driver ) : ?>
-                <tr>
-                    <td class="position"><?php echo $pos++; ?></td>
-                    <td><a href="<?php echo esc_url( rtrim($atts['profile_page_url'], '/') . '/?steam_id=' . $driver['steam_id'] ); ?>"><?php echo esc_html( $driver['name'] ); ?></a></td>
-                    <td><?php echo esc_html( $driver['wins'] ); ?></td>
-                    <td><?php echo esc_html( $driver['races'] ); ?></td>
-                    <td class="points"><?php echo esc_html( $driver['points'] ); ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <?php
-    return ob_get_clean();
-}
-
-/**
  * Renderiza el perfil y palmarés de un piloto.
  */
 function srl_render_driver_profile_shortcode( $atts ) {
@@ -192,8 +129,11 @@ function srl_render_driver_profile_shortcode( $atts ) {
 }
 // Registrar el nuevo shortcode
 add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
-
 function srl_render_championship_list_shortcode( $atts ) {
+    $atts = shortcode_atts( [
+        'standings_page_url' => '/campeonato/', // URL de la página que contendrá [srl_standings]
+    ], $atts, 'srl_championship_list' );
+
     $championship_posts = get_posts([
         'post_type' => 'srl_championship',
         'posts_per_page' => -1,
@@ -214,8 +154,10 @@ function srl_render_championship_list_shortcode( $atts ) {
                 <?php
                 $game = get_post_meta( $champ->ID, '_srl_game', true );
                 $status = get_post_meta( $champ->ID, '_srl_status', true );
+                // CORRECCIÓN: Construir el enlace a la página de clasificación
+                $link = esc_url( rtrim($atts['standings_page_url'], '/') . '/?championship_id=' . $champ->ID );
                 ?>
-                <a href="<?php echo get_permalink( $champ->ID ); ?>" class="srl-list-card">
+                <a href="<?php echo $link; ?>" class="srl-list-card">
                     <?php if ( has_post_thumbnail( $champ->ID ) ) : ?>
                         <?php echo get_the_post_thumbnail( $champ->ID, 'medium' ); ?>
                     <?php endif; ?>
@@ -273,4 +215,125 @@ function srl_render_driver_list_shortcode( $atts ) {
     </div>
     <?php
     return ob_get_clean();
+}
+/**
+ * Renderiza la tabla de clasificación de un campeonato.
+ * CORREGIDO Y MEJORADO
+ */
+function srl_render_standings_shortcode( $atts ) {
+    $atts = shortcode_atts( [ 'championship_id' => get_the_ID(), 'profile_page_url' => '/driver-profile/', ], $atts, 'srl_standings' );
+    $championship_id = intval( $atts['championship_id'] );
+    if ( ! $championship_id ) return '<p>ID de campeonato no encontrado.</p>';
+    
+    global $wpdb;
+    $championship_post = get_post( $championship_id );
+    if ( ! $championship_post || 'srl_championship' !== get_post_type( $championship_post ) ) return '<p>Error: Campeonato no encontrado.</p>';
+    
+    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
+    $scoring_rules = json_decode( $scoring_rules_json, true );
+    $points_map = $scoring_rules['points'] ?? [];
+    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
+    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+    
+    $event_ids = get_posts(['post_type' => 'srl_event', 'meta_key' => '_srl_parent_championship', 'meta_value' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
+    if ( empty($event_ids) ) return '<p>Este campeonato aún no tiene eventos.</p>';
+    
+    $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
+    $results = $wpdb->get_results( $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $event_ids ) );
+    
+    if ( empty( $results ) ) return '<p>Aún no hay resultados para este campeonato.</p>';
+    
+    $standings = [];
+    foreach ( $results as $result ) {
+        $driver_id = $result->driver_id;
+        if ( ! isset( $standings[ $driver_id ] ) ) $standings[ $driver_id ] = [ 'name' => $result->full_name, 'steam_id' => $result->steam_id, 'points' => 0, 'races' => 0, 'wins' => 0, 'poles' => 0, 'fastest_laps' => 0 ];
+        $standings[ $driver_id ]['points'] += ($points_map[ $result->position ] ?? 0);
+        if ( $result->has_pole ) { $standings[ $driver_id ]['points'] += $bonus_pole; $standings[ $driver_id ]['poles']++; }
+        if ( $result->has_fastest_lap ) { $standings[ $driver_id ]['points'] += $bonus_fastest_lap; $standings[ $driver_id ]['fastest_laps']++; }
+        $standings[ $driver_id ]['races']++;
+        if ( $result->position == 1 ) $standings[ $driver_id ]['wins']++;
+    }
+    
+    uasort( $standings, fn($a, $b) => $b['points'] <=> $a['points'] ?: $b['wins'] <=> $a['wins'] );
+    
+    ob_start();
+    ?>
+    <div class="srl-app-container">
+        <h2>Clasificación de Pilotos</h2>
+        <table class="srl-table">
+            <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Victorias</th><th>Poles</th><th>V. Rápidas</th><th class="points">Puntos</th></tr></thead>
+            <tbody>
+                <?php $pos = 1; foreach ( $standings as $driver ) : ?>
+                <tr>
+                    <td class="position"><?php echo $pos++; ?></td>
+                    <td><a href="<?php echo esc_url( rtrim($atts['profile_page_url'], '/') . '/?steam_id=' . $driver['steam_id'] ); ?>"><?php echo esc_html( $driver['name'] ); ?></a></td>
+                    <td><?php echo esc_html( $driver['wins'] ); ?></td>
+                    <td><?php echo esc_html( $driver['poles'] ); ?></td>
+                    <td><?php echo esc_html( $driver['fastest_laps'] ); ?></td>
+                    <td class="points"><?php echo esc_html( $driver['points'] ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * NUEVO: Shortcode para mostrar los resultados de un evento.
+ */
+add_shortcode( 'srl_event_results', 'srl_render_event_results_shortcode' );
+function srl_render_event_results_shortcode( $atts ) {
+    $atts = shortcode_atts( [ 'event_id' => get_the_ID() ], $atts, 'srl_event_results' );
+    $event_id = intval( $atts['event_id'] );
+    if ( ! $event_id ) return '<p>ID de evento no encontrado.</p>';
+
+    global $wpdb;
+    $results = $wpdb->get_results( $wpdb->prepare("
+        SELECT d.full_name, r.position, r.grid_position, r.best_lap_time, r.total_time, r.is_dnf
+        FROM {$wpdb->prefix}srl_results r
+        JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
+        JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+        WHERE s.event_id = %d AND s.session_type = 'Race'
+        ORDER BY r.position ASC
+    ", $event_id) );
+
+    if ( empty( $results ) ) return '<p>Aún no se han importado los resultados para este evento.</p>';
+
+    ob_start();
+    ?>
+    <div class="srl-app-container">
+        <h2>Resultados de Carrera</h2>
+        <table class="srl-table">
+            <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Pos. Salida</th><th>Mejor Vuelta</th><th>Tiempo Total</th></tr></thead>
+            <tbody>
+                <?php foreach ( $results as $result ) : ?>
+                    <tr>
+                        <td class="position"><?php echo $result->is_dnf ? 'DNF' : esc_html( $result->position ); ?></td>
+                        <td><?php echo esc_html( $result->full_name ); ?></td>
+                        <td><?php echo esc_html( $result->grid_position ); ?></td>
+                        <td><?php echo srl_format_time( $result->best_lap_time ); ?></td>
+                        <td><?php echo $result->is_dnf ? '-' : srl_format_time( $result->total_time, true ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Función de ayuda para formatear el tiempo de milisegundos a M:S.ms
+ */
+function srl_format_time( $ms, $is_total_time = false ) {
+    if ( ! $ms || $ms <= 0 ) return '-';
+    $minutes = floor( ( $ms / 1000 ) / 60 );
+    $seconds = floor( ( $ms / 1000 ) % 60 );
+    $milliseconds = $ms % 1000;
+    if ( $is_total_time ) {
+        return sprintf( '%d:%02d.%03d', $minutes, $seconds, $milliseconds );
+    }
+    return sprintf( '%d:%02d.%03d', $minutes, $seconds, $milliseconds );
 }

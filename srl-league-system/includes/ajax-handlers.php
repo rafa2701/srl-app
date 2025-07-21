@@ -13,6 +13,8 @@ if ( ! defined( 'WPINC' ) ) {
 // Hook para la petición de subida de resultados
 add_action( 'wp_ajax_srl_upload_results_file', 'srl_handle_results_upload' );
 add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
+add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
+add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
 
 function srl_handle_results_upload() {
     // 1. Seguridad: Verificar el nonce
@@ -70,10 +72,6 @@ function srl_handle_results_upload() {
 }
 
 
-// Hook para obtener los eventos de un campeonato
-add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
-
-
 /**
  * Obtiene los eventos (CPT) de un campeonato (CPT) usando el campo personalizado.
  */
@@ -82,43 +80,30 @@ function srl_handle_get_events() {
     if ( ! isset( $_POST['championship_id'] ) ) {
         wp_send_json_error( ['message' => 'No se proporcionó ID de campeonato.'] );
     }
-
     $championship_id = intval( $_POST['championship_id'] );
-    
     $args = [
         'post_type'      => 'srl_event',
         'posts_per_page' => -1,
         'orderby'        => 'title',
         'order'          => 'ASC',
-        'meta_query'     => [
-            [
-                'key'     => '_srl_parent_championship', // <-- Usamos el nuevo campo de SCF
-                'value'   => $championship_id,
-                'compare' => '=',
-            ],
-        ],
+        'meta_query'     => [ [ 'key' => '_srl_parent_championship', 'value' => $championship_id, 'compare' => '=' ] ],
     ];
     $event_posts = get_posts( $args );
-
     $events = [];
     if ( ! empty( $event_posts ) ) {
         foreach ( $event_posts as $event_post ) {
-            $events[] = [
-                'id'   => $event_post->ID,
-                'name' => $event_post->post_title,
-            ];
+            $events[] = [ 'id'   => $event_post->ID, 'name' => $event_post->post_title ];
         }
     }
-    
     wp_send_json_success( $events );
 }
-// Hook para la nueva petición de detalles de logros
-add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
-add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' ); // Para usuarios no logueados
 
+
+/**
+ * Obtiene los detalles de los logros de un piloto para el modal.
+ */
 function srl_handle_get_achievement_details() {
     check_ajax_referer( 'srl-public-nonce', 'nonce' );
-
     if ( ! isset( $_POST['driver_id'], $_POST['stat_type'] ) ) {
         wp_send_json_error( ['message' => 'Faltan datos.'] );
     }
@@ -136,11 +121,17 @@ function srl_handle_get_achievement_details() {
         default: wp_send_json_error( ['message' => 'Tipo de estadística no válido.'] );
     }
 
+    // CORRECCIÓN: La consulta ahora une la tabla de campeonatos para obtener su nombre.
     $query = $wpdb->prepare("
-        SELECT event_post.ID as event_id, event_post.post_title as event_name
+        SELECT
+            event_post.ID as event_id,
+            event_post.post_title as event_name,
+            champ_post.post_title as championship_name
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
         JOIN {$wpdb->prefix}posts event_post ON s.event_id = event_post.ID
+        JOIN {$wpdb->prefix}postmeta pm ON event_post.ID = pm.post_id AND pm.meta_key = '_srl_parent_championship'
+        JOIN {$wpdb->prefix}posts champ_post ON pm.meta_value = champ_post.ID
         WHERE r.driver_id = %d AND s.session_type = 'Race' AND {$where_clause}
         ORDER BY event_post.post_date DESC
     ", $driver_id);
@@ -150,7 +141,7 @@ function srl_handle_get_achievement_details() {
     $achievements = [];
     foreach($results as $result) {
         $achievements[] = [
-            'name' => $result->event_name,
+            'name' => esc_html( $result->event_name ) . ' - <span class="srl-modal-champ-name">' . esc_html( $result->championship_name ) . '</span>',
             'url'  => get_permalink($result->event_id)
         ];
     }
