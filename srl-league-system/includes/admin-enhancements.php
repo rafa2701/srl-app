@@ -29,6 +29,11 @@ function srl_add_championship_edit_script() {
                         "points": { "1": 50, "2": 40, "3": 35, "4": 32, "5": 30, "6": 28, "7": 26, "8": 24, "9": 22, "10": 20 },
                         "bonuses": { "pole": 1, "fastest_lap": 2 },
                         "rules": { "drop_worst_results": 0 }
+                    },
+                    'srl': {
+                        "points": { "1": 30, "2": 26, "3": 24, "4": 22, "5": 20, "6": 18, "7": 16, "8": 14, "9": 12, "10": 11, "11": 10, "12": 9, "13": 8, "14": 7, "15": 6, "16": 5, "17": 4, "18": 3, "19": 2, "20": 1 },
+                        "bonuses": { "pole": 1, "fastest_lap": 1 },
+                        "rules": { "drop_worst_results": 0 }
                     }
                 };
 

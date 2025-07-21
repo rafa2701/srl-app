@@ -7,30 +7,31 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
-// --- REGISTRO DE SHORTCODES ---
 add_shortcode( 'srl_standings', 'srl_render_standings_shortcode' );
 add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
 
-
-/**
- * Renderiza la tabla de clasificación de un campeonato.
- * (Sin cambios en esta función)
- */
 function srl_render_standings_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'championship_id' => 0, 'profile_page_url' => '/driver-profile/', ], $atts, 'srl_standings' );
     $championship_id = intval( $atts['championship_id'] );
     if ( ! $championship_id ) return '<p>Error: Debes especificar un ID de campeonato. Ej: [srl_standings championship_id="1"]</p>';
     
     global $wpdb;
-    $championship = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}srl_championships WHERE id = %d", $championship_id ) );
-    if ( ! $championship ) return '<p>Error: Campeonato no encontrado.</p>';
+    $championship_post = get_post( $championship_id );
+    if ( ! $championship_post || 'srl_championship' !== get_post_type( $championship_post ) ) return '<p>Error: Campeonato no encontrado.</p>';
     
-    $scoring_rules = json_decode( $championship->scoring_rules, true );
+    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
+    $scoring_rules = json_decode( $scoring_rules_json, true );
     $points_map = $scoring_rules['points'] ?? [];
     $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
     $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
     
-    $results = $wpdb->get_results( $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id JOIN {$wpdb->prefix}srl_events e ON s.event_id = e.id WHERE e.championship_id = %d AND s.session_type = 'Race'", $championship_id ) );
+    $event_ids = get_posts(['post_type' => 'srl_event', 'post_parent' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
+    if ( empty($event_ids) ) return '<p>Aún no hay resultados para este campeonato.</p>';
+    
+    $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
+    $query = $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $event_ids );
+    $results = $wpdb->get_results( $query );
+    
     if ( empty( $results ) ) return '<p>Aún no hay resultados para este campeonato.</p>';
     
     $standings = [];
@@ -49,7 +50,7 @@ function srl_render_standings_shortcode( $atts ) {
     ob_start();
     ?>
     <div class="srl-app-container">
-        <h2>Clasificación de Pilotos - <?php echo esc_html( $championship->name ); ?></h2>
+        <h2>Clasificación de Pilotos - <?php echo esc_html( $championship_post->post_title ); ?></h2>
         <table class="srl-table">
             <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Victorias</th><th>Carreras</th><th class="points">Puntos</th></tr></thead>
             <tbody>
@@ -69,9 +70,6 @@ function srl_render_standings_shortcode( $atts ) {
     return ob_get_clean();
 }
 
-/**
- * Renderiza el perfil y palmarés de un piloto.
- */
 function srl_render_driver_profile_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'steam_id' => '' ], $atts, 'srl_driver_profile' );
     $steam_id = ! empty( $atts['steam_id'] ) ? $atts['steam_id'] : ( $_GET['steam_id'] ?? '' );
@@ -82,7 +80,6 @@ function srl_render_driver_profile_shortcode( $atts ) {
     $driver = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}srl_drivers WHERE steam_id = %s", $steam_id ) );
     if ( ! $driver ) return '<p>Piloto no encontrado.</p>';
 
-    // --- CÁLCULO DE ESTADÍSTICAS GLOBALES ---
     $all_race_results = $wpdb->get_results( $wpdb->prepare( "SELECT r.position, r.grid_position, r.is_dnf FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE r.driver_id = %d AND s.session_type = 'Race'", $driver->id ) );
     $total_starts = count( $all_race_results );
     $finished_races = array_filter( $all_race_results, fn($r) => !$r->is_dnf );
@@ -94,23 +91,14 @@ function srl_render_driver_profile_shortcode( $atts ) {
         'avg_finish' => $total_finished > 0 ? array_sum( array_column( $finished_races, 'position' ) ) / $total_finished : 0,
     ];
 
-    // --- NUEVO: OBTENER ESTADÍSTICAS POR CAMPEONATO ---
     $championship_stats = $wpdb->get_results( $wpdb->prepare("
-        SELECT
-            c.id as id,
-            c.name as name,
-            c.scoring_rules as scoring_rules,
-            COUNT(r.id) as races,
-            SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END) as wins,
-            SUM(r.has_pole) as poles,
-            SUM(r.has_fastest_lap) as fastest_laps
-        FROM {$wpdb->prefix}srl_championships c
-        JOIN {$wpdb->prefix}srl_events e ON c.id = e.championship_id
-        JOIN {$wpdb->prefix}srl_sessions s ON e.id = s.event_id
-        JOIN {$wpdb->prefix}srl_results r ON s.id = r.session_id
+        SELECT champ.ID as id, champ.post_title as name, COUNT(r.id) as races, SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END) as wins, SUM(r.has_pole) as poles, SUM(r.has_fastest_lap) as fastest_laps
+        FROM {$wpdb->prefix}srl_results r
+        JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+        JOIN {$wpdb->prefix}posts event_post ON s.event_id = event_post.ID AND event_post.post_type = 'srl_event'
+        JOIN {$wpdb->prefix}posts champ ON event_post.post_parent = champ.ID AND champ.post_type = 'srl_championship'
         WHERE r.driver_id = %d AND s.session_type = 'Race'
-        GROUP BY c.id
-        ORDER BY c.name DESC
+        GROUP BY champ.ID ORDER BY champ.post_title DESC
     ", $driver->id) );
     
     ob_start();
@@ -118,7 +106,6 @@ function srl_render_driver_profile_shortcode( $atts ) {
     <div class="srl-app-container srl-driver-profile">
         <h1>Palmarés de <?php echo esc_html( $driver->full_name ); ?></h1>
         <p class="srl-steam-id">SteamID: <?php echo esc_html( $driver->steam_id ); ?></p>
-        
         <h2>Estadísticas Globales</h2>
         <div class="srl-stats-grid">
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->victories_count; ?></div><div class="stat-label">Victorias</div></div>
@@ -132,30 +119,20 @@ function srl_render_driver_profile_shortcode( $atts ) {
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dnfs_count; ?></div><div class="stat-label">Abandonos (DNF)</div></div>
         </div>
 
-        <!-- NUEVA SECCIÓN: DESGLOSE POR CAMPEONATO -->
         <?php if ( ! empty( $championship_stats ) ) : ?>
             <h2 style="margin-top: 40px;">Desempeño por Campeonato</h2>
             <table class="srl-table">
-                <thead>
-                    <tr>
-                        <th>Campeonato</th>
-                        <th>Carreras</th>
-                        <th>Victorias</th>
-                        <th>Poles</th>
-                        <th>V. Rápidas</th>
-                        <th class="points">Puntos Totales</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Campeonato</th><th>Carreras</th><th>Victorias</th><th>Poles</th><th>V. Rápidas</th><th class="points">Puntos Totales</th></tr></thead>
                 <tbody>
                     <?php foreach ( $championship_stats as $champ_stat ) : ?>
                         <?php
-                        // Calcular puntos para este campeonato específico
-                        $champ_rules = json_decode( $champ_stat->scoring_rules, true );
+                        $champ_rules_json = get_post_meta( $champ_stat->id, '_srl_scoring_rules', true );
+                        $champ_rules = json_decode( $champ_rules_json, true );
                         $champ_points_map = $champ_rules['points'] ?? [];
                         $champ_bonus_pole = $champ_rules['bonuses']['pole'] ?? 0;
                         $champ_bonus_fl = $champ_rules['bonuses']['fastest_lap'] ?? 0;
                         
-                        $champ_results = $wpdb->get_results( $wpdb->prepare("SELECT r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id JOIN {$wpdb->prefix}srl_events e ON s.event_id = e.id WHERE r.driver_id = %d AND e.championship_id = %d AND s.session_type = 'Race'", $driver->id, $champ_stat->id) );
+                        $champ_results = $wpdb->get_results( $wpdb->prepare("SELECT r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id JOIN {$wpdb->prefix}posts e ON s.event_id = e.ID WHERE r.driver_id = %d AND e.post_parent = %d AND s.session_type = 'Race'", $driver->id, $champ_stat->id) );
                         
                         $total_points = 0;
                         foreach($champ_results as $res) {

@@ -12,9 +12,9 @@ if ( ! defined( 'WPINC' ) ) die;
  */
 function srl_register_post_types() {
 
-    // --- Íconos SVG codificados en Base64 ---
-    $trophy_icon_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTYgOUg0LjVhMi41IDIuNSAwIDAgMSAwLTVI NiIvPjxwYXRoIGQ9Ik0xOCA5aDEuNWEyLjUgMi41IDAgMCAwIDAtNUgxOCIvPjxwYXRoIGQ9Ik00IDIyaDE2Ii8+PHBhdGggZD0iTTEwIDE0LjY2VjE3YzAgLjU1LS40Ny45OC0uOTcgMS4yMUEzLjQ4IDMuNDggMCAwIDEgOCAxOS44NlYyMiIvPjxwYXRoIGQ9Ik0xNCAxNC42NlYxN2MwIC41NS40Ny45OC45NyAxLjIxQTMuNDggMy40OCAwIDAgMCAxNiAxOS44NlYyMiIvPjxwYXRoIGQ9Ik0xOCAySDZ2N2E2IDYgMCAwIDAgMTIgMFYyWiIvPjwvc3ZnPg==';
-    $flag_icon_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgMTVzMS0xIDQtMSA1IDIgOCAyIDQtMSA0LTFWM3MtMSAxLTQgMS01LTItOC0yLTQgMS00IDF6Ii8+PGxpbmUgeDE9IjQiIHkxPSIyMiIgeDI9IjQiIHkyPSIxNSIvPjwvc3ZnPg==';
+    // --- Íconos SVG codificados en Base64 (Color Blanco) ---
+    $trophy_icon_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik02IDlINC41YTIuNSAyLjUgMCAwIDEgMC01SDYiLz48cGF0aCBkPSJNMTggOWgxLjVhMi41IDIuNSAwIDAgMCAwLTVIMTgiLz48cGF0aCBkPSJNNCAyMmgaDE2Ii8+PHBhdGggZD0iTTEwIDE0LjY2VjE3YzAgLjU1LS40Ny45OC0uOTcgMS4yMUEzLjQ4IDMuNDggMCAwIDEgOCAxOS44NlYyMiIvPjxwYXRoIGQ9Ik0xNCAxNC42NlYxN2MwIC41NS40Ny45OC45NyAxLjIxQTMuNDggMy44IDAgMCAwIDE2IDE5Ljg2VjIyIi8+PHBhdGggZD0iTTE4IDJSDZ2N2E2IDYgMCAwIDAgMTIgMFYyWiIvPjwvc3ZnPg==';
+    $flag_icon_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik00IDE1czEtMSA0LTEgNSAyIDggMiA0LTEgNC0xVjNzLTEgMS00IDEtNS0yLTgtMi00IDEtNCAxek00IDIyVjE1Ii8+PC9zdmc+';
 
     // --- CPT para Campeonatos ---
     $labels_championship = [
@@ -28,12 +28,12 @@ function srl_register_post_types() {
         'label'                 => __( 'Campeonato', 'srl-league-system' ),
         'labels'                => $labels_championship,
         'supports'              => [ 'title', 'editor', 'thumbnail' ],
-        'hierarchical'          => false,
+        'hierarchical'          => true, // Importante para relaciones padre-hijo
         'public'                => true,
         'show_ui'               => true,
         'show_in_menu'          => true,
         'menu_position'         => 21,
-        'menu_icon'             => $trophy_icon_svg, // <-- Ícono actualizado
+        'menu_icon'             => $trophy_icon_svg,
         'can_export'            => true,
         'has_archive'           => true,
         'publicly_queryable'    => true,
@@ -52,12 +52,12 @@ function srl_register_post_types() {
     $args_event = [
         'label'                 => __( 'Evento', 'srl-league-system' ),
         'labels'                => $labels_event,
-        'supports'              => [ 'title' ],
+        'supports'              => [ 'title' ], // Eliminamos 'page-attributes'
         'hierarchical'          => false,
         'public'                => true,
         'show_ui'               => true,
         'show_in_menu'          => 'edit.php?post_type=srl_championship',
-        'menu_icon'             => $flag_icon_svg, // <-- Ícono actualizado
+        'menu_icon'             => $flag_icon_svg,
         'can_export'            => true,
         'has_archive'           => false,
         'exclude_from_search'   => true,

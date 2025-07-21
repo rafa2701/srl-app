@@ -73,6 +73,10 @@ function srl_handle_results_upload() {
 // Hook para obtener los eventos de un campeonato
 add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
 
+
+/**
+ * Obtiene los eventos (CPT) de un campeonato (CPT) usando el campo personalizado.
+ */
 function srl_handle_get_events() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
     if ( ! isset( $_POST['championship_id'] ) ) {
@@ -83,20 +87,25 @@ function srl_handle_get_events() {
     
     $args = [
         'post_type'      => 'srl_event',
-        'post_parent'    => $championship_id,
         'posts_per_page' => -1,
         'orderby'        => 'title',
         'order'          => 'ASC',
-        'fields'         => 'ids', // Solo necesitamos los IDs y títulos
+        'meta_query'     => [
+            [
+                'key'     => '_srl_parent_championship', // <-- Usamos el nuevo campo de SCF
+                'value'   => $championship_id,
+                'compare' => '=',
+            ],
+        ],
     ];
     $event_posts = get_posts( $args );
 
     $events = [];
     if ( ! empty( $event_posts ) ) {
-        foreach ( $event_posts as $event_id ) {
+        foreach ( $event_posts as $event_post ) {
             $events[] = [
-                'id'   => $event_id,
-                'name' => get_the_title( $event_id ),
+                'id'   => $event_post->ID,
+                'name' => $event_post->post_title,
             ];
         }
     }
