@@ -112,3 +112,48 @@ function srl_handle_get_events() {
     
     wp_send_json_success( $events );
 }
+// Hook para la nueva petición de detalles de logros
+add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
+add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' ); // Para usuarios no logueados
+
+function srl_handle_get_achievement_details() {
+    check_ajax_referer( 'srl-public-nonce', 'nonce' );
+
+    if ( ! isset( $_POST['driver_id'], $_POST['stat_type'] ) ) {
+        wp_send_json_error( ['message' => 'Faltan datos.'] );
+    }
+
+    global $wpdb;
+    $driver_id = intval( $_POST['driver_id'] );
+    $stat_type = sanitize_key( $_POST['stat_type'] );
+    $where_clause = '';
+
+    switch ( $stat_type ) {
+        case 'victories': $where_clause = "r.position = 1"; break;
+        case 'podiums': $where_clause = "r.position <= 3"; break;
+        case 'poles': $where_clause = "r.has_pole = 1"; break;
+        case 'fastest_laps': $where_clause = "r.has_fastest_lap = 1"; break;
+        default: wp_send_json_error( ['message' => 'Tipo de estadística no válido.'] );
+    }
+
+    $query = $wpdb->prepare("
+        SELECT event_post.ID as event_id, event_post.post_title as event_name
+        FROM {$wpdb->prefix}srl_results r
+        JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+        JOIN {$wpdb->prefix}posts event_post ON s.event_id = event_post.ID
+        WHERE r.driver_id = %d AND s.session_type = 'Race' AND {$where_clause}
+        ORDER BY event_post.post_date DESC
+    ", $driver_id);
+
+    $results = $wpdb->get_results( $query );
+    
+    $achievements = [];
+    foreach($results as $result) {
+        $achievements[] = [
+            'name' => $result->event_name,
+            'url'  => get_permalink($result->event_id)
+        ];
+    }
+
+    wp_send_json_success( $achievements );
+}

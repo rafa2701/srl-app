@@ -95,6 +95,8 @@ function srl_update_driver_global_stats( $driver_id ) {
         SELECT
             SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END) as victories_count,
             SUM(CASE WHEN r.position <= 3 THEN 1 ELSE 0 END) as podiums_count,
+            SUM(CASE WHEN r.position <= 5 THEN 1 ELSE 0 END) as top_5_count,
+            SUM(CASE WHEN r.position <= 10 THEN 1 ELSE 0 END) as top_10_count,
             SUM(r.has_pole) as poles_count,
             SUM(r.has_fastest_lap) as fastest_laps_count,
             SUM(r.is_dnf) as dnfs_count
@@ -109,13 +111,14 @@ function srl_update_driver_global_stats( $driver_id ) {
             [
                 'victories_count'    => $stats->victories_count,
                 'podiums_count'      => $stats->podiums_count,
+                'top_5_count'        => $stats->top_5_count,
+                'top_10_count'       => $stats->top_10_count,
                 'poles_count'        => $stats->poles_count,
                 'fastest_laps_count' => $stats->fastest_laps_count,
                 'dnfs_count'         => $stats->dnfs_count,
             ],
             [ 'id' => $driver_id ],
-            // BUG FIX: Especificar los formatos de los datos para asegurar una actualización correcta.
-            [ '%d', '%d', '%d', '%d', '%d' ],
+            [ '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
             [ '%d' ]
         );
     }

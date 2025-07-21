@@ -10,6 +10,24 @@ if ( ! defined( 'WPINC' ) ) die;
 add_shortcode( 'srl_standings', 'srl_render_standings_shortcode' );
 add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
 
+/**
+ * Archivo para definir los shortcodes del plugin.
+ *
+ * @package SRL_League_System
+ */
+
+if ( ! defined( 'WPINC' ) ) die;
+
+// --- REGISTRO DE SHORTCODES ---
+add_shortcode( 'srl_standings', 'srl_render_standings_shortcode' );
+add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
+add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
+add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
+
+
+/**
+ * Renderiza la tabla de clasificación de un campeonato.
+ */
 function srl_render_standings_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'championship_id' => 0, 'profile_page_url' => '/driver-profile/', ], $atts, 'srl_standings' );
     $championship_id = intval( $atts['championship_id'] );
@@ -25,7 +43,7 @@ function srl_render_standings_shortcode( $atts ) {
     $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
     $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
     
-    $event_ids = get_posts(['post_type' => 'srl_event', 'post_parent' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
+    $event_ids = get_posts(['post_type' => 'srl_event', 'meta_key' => '_srl_parent_championship', 'meta_value' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
     if ( empty($event_ids) ) return '<p>Aún no hay resultados para este campeonato.</p>';
     
     $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
@@ -70,6 +88,9 @@ function srl_render_standings_shortcode( $atts ) {
     return ob_get_clean();
 }
 
+/**
+ * Renderiza el perfil y palmarés de un piloto.
+ */
 function srl_render_driver_profile_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'steam_id' => '' ], $atts, 'srl_driver_profile' );
     $steam_id = ! empty( $atts['steam_id'] ) ? $atts['steam_id'] : ( $_GET['steam_id'] ?? '' );
@@ -106,15 +127,16 @@ function srl_render_driver_profile_shortcode( $atts ) {
     <div class="srl-app-container srl-driver-profile">
         <h1>Palmarés de <?php echo esc_html( $driver->full_name ); ?></h1>
         <p class="srl-steam-id">SteamID: <?php echo esc_html( $driver->steam_id ); ?></p>
+        
         <h2>Estadísticas Globales</h2>
         <div class="srl-stats-grid">
-            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->victories_count; ?></div><div class="stat-label">Victorias</div></div>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->podiums_count; ?></div><div class="stat-label">Podios</div></div>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->poles_count; ?></div><div class="stat-label">Poles</div></div>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div><div class="stat-label">Vueltas Rápidas</div></div>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['win_percentage'], 2 ); ?>%</div><div class="stat-label">% Victorias</div></div>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['pole_percentage'], 2 ); ?>%</div><div class="stat-label">% Poles</div></div>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div><div class="stat-label">Pos. Salida Prom.</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $total_starts; ?></div><div class="stat-label">Carreras</div></div>
+            <button class="srl-stat-card interactive" data-stat="victories" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->victories_count; ?></div><div class="stat-label">Victorias</div></button>
+            <button class="srl-stat-card interactive" data-stat="podiums" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->podiums_count; ?></div><div class="stat-label">Podios</div></button>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->top_5_count; ?></div><div class="stat-label">Top 5</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->top_10_count; ?></div><div class="stat-label">Top 10</div></div>
+            <button class="srl-stat-card interactive" data-stat="poles" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->poles_count; ?></div><div class="stat-label">Poles</div></button>
+            <button class="srl-stat-card interactive" data-stat="fastest_laps" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div><div class="stat-label">Vueltas Rápidas</div></button>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_finish'], 2 ); ?></div><div class="stat-label">Pos. Llegada Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dnfs_count; ?></div><div class="stat-label">Abandonos (DNF)</div></div>
         </div>
@@ -132,13 +154,16 @@ function srl_render_driver_profile_shortcode( $atts ) {
                         $champ_bonus_pole = $champ_rules['bonuses']['pole'] ?? 0;
                         $champ_bonus_fl = $champ_rules['bonuses']['fastest_lap'] ?? 0;
                         
-                        $champ_results = $wpdb->get_results( $wpdb->prepare("SELECT r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id JOIN {$wpdb->prefix}posts e ON s.event_id = e.ID WHERE r.driver_id = %d AND e.post_parent = %d AND s.session_type = 'Race'", $driver->id, $champ_stat->id) );
-                        
+                        $event_ids = get_posts(['post_type' => 'srl_event', 'meta_key' => '_srl_parent_championship', 'meta_value' => $champ_stat->id, 'posts_per_page' => -1, 'fields' => 'ids']);
                         $total_points = 0;
-                        foreach($champ_results as $res) {
-                            $total_points += ($champ_points_map[$res->position] ?? 0);
-                            if ($res->has_pole) $total_points += $champ_bonus_pole;
-                            if ($res->has_fastest_lap) $total_points += $champ_bonus_fl;
+                        if (!empty($event_ids)) {
+                            $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
+                            $champ_results = $wpdb->get_results( $wpdb->prepare("SELECT r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE r.driver_id = %d AND s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $driver->id, $event_ids) );
+                            foreach($champ_results as $res) {
+                                $total_points += ($champ_points_map[$res->position] ?? 0);
+                                if ($res->has_pole) $total_points += $champ_bonus_pole;
+                                if ($res->has_fastest_lap) $total_points += $champ_bonus_fl;
+                            }
                         }
                         ?>
                         <tr>
@@ -153,6 +178,14 @@ function srl_render_driver_profile_shortcode( $atts ) {
                 </tbody>
             </table>
         <?php endif; ?>
+
+        <div id="srl-achievements-modal" class="srl-modal-overlay" style="display: none;">
+            <div class="srl-modal-content">
+                <button class="srl-modal-close">&times;</button>
+                <h3 id="srl-modal-title"></h3>
+                <div id="srl-modal-body"><p class="loading">Cargando...</p></div>
+            </div>
+        </div>
     </div>
     <?php
     return ob_get_clean();

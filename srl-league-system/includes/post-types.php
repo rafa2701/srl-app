@@ -33,7 +33,7 @@ function srl_register_post_types() {
         'show_ui'               => true,
         'show_in_menu'          => true,
         'menu_position'         => 21,
-        'menu_icon'             => "dashicon-awards",
+        'menu_icon'             => "dashicon-award",
         'can_export'            => true,
         'has_archive'           => true,
         'publicly_queryable'    => true,
