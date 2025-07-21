@@ -113,3 +113,54 @@
     text-transform: uppercase;
 }
 
+/* --- Estilos para Listas (Campeonatos) --- */
+.srl-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+.srl-list-card {
+    display: block;
+    background-color: var(--srl-medium-gray);
+    border-radius: 8px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--srl-text-light);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    position: relative;
+}
+.srl-list-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+.srl-list-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    display: block;
+}
+.srl-list-card h3 {
+    padding: 15px;
+    margin: 0;
+    border: none;
+    font-size: 1.2em;
+}
+.srl-list-card .srl-card-meta {
+    padding: 0 15px 15px;
+    display: block;
+    font-size: 0.9em;
+    color: #ccc;
+}
+.srl-list-card .srl-card-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.srl-status-active { background-color: #28a745; color: white; }
+.srl-status-completed { background-color: #6c757d; color: white; }
+.srl-status-scheduled { background-color: #ffc107; color: #333; }

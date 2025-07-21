@@ -157,3 +157,87 @@ function srl_render_driver_profile_shortcode( $atts ) {
     <?php
     return ob_get_clean();
 }
+// Registrar el nuevo shortcode
+add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
+
+function srl_render_championship_list_shortcode( $atts ) {
+    $championship_posts = get_posts([
+        'post_type' => 'srl_championship',
+        'posts_per_page' => -1,
+        'orderby' => 'title',
+        'order' => 'ASC',
+    ]);
+
+    if ( empty( $championship_posts ) ) {
+        return '<p>No hay campeonatos disponibles en este momento.</p>';
+    }
+
+    ob_start();
+    ?>
+    <div class="srl-app-container">
+        <h2>Campeonatos</h2>
+        <div class="srl-list-grid">
+            <?php foreach ( $championship_posts as $champ ) : ?>
+                <?php
+                $game = get_post_meta( $champ->ID, '_srl_game', true );
+                $status = get_post_meta( $champ->ID, '_srl_status', true );
+                ?>
+                <a href="<?php echo get_permalink( $champ->ID ); ?>" class="srl-list-card">
+                    <?php if ( has_post_thumbnail( $champ->ID ) ) : ?>
+                        <?php echo get_the_post_thumbnail( $champ->ID, 'medium' ); ?>
+                    <?php endif; ?>
+                    <h3><?php echo esc_html( $champ->post_title ); ?></h3>
+                    <span class="srl-card-meta"><?php echo esc_html( strtoupper( $game ) ); ?></span>
+                    <span class="srl-card-status srl-status-<?php echo esc_attr($status); ?>"><?php echo esc_html($status); ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+// Registrar el nuevo shortcode
+add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
+
+function srl_render_driver_list_shortcode( $atts ) {
+    $atts = shortcode_atts( [ 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_driver_list' );
+    
+    global $wpdb;
+    $drivers = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}srl_drivers ORDER BY full_name ASC" );
+
+    if ( empty( $drivers ) ) {
+        return '<p>No hay pilotos registrados.</p>';
+    }
+
+    ob_start();
+    ?>
+    <div class="srl-app-container">
+        <h2>Lista de Pilotos</h2>
+        <table class="srl-table">
+            <thead>
+                <tr>
+                    <th>Nombre del Piloto</th>
+                    <th>Victorias</th>
+                    <th>Podios</th>
+                    <th>Poles</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $drivers as $driver ) : ?>
+                    <tr>
+                        <td>
+                            <a href="<?php echo esc_url( rtrim($atts['profile_page_url'], '/') . '/?steam_id=' . $driver->steam_id ); ?>">
+                                <?php echo esc_html( $driver->full_name ); ?>
+                            </a>
+                        </td>
+                        <td><?php echo esc_html( $driver->victories_count ); ?></td>
+                        <td><?php echo esc_html( $driver->podiums_count ); ?></td>
+                        <td><?php echo esc_html( $driver->poles_count ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
+    return ob_get_clean();
+}
