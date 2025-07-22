@@ -23,6 +23,7 @@ add_shortcode( 'srl_standings', 'srl_render_standings_shortcode' );
 add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
 add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
 add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
+add_shortcode( 'srl_event_results', 'srl_render_event_results_shortcode' );
 
 
 /**
@@ -127,13 +128,12 @@ function srl_render_driver_profile_shortcode( $atts ) {
     <?php
     return ob_get_clean();
 }
-// Registrar el nuevo shortcode
-add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
-function srl_render_championship_list_shortcode( $atts ) {
-    $atts = shortcode_atts( [
-        'standings_page_url' => '/campeonato/', // URL de la página que contendrá [srl_standings]
-    ], $atts, 'srl_championship_list' );
 
+/**
+ * Renderiza la lista de campeonatos.
+ * CORREGIDO: Ahora enlaza a la página propia de cada campeonato.
+ */
+function srl_render_championship_list_shortcode( $atts ) {
     $championship_posts = get_posts([
         'post_type' => 'srl_championship',
         'posts_per_page' => -1,
@@ -154,10 +154,9 @@ function srl_render_championship_list_shortcode( $atts ) {
                 <?php
                 $game = get_post_meta( $champ->ID, '_srl_game', true );
                 $status = get_post_meta( $champ->ID, '_srl_status', true );
-                // CORRECCIÓN: Construir el enlace a la página de clasificación
-                $link = esc_url( rtrim($atts['standings_page_url'], '/') . '/?championship_id=' . $champ->ID );
+                $link = get_permalink( $champ->ID ); // <-- CORRECCIÓN APLICADA AQUÍ
                 ?>
-                <a href="<?php echo $link; ?>" class="srl-list-card">
+                <a href="<?php echo esc_url( $link ); ?>" class="srl-list-card">
                     <?php if ( has_post_thumbnail( $champ->ID ) ) : ?>
                         <?php echo get_the_post_thumbnail( $champ->ID, 'medium' ); ?>
                     <?php endif; ?>
@@ -171,9 +170,6 @@ function srl_render_championship_list_shortcode( $atts ) {
     <?php
     return ob_get_clean();
 }
-// Registrar el nuevo shortcode
-add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
-
 function srl_render_driver_list_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_driver_list' );
     
@@ -280,10 +276,10 @@ function srl_render_standings_shortcode( $atts ) {
     return ob_get_clean();
 }
 
+
 /**
  * NUEVO: Shortcode para mostrar los resultados de un evento.
  */
-add_shortcode( 'srl_event_results', 'srl_render_event_results_shortcode' );
 function srl_render_event_results_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'event_id' => get_the_ID() ], $atts, 'srl_event_results' );
     $event_id = intval( $atts['event_id'] );

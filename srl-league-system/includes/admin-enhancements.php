@@ -37,16 +37,20 @@ function srl_add_championship_edit_script() {
                     }
                 };
 
-                // La función asume que los IDs de los campos coinciden con sus nombres
-                const templateSelector = $('[name="_srl_scoring_template"]');
-                const rulesTextarea = $('[name="_srl_scoring_rules"]');
+                // CORRECCIÓN: Usar selectores que funcionan con la estructura de ACF/SCF
+                // Busca el div contenedor por su data-name y luego encuentra el input/select/textarea dentro.
+                const templateSelector = $('div[data-name="_srl_scoring_template"] select');
+                const rulesTextarea = $('div[data-name="_srl_scoring_rules"] textarea');
 
                 templateSelector.on('change', function() {
                     const selectedTemplate = $(this).val();
+                    console.log(selectedTemplate);
                     if (selectedTemplate && scoreTemplates[selectedTemplate]) {
                         const jsonString = JSON.stringify(scoreTemplates[selectedTemplate], null, 2);
-                        rulesTextarea.val(jsonString).trigger('change'); // Trigger change para que SCF detecte la modificación
-                    }
+                        rulesTextarea.val(jsonString).trigger('change'); // Trigger change para que el plugin de campos detecte la modificación
+                        
+                        console.log('Plantilla de puntuación rellenada con: ' + selectedTemplate);
+                    } 
                 });
             });
         </script>

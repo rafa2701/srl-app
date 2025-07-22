@@ -10,13 +10,22 @@ if ( ! defined( 'WPINC' ) ) die;
 /**
  * Procesa el contenido de un archivo JSON de resultados de Assetto Corsa.
  */
-function srl_parse_assetto_corsa_results( $json_content, $session_id ) {
+function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id ) {
     global $wpdb;
     $data = json_decode( $json_content, true );
     if ( json_last_error() !== JSON_ERROR_NONE ) {
         return ['status' => 'error', 'message' => 'Error al decodificar el JSON: ' . json_last_error_msg()];
     }
 
+    // --- OBTENER REGLAS DE PUNTUACIÓN ---
+    $championship_id = get_post_meta( $event_id, '_srl_parent_championship', true );
+    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
+    $scoring_rules = json_decode( $scoring_rules_json, true );
+    $points_map = $scoring_rules['points'] ?? [];
+    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
+    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+
+    // --- Determinar la vuelta rápida válida ---
     $fastest_lap_time = PHP_INT_MAX;
     $fastest_lap_driver_guid = null;
     if ( ! empty( $data['Laps'] ) ) {
@@ -42,6 +51,15 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id ) {
         
         $processed_drivers[] = $driver_id;
 
+        // --- CALCULAR PUNTOS ---
+        $points_awarded = 0;
+        $has_pole = ( $result_item['GridPosition'] == 1 );
+        $has_fastest_lap = ( $driver_guid === $fastest_lap_driver_guid );
+        
+        $points_awarded += ($points_map[ $position ] ?? 0);
+        if ($has_pole) $points_awarded += $bonus_pole;
+        if ($has_fastest_lap) $points_awarded += $bonus_fastest_lap;
+
         $result_data = [
             'session_id'      => $session_id,
             'driver_id'       => $driver_id,
@@ -52,10 +70,10 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id ) {
             'best_lap_time'   => $result_item['BestLap'],
             'total_time'      => $result_item['TotalTime'],
             'laps_completed'  => count( array_filter($data['Laps'], fn($lap) => $lap['DriverGuid'] === $driver_guid) ),
-            'has_pole'        => ( $result_item['GridPosition'] == 1 ),
-            'has_fastest_lap' => ( $driver_guid === $fastest_lap_driver_guid ),
+            'has_pole'        => $has_pole,
+            'has_fastest_lap' => $has_fastest_lap,
             'is_dnf'          => ( $result_item['TotalTime'] == 0 ),
-            'points_awarded'  => 0,
+            'points_awarded'  => $points_awarded, // <-- PUNTOS GUARDADOS
         ];
         
         $wpdb->replace( $wpdb->prefix . 'srl_results', $result_data );
@@ -68,7 +86,6 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id ) {
 
     return ['status' => 'success', 'message' => 'Resultados importados y estadísticas globales actualizadas.'];
 }
-
 /**
  * Obtiene o crea un piloto en la base de datos.
  */

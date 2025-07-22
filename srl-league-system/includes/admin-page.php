@@ -62,6 +62,22 @@ function srl_render_admin_page() {
             
             <div id="srl-ajax-response" style="margin-top: 20px;"></div>
         </div>
+         <hr style="margin: 40px 0;">
+
+        <!-- NUEVA SECCIÓN DE HERRAMIENTAS -->
+        <div id="srl-admin-tools-wrapper" style="max-width: 600px;">
+            <h2>Herramientas Administrativas</h2>
+            <p>Usa estas herramientas para mantenimiento de la base de datos.</p>
+            
+            <div class="srl-tool-card">
+                <h4>Recalcular Todas las Estadísticas de Pilotos</h4>
+                <p>Si has modificado o eliminado resultados manualmente, esta función recorrerá todos los pilotos y recalculará sus estadísticas globales (victorias, podios, poles, etc.) desde cero para asegurar que los datos sean correctos.</p>
+                <button id="srl-recalculate-stats-btn" class="button button-secondary">Iniciar Recálculo</button>
+                <span class="spinner" style="float: none; vertical-align: middle;"></span>
+            </div>
+            <div id="srl-recalculate-response" style="margin-top: 20px;"></div>
+        </div>
+
     </div>
     <?php
 }

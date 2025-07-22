@@ -97,4 +97,41 @@ jQuery(document).ready(function($) {
             }
         });
     });
+     // --- NUEVO: Lógica para el botón de recálculo ---
+    const recalcBtn = $('#srl-recalculate-stats-btn');
+    const recalcSpinner = recalcBtn.next('.spinner');
+    const recalcResponseDiv = $('#srl-recalculate-response');
+
+    recalcBtn.on('click', function() {
+        if ( ! confirm('¿Estás seguro de que quieres recalcular todas las estadísticas? Este proceso puede tardar un poco.') ) {
+            return;
+        }
+
+        recalcSpinner.addClass('is-active');
+        recalcResponseDiv.html('').hide();
+        recalcBtn.prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_recalculate_all_stats',
+                nonce: srl_ajax_object.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    recalcResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show();
+                } else {
+                    recalcResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
+                }
+            },
+            error: function() {
+                recalcResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado durante el recálculo.</p></div>').show();
+            },
+            complete: function() {
+                recalcSpinner.removeClass('is-active');
+                recalcBtn.prop('disabled', false);
+            }
+        });
+    });
 });
