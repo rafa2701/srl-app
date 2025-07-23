@@ -48,8 +48,15 @@ function srl_public_enqueue_assets() {
     wp_enqueue_style( 'srl-public-css', SRL_PLUGIN_URL . 'assets/css/main.css', [], SRL_PLUGIN_VERSION );
     
     // Cargar JS solo si un shortcode nuestro está presente
-    if ( is_singular() && has_shortcode( get_post()->post_content, 'srl_driver_profile' ) ) {
-        wp_enqueue_script( 'srl-public-js', SRL_PLUGIN_URL . 'assets/js/public.js', ['jquery'], SRL_PLUGIN_VERSION, true );
+    global $post;
+    if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'srl_driver_profile' ) || has_shortcode( $post->post_content, 'srl_standings' ) || has_shortcode( $post->post_content, 'srl_driver_list' ) || has_shortcode( $post->post_content, 'srl_event_results' ) ) {
+        
+        // 1. Cargar la librería Tablesort desde un CDN
+        wp_enqueue_script( 'srl-tablesort', 'https://cdn.jsdelivr.net/npm/tablesort@5.6.0/src/tablesort.min.js', [], null, true );
+
+        // 2. Cargar nuestro script público, que ahora depende de Tablesort
+        wp_enqueue_script( 'srl-public-js', SRL_PLUGIN_URL . 'assets/js/public.js', ['jquery', 'srl-tablesort'], SRL_PLUGIN_VERSION, true );
+        
         wp_localize_script( 'srl-public-js', 'srl_ajax_object', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'srl-public-nonce' ) ]);
     }
 }

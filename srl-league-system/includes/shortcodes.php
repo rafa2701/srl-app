@@ -7,17 +7,6 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
-add_shortcode( 'srl_standings', 'srl_render_standings_shortcode' );
-add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
-
-/**
- * Archivo para definir los shortcodes del plugin.
- *
- * @package SRL_League_System
- */
-
-if ( ! defined( 'WPINC' ) ) die;
-
 // --- REGISTRO DE SHORTCODES ---
 add_shortcode( 'srl_standings', 'srl_render_standings_shortcode' );
 add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
@@ -75,6 +64,7 @@ function srl_render_driver_profile_shortcode( $atts ) {
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->top_10_count; ?></div><div class="stat-label">Top 10</div></div>
             <button class="srl-stat-card interactive" data-stat="poles" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->poles_count; ?></div><div class="stat-label">Poles</div></button>
             <button class="srl-stat-card interactive" data-stat="fastest_laps" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div><div class="stat-label">Vueltas Rápidas</div></button>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div><div class="stat-label">Pos. Salida Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_finish'], 2 ); ?></div><div class="stat-label">Pos. Llegada Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dnfs_count; ?></div><div class="stat-label">Abandonos (DNF)</div></div>
         </div>
@@ -174,7 +164,8 @@ function srl_render_driver_list_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_driver_list' );
     
     global $wpdb;
-    $drivers = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}srl_drivers ORDER BY full_name ASC" );
+    // CORRECCIÓN: Cambiado el ORDER BY a victories_count DESC
+    $drivers = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}srl_drivers ORDER BY victories_count DESC, full_name ASC" );
 
     if ( empty( $drivers ) ) {
         return '<p>No hay pilotos registrados.</p>';
@@ -184,7 +175,7 @@ function srl_render_driver_list_shortcode( $atts ) {
     ?>
     <div class="srl-app-container">
         <h2>Lista de Pilotos</h2>
-        <table class="srl-table">
+        <table class="srl-table srl-sortable-table"> <!-- Clase añadida -->
             <thead>
                 <tr>
                     <th>Nombre del Piloto</th>
@@ -214,7 +205,6 @@ function srl_render_driver_list_shortcode( $atts ) {
 }
 /**
  * Renderiza la tabla de clasificación de un campeonato.
- * CORREGIDO Y MEJORADO
  */
 function srl_render_standings_shortcode( $atts ) {
     $atts = shortcode_atts( [ 'championship_id' => get_the_ID(), 'profile_page_url' => '/driver-profile/', ], $atts, 'srl_standings' );
@@ -242,12 +232,15 @@ function srl_render_standings_shortcode( $atts ) {
     $standings = [];
     foreach ( $results as $result ) {
         $driver_id = $result->driver_id;
-        if ( ! isset( $standings[ $driver_id ] ) ) $standings[ $driver_id ] = [ 'name' => $result->full_name, 'steam_id' => $result->steam_id, 'points' => 0, 'races' => 0, 'wins' => 0, 'poles' => 0, 'fastest_laps' => 0 ];
+        if ( ! isset( $standings[ $driver_id ] ) ) {
+            $standings[ $driver_id ] = [ 'name' => $result->full_name, 'steam_id' => $result->steam_id, 'points' => 0, 'races' => 0, 'wins' => 0, 'podiums' => 0, 'poles' => 0, 'fastest_laps' => 0 ];
+        }
         $standings[ $driver_id ]['points'] += ($points_map[ $result->position ] ?? 0);
         if ( $result->has_pole ) { $standings[ $driver_id ]['points'] += $bonus_pole; $standings[ $driver_id ]['poles']++; }
         if ( $result->has_fastest_lap ) { $standings[ $driver_id ]['points'] += $bonus_fastest_lap; $standings[ $driver_id ]['fastest_laps']++; }
         $standings[ $driver_id ]['races']++;
         if ( $result->position == 1 ) $standings[ $driver_id ]['wins']++;
+        if ( $result->position <= 3 ) $standings[ $driver_id ]['podiums']++; // <-- AÑADIDO
     }
     
     uasort( $standings, fn($a, $b) => $b['points'] <=> $a['points'] ?: $b['wins'] <=> $a['wins'] );
@@ -256,14 +249,15 @@ function srl_render_standings_shortcode( $atts ) {
     ?>
     <div class="srl-app-container">
         <h2>Clasificación de Pilotos</h2>
-        <table class="srl-table">
-            <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Victorias</th><th>Poles</th><th>V. Rápidas</th><th class="points">Puntos</th></tr></thead>
+        <table class="srl-table srl-sortable-table">
+            <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Victorias</th><th>Podios</th><th>Poles</th><th>V. Rápidas</th><th class="points">Puntos</th></tr></thead>
             <tbody>
                 <?php $pos = 1; foreach ( $standings as $driver ) : ?>
                 <tr>
                     <td class="position"><?php echo $pos++; ?></td>
                     <td><a href="<?php echo esc_url( rtrim($atts['profile_page_url'], '/') . '/?steam_id=' . $driver['steam_id'] ); ?>"><?php echo esc_html( $driver['name'] ); ?></a></td>
                     <td><?php echo esc_html( $driver['wins'] ); ?></td>
+                    <td><?php echo esc_html( $driver['podiums'] ); ?></td>
                     <td><?php echo esc_html( $driver['poles'] ); ?></td>
                     <td><?php echo esc_html( $driver['fastest_laps'] ); ?></td>
                     <td class="points"><?php echo esc_html( $driver['points'] ); ?></td>
@@ -278,16 +272,16 @@ function srl_render_standings_shortcode( $atts ) {
 
 
 /**
- * NUEVO: Shortcode para mostrar los resultados de un evento.
+ * Renderiza los resultados de un evento.
  */
 function srl_render_event_results_shortcode( $atts ) {
-    $atts = shortcode_atts( [ 'event_id' => get_the_ID() ], $atts, 'srl_event_results' );
+    $atts = shortcode_atts( [ 'event_id' => get_the_ID(), 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_event_results' );
     $event_id = intval( $atts['event_id'] );
     if ( ! $event_id ) return '<p>ID de evento no encontrado.</p>';
 
     global $wpdb;
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, r.position, r.grid_position, r.best_lap_time, r.total_time, r.is_dnf
+        SELECT d.full_name, d.steam_id, r.position, r.grid_position, r.best_lap_time, r.total_time, r.is_dnf, r.has_fastest_lap
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -301,13 +295,18 @@ function srl_render_event_results_shortcode( $atts ) {
     ?>
     <div class="srl-app-container">
         <h2>Resultados de Carrera</h2>
-        <table class="srl-table">
+        <table class="srl-table srl-sortable-table">
             <thead><tr><th class="position">Pos</th><th>Piloto</th><th>Pos. Salida</th><th>Mejor Vuelta</th><th>Tiempo Total</th></tr></thead>
             <tbody>
                 <?php foreach ( $results as $result ) : ?>
-                    <tr>
+                    <?php
+                    $row_classes = [];
+                    if ( $result->has_fastest_lap ) $row_classes[] = 'srl-fastest-lap';
+                    if ( $result->grid_position == 1 ) $row_classes[] = 'srl-pole-position';
+                    ?>
+                    <tr class="<?php echo implode(' ', $row_classes); ?>">
                         <td class="position"><?php echo $result->is_dnf ? 'DNF' : esc_html( $result->position ); ?></td>
-                        <td><?php echo esc_html( $result->full_name ); ?></td>
+                        <td><a href="<?php echo esc_url( rtrim($atts['profile_page_url'], '/') . '/?steam_id=' . $result->steam_id ); ?>"><?php echo esc_html( $result->full_name ); ?></a></td>
                         <td><?php echo esc_html( $result->grid_position ); ?></td>
                         <td><?php echo srl_format_time( $result->best_lap_time ); ?></td>
                         <td><?php echo $result->is_dnf ? '-' : srl_format_time( $result->total_time, true ); ?></td>

@@ -58,4 +58,10 @@ jQuery(document).ready(function($) {
             closeModal();
         }
     });
+    // --- NUEVO: Inicializar el ordenamiento de tablas ---
+    // Busca todas las tablas con la clase 'srl-sortable-table' y las hace ordenables.
+    $('.srl-sortable-table').each(function() {
+        new Tablesort(this);
+        console.log('Tabla ordenada inicializada.');
+    });
 });
