@@ -1,6 +1,6 @@
 /*
  * Stylesheet for SR Latinoamerica League System
- * Version: 1.5.2
+ * Version: 1.7.0
  */
 
 /* --- Variables de Color y Fuentes --- */
@@ -21,9 +21,8 @@
     color: var(--srl-text-light);
     padding: 20px;
     border-radius: 8px;
-    margin: 20px auto; /* Centrado */
+    margin: 20px 0; /* Ocupa el 100% del contenedor padre */
 }
-
 .srl-app-container h1, .srl-app-container h2, .srl-app-container h3 {
     border-left: 4px solid var(--srl-red);
     padding-left: 15px;
@@ -216,7 +215,6 @@
 .srl-status-completed { background-color: #6c757d; color: white; }
 .srl-status-scheduled { background-color: #ffc107; color: #333; }
 
-/* --- Menú Principal (Estilo Lista) --- */
 /* --- Menú Principal (Estilo Cuadrícula) --- */
 .srl-main-menu-grid {
     display: grid;

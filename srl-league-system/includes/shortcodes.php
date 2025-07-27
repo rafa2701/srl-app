@@ -58,7 +58,6 @@ function srl_calculate_championship_standings( $championship_id ) {
         if ( $a['points'] != $b['points'] ) {
             return $b['points'] <=> $a['points'];
         }
-        // Desempate por posiciones
         for ($i = 1; $i <= 10; $i++) {
             if ($a['positions'][$i] != $b['positions'][$i]) {
                 return $b['positions'][$i] <=> $a['positions'][$i];
@@ -144,20 +143,23 @@ function srl_render_driver_profile_shortcode( $atts ) {
         'avg_finish' => $total_finished > 0 ? array_sum( array_column( $finished_races, 'position' ) ) / $total_finished : 0,
     ];
 
-    // CORRECCIÓN: Usar una consulta con meta_query para obtener el historial de campeonatos.
-    $participated_event_ids = $wpdb->get_col( $wpdb->prepare("SELECT DISTINCT s.event_id FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE r.driver_id = %d", $driver->id) );
-    $championship_ids = [];
-    if ( !empty($participated_event_ids) ) {
-        foreach($participated_event_ids as $event_id) {
-            $champ_id = get_post_meta($event_id, '_srl_parent_championship', true);
-            if ($champ_id) {
-                $championship_ids[$champ_id] = $champ_id;
-            }
-        }
-    }
+    $championship_ids_query = $wpdb->get_col( $wpdb->prepare("
+        SELECT DISTINCT pm.meta_value
+        FROM {$wpdb->prefix}srl_results r
+        JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+        JOIN {$wpdb->prefix}postmeta pm ON s.event_id = pm.post_id
+        WHERE r.driver_id = %d AND pm.meta_key = '_srl_parent_championship'
+    ", $driver->id) );
+    
     $championship_history = [];
-    if (!empty($championship_ids)) {
-        $championship_history = get_posts(['post_type' => 'srl_championship', 'post__in' => $championship_ids, 'posts_per_page' => -1]);
+    if (!empty($championship_ids_query)) {
+        $championship_history = get_posts([
+            'post_type' => 'srl_championship',
+            'post__in' => $championship_ids_query,
+            'posts_per_page' => -1,
+            'orderby' => 'post_date',
+            'order' => 'DESC'
+        ]);
     }
     
     ob_start();
@@ -188,7 +190,7 @@ function srl_render_driver_profile_shortcode( $atts ) {
                 <tbody>
                     <?php foreach ( $championship_history as $champ ) : ?>
                         <?php
-                        $standings = srl_calculate_championship_standings( $champ->id );
+                        $standings = srl_calculate_championship_standings( $champ->ID );
                         $final_pos = '-';
                         $final_points = '-';
                         $pos = 1;
@@ -202,7 +204,7 @@ function srl_render_driver_profile_shortcode( $atts ) {
                         }
                         ?>
                         <tr>
-                            <td><a href="<?php echo get_permalink($champ->id); ?>"><?php echo esc_html( $champ->name ); ?></a></td>
+                            <td><a href="<?php echo get_permalink($champ->ID); ?>"><?php echo esc_html( $champ->post_title ); ?></a></td>
                             <td class="numeric"><?php echo $final_pos; ?></td>
                             <td class="points numeric"><?php echo $final_points; ?></td>
                         </tr>

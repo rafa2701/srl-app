@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       SRL League System
- * Version:           1.2.0
+ * Version:           0.7.0
  * ... (resto de la cabecera)
  */
 
@@ -20,7 +20,9 @@ function srl_activate_plugin() {
 // --- Incluir todos los archivos necesarios ---
 require_once SRL_PLUGIN_PATH . 'includes/post-types.php';
 require_once SRL_PLUGIN_PATH . 'includes/admin-enhancements.php';
+require_once SRL_PLUGIN_PATH . 'includes/admin-meta-boxes.php'; // <-- AÑADIDO
 require_once SRL_PLUGIN_PATH . 'includes/data-importers/assetto-parser.php';
+require_once SRL_PLUGIN_PATH . 'includes/data-importers/automobilista-parser.php';
 require_once SRL_PLUGIN_PATH . 'includes/admin-page.php';
 require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
