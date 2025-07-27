@@ -1,6 +1,6 @@
 /*
  * Stylesheet for SR Latinoamerica League System
- * Version: 1.5.0
+ * Version: 1.5.2
  */
 
 /* --- Variables de Color y Fuentes --- */
@@ -21,8 +21,9 @@
     color: var(--srl-text-light);
     padding: 20px;
     border-radius: 8px;
-    margin: 20px 0;
+    margin: 20px auto; /* Centrado */
 }
+
 .srl-app-container h1, .srl-app-container h2, .srl-app-container h3 {
     border-left: 4px solid var(--srl-red);
     padding-left: 15px;
@@ -73,6 +74,9 @@
 .srl-table .points {
     font-weight: bold;
     color: var(--srl-red);
+}
+.srl-table th.numeric,
+.srl-table td.numeric {
     text-align: right;
 }
 
@@ -103,12 +107,12 @@
 }
 
 /* --- Hitos en Tabla de Resultados --- */
-.srl-table .srl-pole-position td:nth-child(3) { /* Columna Pos. Salida */
+.srl-table .srl-pole-position td:nth-child(3) {
     background-color: #28a745;
     color: #fff;
     font-weight: bold;
 }
-.srl-table .srl-fastest-lap td:nth-child(4) { /* Columna Mejor Vuelta */
+.srl-table .srl-fastest-lap td:nth-child(4) {
     background-color: #800080;
     color: #fff;
     font-weight: bold;
@@ -211,6 +215,72 @@
 .srl-status-active { background-color: #28a745; color: white; }
 .srl-status-completed { background-color: #6c757d; color: white; }
 .srl-status-scheduled { background-color: #ffc107; color: #333; }
+
+/* --- Menú Principal (Estilo Lista) --- */
+/* --- Menú Principal (Estilo Cuadrícula) --- */
+.srl-main-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+.srl-menu-card {
+    display: flex;
+    align-items: center;
+    background-color: var(--srl-medium-gray);
+    border-radius: 8px;
+    padding: 20px;
+    text-decoration: none;
+    color: var(--srl-text-light);
+    border: 1px solid var(--srl-light-gray);
+    transition: transform 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    position: relative;
+}
+.srl-menu-card:not(.disabled):hover {
+    transform: translateY(-3px);
+    border-color: var(--srl-red);
+}
+.srl-menu-card .srl-card-icon {
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+.srl-menu-card .srl-card-icon svg {
+    color: var(--srl-red);
+    width: 40px;
+    height: 40px;
+}
+.srl-menu-card .srl-card-text {
+    text-align: left;
+}
+.srl-menu-card h3 {
+    margin: 0 0 5px 0;
+    padding: 0;
+    border: none;
+    font-size: 1.4em;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.srl-menu-card p {
+    margin: 0;
+    font-size: 1em;
+    color: #ccc;
+    line-height: 1.4;
+}
+.srl-menu-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.srl-menu-card .srl-card-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--srl-red);
+    color: white;
+    padding: 4px 8px;
+    font-size: 0.75em;
+    font-weight: bold;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
 
 /* --- Modal de Logros --- */
 .srl-modal-overlay {
