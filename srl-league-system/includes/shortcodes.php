@@ -17,59 +17,6 @@ add_shortcode( 'srl_main_menu', 'srl_render_main_menu_shortcode' );
 
 
 /**
- * NUEVA FUNCIÓN CENTRAL: Calcula la clasificación final de un campeonato con desempates.
- *
- * @param int $championship_id El ID del post del campeonato.
- * @return array La clasificación final ordenada.
- */
-function srl_calculate_championship_standings( $championship_id ) {
-    global $wpdb;
-
-    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
-    $scoring_rules = json_decode( $scoring_rules_json, true );
-    $points_map = $scoring_rules['points'] ?? [];
-    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
-    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
-
-    $event_ids = get_posts(['post_type' => 'srl_event', 'meta_key' => '_srl_parent_championship', 'meta_value' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
-    if ( empty($event_ids) ) return [];
-
-    $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
-    $results = $wpdb->get_results( $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $event_ids ) );
-    
-    if ( empty( $results ) ) return [];
-
-    $standings = [];
-    foreach ( $results as $result ) {
-        $driver_id = $result->driver_id;
-        if ( ! isset( $standings[ $driver_id ] ) ) {
-            $standings[ $driver_id ] = [ 'name' => $result->full_name, 'steam_id' => $result->steam_id, 'points' => 0, 'races' => 0, 'wins' => 0, 'podiums' => 0, 'poles' => 0, 'fastest_laps' => 0, 'positions' => array_fill(1, 10, 0) ];
-        }
-        $standings[ $driver_id ]['points'] += ($points_map[ $result->position ] ?? 0);
-        if ( $result->has_pole ) { $standings[ $driver_id ]['points'] += $bonus_pole; $standings[ $driver_id ]['poles']++; }
-        if ( $result->has_fastest_lap ) { $standings[ $driver_id ]['points'] += $bonus_fastest_lap; $standings[ $driver_id ]['fastest_laps']++; }
-        $standings[ $driver_id ]['races']++;
-        if ( $result->position == 1 ) $standings[ $driver_id ]['wins']++;
-        if ( $result->position <= 3 ) $standings[ $driver_id ]['podiums']++;
-        if ( $result->position <= 10 ) $standings[ $driver_id ]['positions'][$result->position]++;
-    }
-
-    uasort( $standings, function( $a, $b ) {
-        if ( $a['points'] != $b['points'] ) {
-            return $b['points'] <=> $a['points'];
-        }
-        for ($i = 1; $i <= 10; $i++) {
-            if ($a['positions'][$i] != $b['positions'][$i]) {
-                return $b['positions'][$i] <=> $a['positions'][$i];
-            }
-        }
-        return 0;
-    });
-
-    return $standings;
-}
-
-/**
  * Renderiza la tabla de clasificación de un campeonato.
  */
 function srl_render_standings_shortcode( $atts ) {
@@ -178,6 +125,8 @@ function srl_render_driver_profile_shortcode( $atts ) {
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->top_10_count; ?></div><div class="stat-label">Top 10</div></div>
             <button class="srl-stat-card interactive" data-stat="poles" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->poles_count; ?></div><div class="stat-label">Poles</div></button>
             <button class="srl-stat-card interactive" data-stat="fastest_laps" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div><div class="stat-label">Vueltas Rápidas</div></button>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['win_percentage'], 2 ); ?>%</div><div class="stat-label">% Victorias</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['pole_percentage'], 2 ); ?>%</div><div class="stat-label">% Poles</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div><div class="stat-label">Pos. Salida Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_finish'], 2 ); ?></div><div class="stat-label">Pos. Llegada Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dnfs_count; ?></div><div class="stat-label">Abandonos (DNF)</div></div>

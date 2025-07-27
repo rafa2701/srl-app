@@ -68,26 +68,47 @@ function srl_handle_get_events() {
  */
 function srl_handle_recalculate_all_stats() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    srl_write_to_log('--- INICIO DE RECÁLCULO DE ESTADÍSTICAS SRL ---');
+
     global $wpdb;
     $driver_ids = $wpdb->get_col( "SELECT id FROM {$wpdb->prefix}srl_drivers" );
-    if ( empty( $driver_ids ) ) wp_send_json_error( ['message' => 'No se encontraron pilotos para recalcular.'] );
+    if ( empty( $driver_ids ) ) {
+        srl_write_to_log('SRL Recalculate: No se encontraron pilotos.');
+        wp_send_json_error( ['message' => 'No se encontraron pilotos para recalcular.'] );
+    }
+    srl_write_to_log('SRL Recalculate: Se encontraron ' . count($driver_ids) . ' pilotos para procesar.');
 
     foreach ( $driver_ids as $driver_id ) {
         srl_update_driver_global_stats( $driver_id );
     }
+    srl_write_to_log('SRL Recalculate: Se actualizaron las estadísticas básicas (victorias, podios, etc.).');
 
     $wpdb->query( "UPDATE {$wpdb->prefix}srl_drivers SET championships_won_count = 0" );
+    srl_write_to_log('SRL Recalculate: Se resetearon los contadores de campeonatos ganados.');
+    
     $completed_championships = get_posts([ 'post_type' => 'srl_championship', 'posts_per_page' => -1, 'meta_key' => '_srl_status', 'meta_value' => 'completed' ]);
+    srl_write_to_log('SRL Recalculate: Se encontraron ' . count($completed_championships) . ' campeonatos completados para analizar.');
+
     $champs_recalculated = 0;
     foreach ( $completed_championships as $champ ) {
+        if ( ! function_exists('srl_calculate_championship_standings') ) {
+            require_once SRL_PLUGIN_PATH . 'includes/core-functions.php';
+        }
         $standings = srl_calculate_championship_standings( $champ->ID );
         if ( ! empty( $standings ) ) {
             $winner_driver_id = array_key_first( $standings );
             $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}srl_drivers SET championships_won_count = championships_won_count + 1 WHERE id = %d", $winner_driver_id ) );
             $champs_recalculated++;
+            srl_write_to_log('SRL Recalculate: Campeonato ID ' . $champ->ID . ' procesado. Ganador: Piloto ID ' . $winner_driver_id);
+        } else {
+            srl_write_to_log('SRL Recalculate: Campeonato ID ' . $champ->ID . ' no tiene resultados y fue omitido.');
         }
     }
-    wp_send_json_success( ['message' => 'Se han recalculado las estadísticas para ' . count( $driver_ids ) . ' pilotos y se han reasignado ' . $champs_recalculated . ' campeonatos.'] );
+    
+    $final_message = 'Se han recalculado las estadísticas para ' . count( $driver_ids ) . ' pilotos y se han reasignado ' . $champs_recalculated . ' campeonatos.';
+    srl_write_to_log('SRL Recalculate: ' . $final_message);
+    srl_write_to_log('--- FIN DE RECÁLCULO DE ESTADÍSTICAS SRL ---');
+    wp_send_json_success( ['message' => $final_message] );
 }
 
 function srl_handle_get_achievement_details() {
