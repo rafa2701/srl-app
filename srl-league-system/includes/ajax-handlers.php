@@ -13,7 +13,7 @@ add_action( 'wp_ajax_srl_recalculate_all_stats', 'srl_handle_recalculate_all_sta
 add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
 add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
 add_action( 'wp_ajax_srl_delete_event_results', 'srl_handle_delete_event_results' );
-
+add_action( 'wp_ajax_srl_bulk_upload_results', 'srl_handle_bulk_upload' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -179,4 +179,78 @@ function srl_handle_delete_event_results() {
     } else {
         wp_send_json_success( ['message' => 'No había resultados que eliminar.'] );
     }
+}
+
+/**
+ * Maneja la subida en lote de archivos de resultados de Assetto Corsa.
+ */
+function srl_handle_bulk_upload() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! isset( $_POST['championship_id'] ) || empty( $_FILES['bulk_results_files'] ) ) {
+        wp_send_json_error( ['message' => 'Faltan datos. Selecciona un campeonato y al menos un archivo.'] );
+    }
+
+    $championship_id = intval( $_POST['championship_id'] );
+    $files = $_FILES['bulk_results_files'];
+    $file_data = [];
+    $log = [];
+
+    // 1. Validar y leer todos los archivos primero
+    for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+        $file_name = $files['name'][$i];
+        if ( strtolower( pathinfo( $file_name, PATHINFO_EXTENSION ) ) !== 'json' ) {
+            $log[] = "Error: El archivo '{$file_name}' no es un .json y fue omitido.";
+            continue;
+        }
+        $content = file_get_contents( $files['tmp_name'][$i] );
+        $json_data = json_decode( $content, true );
+        if ( json_last_error() !== JSON_ERROR_NONE || !isset($json_data['TrackName'], $json_data['Date']) ) {
+            $log[] = "Error: El archivo '{$file_name}' está corrupto o no tiene los campos 'TrackName' o 'Date' y fue omitido.";
+            continue;
+        }
+        $file_data[] = [
+            'name' => $file_name,
+            'date' => strtotime( $json_data['Date'] ),
+            'track_name' => $json_data['TrackName'],
+            'content' => $content,
+        ];
+    }
+
+    // 2. Ordenar archivos por fecha
+    usort( $file_data, fn($a, $b) => $a['date'] <=> $b['date'] );
+
+    // 3. Procesar archivos en orden
+    global $wpdb;
+    $round_number = 1;
+    foreach ( $file_data as $data ) {
+        // Crear el título del evento
+        $track_name_formatted = ucwords( str_replace( ['_', '-'], ' ', $data['track_name'] ) );
+        $event_date_formatted = date( 'd/m/Y', $data['date'] );
+        $event_title = "R{$round_number}: {$track_name_formatted} - ({$event_date_formatted})";
+
+        // Crear el post del evento
+        $event_id = wp_insert_post([
+            'post_title'  => $event_title,
+            'post_type'   => 'srl_event',
+            'post_status' => 'publish',
+        ]);
+
+        if ( $event_id ) {
+            update_post_meta( $event_id, '_srl_parent_championship', $championship_id );
+            update_post_meta( $event_id, '_srl_track_name', $data['track_name'] );
+            update_post_meta( $event_id, '_srl_event_date', date('Y-m-d', $data['date']) );
+
+            // Crear la sesión e importar resultados
+            $wpdb->insert( $wpdb->prefix . 'srl_sessions', [ 'event_id' => $event_id, 'session_type' => 'Race', 'source_file' => sanitize_file_name( $data['name'] ) ] );
+            $session_id = $wpdb->insert_id;
+            srl_parse_assetto_corsa_results( $data['content'], $session_id, $event_id );
+            
+            $log[] = "Éxito: El archivo '{$data['name']}' fue importado como '{$event_title}'.";
+            $round_number++;
+        } else {
+            $log[] = "Error: No se pudo crear el evento para el archivo '{$data['name']}'.";
+        }
+    }
+
+    wp_send_json_success( ['message' => 'Proceso completado.', 'log' => $log] );
 }

@@ -1,5 +1,15 @@
 jQuery(document).ready(function($) {
 
+    // --- Lógica de Pestañas ---
+    $('.nav-tab-wrapper a').on('click', function(e) {
+        e.preventDefault();
+        $('.nav-tab').removeClass('nav-tab-active');
+        $('.srl-tab-content').removeClass('active');
+        $(this).addClass('nav-tab-active');
+        $($(this).attr('href')).addClass('active');
+    });
+
+    // --- Lógica del formulario de subida manual ---
     const championshipSelect = $('#srl-championship-select');
     const eventSelect = $('#srl-event-select');
     const sessionSelect = $('#srl-session-select');
@@ -7,7 +17,6 @@ jQuery(document).ready(function($) {
     const responseDiv = $('#srl-ajax-response');
     const spinner = form.find('.spinner');
 
-    // 1. Cuando se cambia el campeonato, buscar sus eventos
     championshipSelect.on('change', function() {
         const champId = $(this).val();
         
@@ -46,23 +55,15 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // 2. Cuando se cambia el evento, habilitar el selector de sesión
     eventSelect.on('change', function() {
         const eventId = $(this).val();
         if (eventId) {
             sessionSelect.prop('disabled', false);
-            // Lógica simple para las sesiones, se puede expandir si es necesario
-            sessionSelect.html(`
-                <option value="">-- Elige una sesión --</option>
-                <option value="Qualifying">Clasificación (Qualy)</option>
-                <option value="Race">Carrera (Race)</option>
-            `);
         } else {
             sessionSelect.prop('disabled', true).html('<option value="">-- Primero elige un evento --</option>');
         }
     });
 
-    // 3. Manejar el envío del formulario
     form.on('submit', function(e) {
         e.preventDefault();
         
@@ -82,7 +83,7 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     responseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show();
-                    form[0].reset(); // Limpiar el formulario
+                    form[0].reset();
                     eventSelect.prop('disabled', true).html('<option value="">-- Primero elige un campeonato --</option>');
                     sessionSelect.prop('disabled', true).html('<option value="">-- Primero elige un evento --</option>');
                 } else {
@@ -97,7 +98,51 @@ jQuery(document).ready(function($) {
             }
         });
     });
-     // --- NUEVO: Lógica para el botón de recálculo ---
+
+    // --- Lógica para el botón de eliminar resultados ---
+    const deleteBtn = $('#srl-delete-results-btn');
+    const deleteSpinner = deleteBtn.next('.spinner');
+    const deleteResponseDiv = $('#srl-delete-response');
+
+    deleteBtn.on('click', function() {
+        if ( ! confirm('¡ATENCIÓN!\n\nEstás a punto de eliminar permanentemente todos los resultados de este evento.\n\n¿Estás seguro de que quieres continuar?') ) {
+            return;
+        }
+
+        const eventId = $(this).data('event-id');
+        const nonce = $('#srl_event_actions_nonce').val();
+
+        deleteSpinner.addClass('is-active');
+        deleteResponseDiv.html('').hide();
+        deleteBtn.prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_delete_event_results',
+                nonce: nonce,
+                event_id: eventId
+            },
+            success: function(response) {
+                if (response.success) {
+                    deleteResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
+                    setTimeout(function() { location.reload(); }, 2000);
+                } else {
+                    deleteResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                }
+            },
+            error: function() {
+                deleteResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado.</div>').show();
+            },
+            complete: function() {
+                deleteSpinner.removeClass('is-active');
+                deleteBtn.prop('disabled', false);
+            }
+        });
+    });
+
+    // --- Lógica para el botón de recalcular ---
     const recalcBtn = $('#srl-recalculate-stats-btn');
     const recalcSpinner = recalcBtn.next('.spinner');
     const recalcResponseDiv = $('#srl-recalculate-response');
@@ -134,46 +179,59 @@ jQuery(document).ready(function($) {
             }
         });
     });
-     // --- NUEVO: Lógica para el botón de eliminar resultados ---
-    const deleteBtn = $('#srl-delete-results-btn');
-    const deleteSpinner = deleteBtn.next('.spinner');
-    const deleteResponseDiv = $('#srl-delete-response');
 
-    deleteBtn.on('click', function() {
-        if ( ! confirm('¡ATENCIÓN!\n\nEstás a punto de eliminar permanentemente todos los resultados de este evento.\n\n¿Estás seguro de que quieres continuar?') ) {
+    // --- Lógica para el formulario de importación en lote ---
+    const bulkForm = $('#srl-bulk-upload-form');
+    const bulkSpinner = bulkForm.find('.spinner');
+    const bulkResponseDiv = $('#srl-bulk-response');
+
+    bulkForm.on('submit', function(e) {
+        e.preventDefault();
+        
+        const championshipId = $('#srl-bulk-championship-select').val();
+        if (!championshipId) {
+            alert('Por favor, selecciona un campeonato.');
+            return;
+        }
+        if (document.getElementById('srl-bulk-results-files').files.length === 0) {
+            alert('Por favor, selecciona al menos un archivo.');
             return;
         }
 
-        const eventId = $(this).data('event-id');
-        const nonce = $('#srl_event_actions_nonce').val();
+        bulkSpinner.addClass('is-active');
+        bulkResponseDiv.html('').hide();
+        $(this).find('input[type="submit"]').prop('disabled', true);
 
-        deleteSpinner.addClass('is-active');
-        deleteResponseDiv.html('').hide();
-        deleteBtn.prop('disabled', true);
+        const formData = new FormData(this);
+        formData.append('action', 'srl_bulk_upload_results');
+        formData.append('nonce', srl_ajax_object.nonce);
 
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_delete_event_results',
-                nonce: nonce,
-                event_id: eventId
-            },
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.success) {
-                    deleteResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
-                    // Opcional: Recargar la página para ver los cambios en la tabla de resultados
-                    setTimeout(function() { location.reload(); }, 2000);
+                    let logHtml = `<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div><h4>Registro de importación:</h4><ul style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px;">`;
+                    response.data.log.forEach(function(line) {
+                        const isError = line.startsWith('Error:');
+                        logHtml += `<li style="color: ${isError ? '#dc3545' : '#28a745'};">${line}</li>`;
+                    });
+                    logHtml += '</ul>';
+                    bulkResponseDiv.html(logHtml).show();
+                    bulkForm[0].reset();
                 } else {
-                    deleteResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                    bulkResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
                 }
             },
             error: function() {
-                deleteResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado.</div>').show();
+                bulkResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
             },
             complete: function() {
-                deleteSpinner.removeClass('is-active');
-                deleteBtn.prop('disabled', false);
+                bulkSpinner.removeClass('is-active');
+                bulkForm.find('input[type="submit"]').prop('disabled', false);
             }
         });
     });
