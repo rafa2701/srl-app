@@ -134,4 +134,47 @@ jQuery(document).ready(function($) {
             }
         });
     });
+     // --- NUEVO: Lógica para el botón de eliminar resultados ---
+    const deleteBtn = $('#srl-delete-results-btn');
+    const deleteSpinner = deleteBtn.next('.spinner');
+    const deleteResponseDiv = $('#srl-delete-response');
+
+    deleteBtn.on('click', function() {
+        if ( ! confirm('¡ATENCIÓN!\n\nEstás a punto de eliminar permanentemente todos los resultados de este evento.\n\n¿Estás seguro de que quieres continuar?') ) {
+            return;
+        }
+
+        const eventId = $(this).data('event-id');
+        const nonce = $('#srl_event_actions_nonce').val();
+
+        deleteSpinner.addClass('is-active');
+        deleteResponseDiv.html('').hide();
+        deleteBtn.prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_delete_event_results',
+                nonce: nonce,
+                event_id: eventId
+            },
+            success: function(response) {
+                if (response.success) {
+                    deleteResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
+                    // Opcional: Recargar la página para ver los cambios en la tabla de resultados
+                    setTimeout(function() { location.reload(); }, 2000);
+                } else {
+                    deleteResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                }
+            },
+            error: function() {
+                deleteResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado.</div>').show();
+            },
+            complete: function() {
+                deleteSpinner.removeClass('is-active');
+                deleteBtn.prop('disabled', false);
+            }
+        });
+    });
 });

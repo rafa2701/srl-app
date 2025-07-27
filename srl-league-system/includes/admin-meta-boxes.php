@@ -7,18 +7,29 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
-add_action( 'add_meta_boxes', 'srl_add_event_results_meta_box' );
+add_action( 'add_meta_boxes', 'srl_add_event_meta_boxes' );
 
 /**
- * Registra el meta box para mostrar los resultados en la página de edición de un evento.
+ * Registra todos los meta boxes para la pantalla de edición de un evento.
  */
-function srl_add_event_results_meta_box() {
+function srl_add_event_meta_boxes() {
+    // Meta Box para mostrar los resultados
     add_meta_box(
         'srl_event_results_viewer',
         'Resultados Importados',
         'srl_render_event_results_meta_box',
-        'srl_event', // CPT al que se aplica
+        'srl_event',
         'normal',
+        'high'
+    );
+
+    // NUEVO: Meta Box para acciones administrativas
+    add_meta_box(
+        'srl_event_actions',
+        'Acciones del Evento',
+        'srl_render_event_actions_meta_box',
+        'srl_event',
+        'side', // Lo colocamos en la barra lateral
         'high'
     );
 }
@@ -68,5 +79,23 @@ function srl_render_event_results_meta_box( $post ) {
             <?php endforeach; ?>
         </tbody>
     </table>
+    <?php
+}
+
+/**
+ * NUEVO: Renderiza el contenido del meta box de acciones del evento.
+ */
+function srl_render_event_actions_meta_box( $post ) {
+    // Añadir un nonce para seguridad
+    wp_nonce_field( 'srl_delete_event_results_nonce', 'srl_event_actions_nonce' );
+    ?>
+    <p>Usa este botón para eliminar permanentemente todos los resultados y sesiones asociadas a este evento.</p>
+    <p><strong>¡Esta acción no se puede deshacer!</strong></p>
+    
+    <button type="button" id="srl-delete-results-btn" class="button button-danger" data-event-id="<?php echo esc_attr( $post->ID ); ?>">
+        Eliminar Resultados
+    </button>
+    <span class="spinner" style="float: none; vertical-align: middle;"></span>
+    <div id="srl-delete-response" style="margin-top: 10px;"></div>
     <?php
 }

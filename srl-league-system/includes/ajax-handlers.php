@@ -12,6 +12,8 @@ add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
 add_action( 'wp_ajax_srl_recalculate_all_stats', 'srl_handle_recalculate_all_stats' );
 add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
 add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
+add_action( 'wp_ajax_srl_delete_event_results', 'srl_handle_delete_event_results' );
+
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -141,4 +143,40 @@ function srl_handle_get_achievement_details() {
         $achievements[] = [ 'name' => esc_html( $result->event_name ) . ' - <span class="srl-modal-champ-name">' . esc_html( $result->championship_name ) . '</span>', 'url'  => get_permalink($result->event_id) ];
     }
     wp_send_json_success( $achievements );
+}
+/**
+ * Maneja la eliminación de todos los resultados y sesiones de un evento.
+ */
+function srl_handle_delete_event_results() {
+    check_ajax_referer( 'srl_delete_event_results_nonce', 'nonce' );
+
+    if ( ! isset( $_POST['event_id'] ) || ! current_user_can('manage_options') ) {
+        wp_send_json_error( ['message' => 'Error: Faltan datos o no tienes permisos.'] );
+    }
+
+    global $wpdb;
+    $event_id = intval( $_POST['event_id'] );
+
+    // 1. Encontrar todas las sesiones para este evento
+    $session_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d", $event_id ) );
+
+    if ( ! empty( $session_ids ) ) {
+        $session_ids_placeholder = implode( ',', array_fill( 0, count( $session_ids ), '%d' ) );
+
+        // 2. Encontrar todos los pilotos afectados ANTES de borrar los resultados
+        $affected_drivers = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT driver_id FROM {$wpdb->prefix}srl_results WHERE session_id IN ($session_ids_placeholder)", $session_ids ) );
+
+        // 3. Borrar los resultados y las sesiones
+        $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_results WHERE session_id IN ($session_ids_placeholder)", $session_ids ) );
+        $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_sessions WHERE id IN ($session_ids_placeholder)", $session_ids ) );
+
+        // 4. Recalcular las estadísticas de los pilotos afectados
+        foreach ( $affected_drivers as $driver_id ) {
+            srl_update_driver_global_stats( $driver_id );
+        }
+        
+        wp_send_json_success( ['message' => 'Resultados eliminados. Se han actualizado las estadísticas de ' . count($affected_drivers) . ' pilotos.'] );
+    } else {
+        wp_send_json_success( ['message' => 'No había resultados que eliminar.'] );
+    }
 }
