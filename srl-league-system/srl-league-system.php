@@ -4,7 +4,7 @@
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
  * Version:           1.8.0
- * Author:            Tu Nombre / Gemini AI
+ * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -18,6 +18,12 @@ if ( ! defined( 'WPINC' ) ) die;
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SRL_PLUGIN_VERSION', '1.8.0' );
+
+// Cargar la librería PhpSpreadsheet
+if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
+    require_once SRL_PLUGIN_PATH . 'vendor/autoload.php';
+}
+
 
 // Hook de activación
 register_activation_hook( __FILE__, 'srl_activate_plugin' );

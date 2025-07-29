@@ -19,8 +19,9 @@ function srl_render_admin_page() {
         <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
         
         <h2 class="nav-tab-wrapper">
-            <a href="#manual-import" class="nav-tab nav-tab-active">Importación Manual</a>
+           <a href="#manual-import" class="nav-tab nav-tab-active">Importación Manual</a>
             <a href="#bulk-import" class="nav-tab">Importación en Lote (AC)</a>
+            <a href="#history-import" class="nav-tab">Importar Historial (XLSX)</a> <!-- NUEVA PESTAÑA -->
             <a href="#tools" class="nav-tab">Herramientas</a>
         </h2>
 
@@ -48,6 +49,19 @@ function srl_render_admin_page() {
                     <p><?php submit_button( 'Iniciar Importación en Lote', 'primary', 'srl-submit-bulk-results', false ); ?><span class="spinner" style="float: none; vertical-align: middle;"></span></p>
                 </form>
                 <div id="srl-bulk-response" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+        <!-- NUEVO: Pestaña para la importación histórica -->
+        <div id="history-import" class="srl-tab-content">
+            <div id="srl-history-upload-wrapper" style="max-width: 600px;">
+                <h2>Importar Archivo Histórico de Automobilista (.xlsx)</h2>
+                <p>Esta herramienta leerá un archivo .xlsx completo, creará todos los campeonatos, eventos y resultados históricos de Automobilista.</p>
+                <p><strong>Nota:</strong> Este proceso puede tardar varios minutos y no debe interrumpirse. Asegúrate de que el archivo tiene la estructura correcta ("Tablas de Orlando").</p>
+                <form id="srl-history-upload-form" method="post" enctype="multipart/form-data">
+                    <p><label><strong>1. Sube el archivo .xlsx completo:</strong><br><input type="file" name="history_file" id="srl-history-file" accept=".xlsx"></label></p>
+                    <p><?php submit_button( 'Iniciar Migración Histórica', 'primary', 'srl-submit-history', false ); ?><span class="spinner" style="float: none; vertical-align: middle;"></span></p>
+                </form>
+                <div id="srl-history-response" style="margin-top: 20px;"></div>
             </div>
         </div>
 

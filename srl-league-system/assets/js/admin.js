@@ -235,4 +235,55 @@ jQuery(document).ready(function($) {
             }
         });
     });
+      // --- NUEVO: Lógica para el formulario de migración histórica ---
+    const historyForm = $('#srl-history-upload-form');
+    const historySpinner = historyForm.find('.spinner');
+    const historyResponseDiv = $('#srl-history-response');
+
+    historyForm.on('submit', function(e) {
+        e.preventDefault();
+        
+        if (document.getElementById('srl-history-file').files.length === 0) {
+            alert('Por favor, selecciona un archivo .xlsx.');
+            return;
+        }
+
+        historySpinner.addClass('is-active');
+        historyResponseDiv.html('<p>Procesando archivo... Esto puede tardar varios minutos. Por favor, no cierres esta ventana.</p>').show();
+        $(this).find('input[type="submit"]').prop('disabled', true);
+
+        const formData = new FormData(this);
+        formData.append('action', 'srl_import_history_file');
+        formData.append('nonce', srl_ajax_object.nonce);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                let logHtml = `<h4>Registro de Migración:</h4><ul style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px;">`;
+                response.data.log.forEach(function(line) {
+                    const isError = line.startsWith('Error:');
+                    logHtml += `<li style="color: ${isError ? '#dc3545' : '#000'};">${line}</li>`;
+                });
+                logHtml += '</ul>';
+
+                if (response.success) {
+                    historyResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
+                } else {
+                    historyResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
+                }
+            },
+            error: function() {
+                historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor.</p></div>').show();
+            },
+            complete: function() {
+                historySpinner.removeClass('is-active');
+                historyForm.find('input[type="submit"]').prop('disabled', false);
+            }
+        });
+    });
+
 });

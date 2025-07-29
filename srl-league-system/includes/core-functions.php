@@ -7,6 +7,8 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
+
+
 /**
  * FUNCIÓN CENTRAL: Calcula la clasificación final de un campeonato con desempates.
  *
@@ -59,20 +61,24 @@ function srl_calculate_championship_standings( $championship_id ) {
 
     return $standings;
 }
+
 /**
- * NUEVO: Escribe un mensaje en un archivo de log personalizado.
+ * Escribe un mensaje en un archivo de log personalizado dentro de la carpeta /logs/ del plugin.
  *
  * @param string $message El mensaje a registrar.
+ * @param string $log_file_name El nombre del archivo de log (ej: 'recalculate.log').
  */
-function srl_write_to_log( $message ) {
-    // Asegurarse de que la constante del plugin está definida
-    if ( ! defined( 'SRL_PLUGIN_PATH' ) ) {
-        return;
+function srl_write_to_log( $message, $log_file_name = 'srl-main.log' ) {
+    if ( ! defined( 'SRL_PLUGIN_PATH' ) ) return;
+    
+    $log_dir = SRL_PLUGIN_PATH . 'logs';
+    if ( ! file_exists( $log_dir ) ) {
+        wp_mkdir_p( $log_dir );
     }
-    $log_file = SRL_PLUGIN_PATH . 'srl-recalculate.log';
+
+    $log_file = $log_dir . '/' . sanitize_file_name( $log_file_name );
     $timestamp = date("Y-m-d H:i:s");
-    // Formatear el mensaje con la fecha y un salto de línea
     $formatted_message = "[" . $timestamp . "] " . print_r($message, true) . "\n";
-    // Añadir el mensaje al final del archivo
+    
     file_put_contents( $log_file, $formatted_message, FILE_APPEND );
 }

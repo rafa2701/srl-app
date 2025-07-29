@@ -7,6 +7,12 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
+// CORRECCIÓN: Incluir los archivos con las funciones necesarias al principio del archivo.
+// Esto asegura que las funciones estén disponibles durante las llamadas AJAX.
+// require_once SRL_PLUGIN_PATH . 'includes/core-functions.php';
+require_once SRL_PLUGIN_PATH . 'includes/data-importers/assetto-parser.php';
+
+
 add_action( 'wp_ajax_srl_upload_results_file', 'srl_handle_results_upload' );
 add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
 add_action( 'wp_ajax_srl_recalculate_all_stats', 'srl_handle_recalculate_all_stats' );
@@ -14,6 +20,7 @@ add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_d
 add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
 add_action( 'wp_ajax_srl_delete_event_results', 'srl_handle_delete_event_results' );
 add_action( 'wp_ajax_srl_bulk_upload_results', 'srl_handle_bulk_upload' );
+add_action( 'wp_ajax_srl_import_history_file', 'srl_handle_history_import' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -253,4 +260,25 @@ function srl_handle_bulk_upload() {
     }
 
     wp_send_json_success( ['message' => 'Proceso completado.', 'log' => $log] );
+}
+
+function srl_handle_history_import() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( empty( $_FILES['history_file'] ) ) {
+        wp_send_json_error( ['message' => 'No se ha subido ningún archivo.'] );
+    }
+    
+    // Aumentar el límite de tiempo de ejecución para este proceso
+    set_time_limit(300); // 5 minutos
+
+    $file = $_FILES['history_file'];
+    
+    // Llamar a la función principal del parser de Automobilista
+    $result = srl_parse_automobilista_history_file( $file['tmp_name'] );
+
+    if ( $result['status'] === 'success' ) {
+        wp_send_json_success( ['message' => 'Migración completada.', 'log' => $result['log']] );
+    } else {
+        wp_send_json_error( ['message' => 'Ocurrió un error durante la migración.', 'log' => $result['log']] );
+    }
 }
