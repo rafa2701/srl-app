@@ -54,5 +54,6 @@ function srl_driver_results_table( $driver_id ) {
 
     ob_start();
     ?>
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-       
+    <table class="min-w-full divide-y divide-gray-200 text-sm"> 
+        <?php
+    }
