@@ -32,6 +32,15 @@ function srl_add_event_meta_boxes() {
         'side', // Lo colocamos en la barra lateral
         'high'
     );
+    // NUEVO: Meta Box para acciones en la vista de Campeonato
+    add_meta_box(
+        'srl_championship_actions',
+        'Acciones del Campeonato',
+        'srl_render_championship_actions_meta_box',
+        'srl_championship', // Aplicar al CPT de Campeonatos
+        'side',
+        'high'
+    );
 }
 
 /**
@@ -97,5 +106,21 @@ function srl_render_event_actions_meta_box( $post ) {
     </button>
     <span class="spinner" style="float: none; vertical-align: middle;"></span>
     <div id="srl-delete-response" style="margin-top: 10px;"></div>
+    <?php
+}
+/**
+ * NUEVO: Renderiza el contenido del meta box de acciones del campeonato.
+ */
+function srl_render_championship_actions_meta_box( $post ) {
+    wp_nonce_field( 'srl_recalculate_points_nonce', 'srl_championship_actions_nonce' );
+    ?>
+    <p>Usa este botón si has cambiado el sistema de puntuación y necesitas actualizar los puntos de todos los eventos de este campeonato.</p>
+    <p><strong>Nota:</strong> Esto también recalculará las estadísticas globales de los pilotos afectados.</p>
+    
+    <button type="button" id="srl-recalculate-points-btn" class="button button-secondary" data-championship-id="<?php echo esc_attr( $post->ID ); ?>">
+        Recalcular Puntos
+    </button>
+    <span class="spinner" style="float: none; vertical-align: middle;"></span>
+    <div id="srl-recalculate-points-response" style="margin-top: 10px;"></div>
     <?php
 }

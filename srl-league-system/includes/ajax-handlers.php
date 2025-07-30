@@ -22,6 +22,7 @@ add_action( 'wp_ajax_srl_delete_event_results', 'srl_handle_delete_event_results
 add_action( 'wp_ajax_srl_bulk_upload_results', 'srl_handle_bulk_upload' );
 add_action( 'wp_ajax_srl_import_history_file', 'srl_handle_history_import' );
 add_action( 'wp_ajax_srl_cleanup_orphan_results', 'srl_handle_cleanup_orphans' );
+add_action( 'wp_ajax_srl_recalculate_championship_points', 'srl_handle_recalculate_championship_points' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -309,4 +310,58 @@ function srl_handle_cleanup_orphans() {
     $sessions_deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_sessions WHERE id IN ($ids_placeholder)", $orphan_session_ids ) );
 
     wp_send_json_success( ['message' => "Limpieza completada. Se eliminaron {$sessions_deleted} sesiones y {$results_deleted} resultados huérfanos."] );
+}
+/**
+ * Maneja el recálculo de puntos para todos los eventos de un campeonato.
+ */
+function srl_handle_recalculate_championship_points() {
+    check_ajax_referer( 'srl_recalculate_points_nonce', 'nonce' );
+
+    if ( ! isset( $_POST['championship_id'] ) || ! current_user_can('manage_options') ) {
+        wp_send_json_error( ['message' => 'Error: Faltan datos o no tienes permisos.'] );
+    }
+
+    $championship_id = intval( $_POST['championship_id'] );
+    
+    // Obtener las nuevas reglas de puntuación
+    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
+    $scoring_rules = json_decode( $scoring_rules_json, true );
+    $points_map = $scoring_rules['points'] ?? [];
+    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
+    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+
+    global $wpdb;
+    
+    // Encontrar todos los eventos y resultados de este campeonato
+    $event_ids = get_posts(['post_type' => 'srl_event', 'meta_key' => '_srl_parent_championship', 'meta_value' => $championship_id, 'posts_per_page' => -1, 'fields' => 'ids']);
+    
+    if ( empty($event_ids) ) {
+        wp_send_json_success( ['message' => 'Este campeonato no tiene eventos para recalcular.'] );
+    }
+
+    $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
+    $results = $wpdb->get_results( $wpdb->prepare( "SELECT id, position, has_pole, has_fastest_lap, driver_id FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder)", $event_ids ) );
+
+    $affected_drivers = [];
+    foreach ( $results as $result ) {
+        $points_awarded = 0;
+        $points_awarded += ($points_map[ $result->position ] ?? 0);
+        if ( $result->has_pole ) $points_awarded += $bonus_pole;
+        if ( $result->has_fastest_lap ) $points_awarded += $bonus_fastest_lap;
+
+        $wpdb->update(
+            $wpdb->prefix . 'srl_results',
+            [ 'points_awarded' => $points_awarded ],
+            [ 'id' => $result->id ]
+        );
+        $affected_drivers[] = $result->driver_id;
+    }
+
+    // Recalcular las estadísticas globales de los pilotos afectados
+    $unique_affected_drivers = array_unique($affected_drivers);
+    foreach ( $unique_affected_drivers as $driver_id ) {
+        srl_update_driver_global_stats( $driver_id );
+    }
+
+    wp_send_json_success( ['message' => count($results) . ' resultados actualizados. Se recalcularon las estadísticas de ' . count($unique_affected_drivers) . ' pilotos.'] );
 }

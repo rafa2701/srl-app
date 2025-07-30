@@ -99,6 +99,118 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // --- Lógica para el formulario de importación en lote ---
+    const bulkForm = $('#srl-bulk-upload-form');
+    const bulkSpinner = bulkForm.find('.spinner');
+    const bulkResponseDiv = $('#srl-bulk-response');
+
+    bulkForm.on('submit', function(e) {
+        e.preventDefault();
+        
+        const championshipId = $('#srl-bulk-championship-select').val();
+        if (!championshipId) {
+            alert('Por favor, selecciona un campeonato.');
+            return;
+        }
+        if (document.getElementById('srl-bulk-results-files').files.length === 0) {
+            alert('Por favor, selecciona al menos un archivo.');
+            return;
+        }
+
+        bulkSpinner.addClass('is-active');
+        bulkResponseDiv.html('').hide();
+        $(this).find('input[type="submit"]').prop('disabled', true);
+
+        const formData = new FormData(this);
+        formData.append('action', 'srl_bulk_upload_results');
+        formData.append('nonce', srl_ajax_object.nonce);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    let logHtml = `<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div><h4>Registro de importación:</h4><ul style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px;">`;
+                    response.data.log.forEach(function(line) {
+                        const isError = line.startsWith('Error:');
+                        logHtml += `<li style="color: ${isError ? '#dc3545' : '#28a745'};">${line}</li>`;
+                    });
+                    logHtml += '</ul>';
+                    bulkResponseDiv.html(logHtml).show();
+                    bulkForm[0].reset();
+                } else {
+                    bulkResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
+                }
+            },
+            error: function() {
+                bulkResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
+            },
+            complete: function() {
+                bulkSpinner.removeClass('is-active');
+                bulkForm.find('input[type="submit"]').prop('disabled', false);
+            }
+        });
+    });
+
+    // --- Lógica para el formulario de migración histórica ---
+    const historyForm = $('#srl-history-upload-form');
+    const historySpinner = historyForm.find('.spinner');
+    const historyResponseDiv = $('#srl-history-response');
+
+    historyForm.on('submit', function(e) {
+        e.preventDefault();
+        
+        if (document.getElementById('srl-history-file').files.length === 0) {
+            alert('Por favor, selecciona un archivo .xlsx.');
+            return;
+        }
+
+        historySpinner.addClass('is-active');
+        historyResponseDiv.html('<p>Procesando archivo... Esto puede tardar varios minutos. Por favor, no cierres esta ventana.</p>').show();
+        $(this).find('input[type="submit"]').prop('disabled', true);
+
+        const formData = new FormData(this);
+        formData.append('action', 'srl_import_history_file');
+        formData.append('nonce', srl_ajax_object.nonce);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                let logHtml = `<h4>Registro de Migración:</h4><div style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px; white-space: pre-wrap;">`;
+                if (typeof response.data.log === 'string') {
+                    const logLines = response.data.log.split('\n');
+                    logLines.forEach(function(line) {
+                        if (line.trim() !== '') {
+                            const isError = line.toLowerCase().includes('error:') || line.toLowerCase().includes('advertencia:');
+                            logHtml += `<div style="color: ${isError ? '#dc3545' : '#000'};">${line}</div>`;
+                        }
+                    });
+                }
+                logHtml += '</div>';
+
+                if (response.success) {
+                    historyResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
+                } else {
+                    historyResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
+                }
+            },
+            error: function() {
+                historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor. Revisa el archivo de log en el plugin para más detalles.</p></div>').show();
+            },
+            complete: function() {
+                historySpinner.removeClass('is-active');
+                historyForm.find('input[type="submit"]').prop('disabled', false);
+            }
+        });
+    });
+
     // --- Lógica para el botón de eliminar resultados ---
     const deleteBtn = $('#srl-delete-results-btn');
     const deleteSpinner = deleteBtn.next('.spinner');
@@ -180,118 +292,7 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // --- Lógica para el formulario de importación en lote ---
-    const bulkForm = $('#srl-bulk-upload-form');
-    const bulkSpinner = bulkForm.find('.spinner');
-    const bulkResponseDiv = $('#srl-bulk-response');
-
-    bulkForm.on('submit', function(e) {
-        e.preventDefault();
-        
-        const championshipId = $('#srl-bulk-championship-select').val();
-        if (!championshipId) {
-            alert('Por favor, selecciona un campeonato.');
-            return;
-        }
-        if (document.getElementById('srl-bulk-results-files').files.length === 0) {
-            alert('Por favor, selecciona al menos un archivo.');
-            return;
-        }
-
-        bulkSpinner.addClass('is-active');
-        bulkResponseDiv.html('').hide();
-        $(this).find('input[type="submit"]').prop('disabled', true);
-
-        const formData = new FormData(this);
-        formData.append('action', 'srl_bulk_upload_results');
-        formData.append('nonce', srl_ajax_object.nonce);
-
-        $.ajax({
-            url: srl_ajax_object.ajax_url,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    let logHtml = `<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div><h4>Registro de importación:</h4><ul style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px;">`;
-                    response.data.log.forEach(function(line) {
-                        const isError = line.startsWith('Error:');
-                        logHtml += `<li style="color: ${isError ? '#dc3545' : '#28a745'};">${line}</li>`;
-                    });
-                    logHtml += '</ul>';
-                    bulkResponseDiv.html(logHtml).show();
-                    bulkForm[0].reset();
-                } else {
-                    bulkResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
-                }
-            },
-            error: function() {
-                bulkResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
-            },
-            complete: function() {
-                bulkSpinner.removeClass('is-active');
-                bulkForm.find('input[type="submit"]').prop('disabled', false);
-            }
-        });
-    });
-    // --- Lógica para el formulario de migración histórica ---
-    const historyForm = $('#srl-history-upload-form');
-    const historySpinner = historyForm.find('.spinner');
-    const historyResponseDiv = $('#srl-history-response');
-
-    historyForm.on('submit', function(e) {
-        e.preventDefault();
-        
-        if (document.getElementById('srl-history-file').files.length === 0) {
-            alert('Por favor, selecciona un archivo .xlsx.');
-            return;
-        }
-
-        historySpinner.addClass('is-active');
-        historyResponseDiv.html('<p>Procesando archivo... Esto puede tardar varios minutos. Por favor, no cierres esta ventana.</p>').show();
-        $(this).find('input[type="submit"]').prop('disabled', true);
-
-        const formData = new FormData(this);
-        formData.append('action', 'srl_import_history_file');
-        formData.append('nonce', srl_ajax_object.nonce);
-
-        $.ajax({
-            url: srl_ajax_object.ajax_url,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                // CORRECCIÓN: Procesar el log como un string y dividirlo en líneas
-                let logHtml = `<h4>Registro de Migración:</h4><ul style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px;">`;
-                if (typeof response.data.log === 'string') {
-                    const logLines = response.data.log.split('\n');
-                    logLines.forEach(function(line) {
-                        if (line.trim() !== '') {
-                            const isError = line.toLowerCase().includes('error:') || line.toLowerCase().includes('advertencia:');
-                            logHtml += `<li style="color: ${isError ? '#dc3545' : '#000'};">${line}</li>`;
-                        }
-                    });
-                }
-                logHtml += '</ul>';
-
-                if (response.success) {
-                    historyResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
-                } else {
-                    historyResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
-                }
-            },
-            error: function() {
-                historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor. Revisa el archivo de log en el plugin para más detalles.</p></div>').show();
-            },
-            complete: function() {
-                historySpinner.removeClass('is-active');
-                historyForm.find('input[type="submit"]').prop('disabled', false);
-            }
-        });
-    });
-    // --- NUEVO: Lógica para el botón de limpiar huérfanos ---
+    // --- Lógica para el botón de limpiar huérfanos ---
     const cleanupBtn = $('#srl-cleanup-orphans-btn');
     const cleanupSpinner = cleanupBtn.next('.spinner');
     const cleanupResponseDiv = $('#srl-cleanup-response');
@@ -328,4 +329,45 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // --- Lógica para el botón de recalcular puntos de un campeonato ---
+    const recalcPointsBtn = $('#srl-recalculate-points-btn');
+    const recalcPointsSpinner = recalcPointsBtn.next('.spinner');
+    const recalcPointsResponseDiv = $('#srl-recalculate-points-response');
+
+    recalcPointsBtn.on('click', function() {
+        if ( ! confirm('Esto recalculará los puntos para TODOS los eventos de este campeonato usando las reglas de puntuación guardadas actualmente. ¿Estás seguro?') ) {
+            return;
+        }
+
+        const championshipId = $(this).data('championship-id');
+        const nonce = $('#srl_championship_actions_nonce').val();
+
+        recalcPointsSpinner.addClass('is-active');
+        recalcPointsResponseDiv.html('').hide();
+        recalcPointsBtn.prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_recalculate_championship_points',
+                nonce: nonce,
+                championship_id: championshipId
+            },
+            success: function(response) {
+                if (response.success) {
+                    recalcPointsResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
+                } else {
+                    recalcPointsResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                }
+            },
+            error: function() {
+                recalcPointsResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado.</div>').show();
+            },
+            complete: function() {
+                recalcPointsSpinner.removeClass('is-active');
+                recalcPointsBtn.prop('disabled', false);
+            }
+        });
+    });
 });
