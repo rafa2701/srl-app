@@ -90,3 +90,35 @@ function srl_include_template_function( $template ) {
 }
 add_filter( 'template_include', 'srl_include_template_function', 1 );
 
+/**
+ * NUEVO: Se activa antes de que un post sea eliminado.
+ * Limpia los resultados, sesiones y recalcula stats si el post es un Evento.
+ */
+function srl_cleanup_on_event_delete( $post_id ) {
+    if ( get_post_type( $post_id ) !== 'srl_event' ) {
+        return;
+    }
+
+    global $wpdb;
+    $event_id = $post_id;
+
+    // 1. Encontrar todas las sesiones para este evento
+    $session_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d", $event_id ) );
+
+    if ( ! empty( $session_ids ) ) {
+        $session_ids_placeholder = implode( ',', array_fill( 0, count( $session_ids ), '%d' ) );
+
+        // 2. Encontrar todos los pilotos afectados ANTES de borrar
+        $affected_drivers = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT driver_id FROM {$wpdb->prefix}srl_results WHERE session_id IN ($session_ids_placeholder)", $session_ids ) );
+
+        // 3. Borrar los resultados y las sesiones
+        $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_results WHERE session_id IN ($session_ids_placeholder)", $session_ids ) );
+        $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_sessions WHERE id IN ($session_ids_placeholder)", $session_ids ) );
+
+        // 4. Recalcular las estadísticas de los pilotos afectados
+        foreach ( $affected_drivers as $driver_id ) {
+            srl_update_driver_global_stats( $driver_id );
+        }
+    }
+}
+add_action( 'before_delete_post', 'srl_cleanup_on_event_delete' );

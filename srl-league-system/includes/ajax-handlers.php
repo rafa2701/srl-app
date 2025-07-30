@@ -21,6 +21,7 @@ add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achiev
 add_action( 'wp_ajax_srl_delete_event_results', 'srl_handle_delete_event_results' );
 add_action( 'wp_ajax_srl_bulk_upload_results', 'srl_handle_bulk_upload' );
 add_action( 'wp_ajax_srl_import_history_file', 'srl_handle_history_import' );
+add_action( 'wp_ajax_srl_cleanup_orphan_results', 'srl_handle_cleanup_orphans' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -281,4 +282,31 @@ function srl_handle_history_import() {
     } else {
         wp_send_json_error( ['message' => 'Ocurrió un error durante la migración.', 'log' => $result['log']] );
     }
+}
+function srl_handle_cleanup_orphans() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! current_user_can('manage_options') ) {
+        wp_send_json_error( ['message' => 'No tienes permisos.'] );
+    }
+
+    global $wpdb;
+    // Encontrar IDs de sesiones cuyo event_id no existe en la tabla de posts
+    $orphan_sessions_query = "
+        SELECT s.id FROM {$wpdb->prefix}srl_sessions s
+        LEFT JOIN {$wpdb->prefix}posts p ON s.event_id = p.ID
+        WHERE p.ID IS NULL
+    ";
+    $orphan_session_ids = $wpdb->get_col($orphan_sessions_query);
+
+    if ( empty($orphan_session_ids) ) {
+        wp_send_json_success( ['message' => 'No se encontraron resultados huérfanos. ¡La base de datos está limpia!'] );
+    }
+
+    $ids_placeholder = implode( ',', array_fill( 0, count( $orphan_session_ids ), '%d' ) );
+    
+    // Borrar resultados y sesiones huérfanas
+    $results_deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_results WHERE session_id IN ($ids_placeholder)", $orphan_session_ids ) );
+    $sessions_deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}srl_sessions WHERE id IN ($ids_placeholder)", $orphan_session_ids ) );
+
+    wp_send_json_success( ['message' => "Limpieza completada. Se eliminaron {$sessions_deleted} sesiones y {$results_deleted} resultados huérfanos."] );
 }

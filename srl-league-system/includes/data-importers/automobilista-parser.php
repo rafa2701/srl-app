@@ -11,9 +11,6 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 /**
  * Función principal para procesar el archivo histórico completo de Automobilista.
- *
- * @param string $file_path La ruta temporal del archivo .xlsx subido.
- * @return array Un array con el estado y el registro de la migración.
  */
 function srl_parse_automobilista_history_file( $file_path ) {
     $log_file = 'history-import-' . date('Y-m-d_H-i-s') . '.log';
@@ -27,7 +24,6 @@ function srl_parse_automobilista_history_file( $file_path ) {
         $all_affected_drivers = [];
         global $wpdb;
 
-        // 1. Identificar y procesar cada campeonato
         foreach ( $sheet_names as $sheet_name ) {
             if ( strpos( strtolower($sheet_name), 'temporada' ) === 0 ) {
                 srl_write_to_log("Procesando hoja de campeonato: {$sheet_name}", $log_file);
@@ -53,7 +49,6 @@ function srl_parse_automobilista_history_file( $file_path ) {
 
                 srl_write_to_log("Campeonato '{$champ_name}' (ID: {$championship_id}) creado.", $log_file);
 
-                // 2. Leer los eventos de la hoja de temporada de forma más eficiente
                 $worksheet = $spreadsheet->getSheetByName($sheet_name);
                 $events_data = [];
                 $highest_row = $worksheet->getHighestRow();
@@ -78,7 +73,6 @@ function srl_parse_automobilista_history_file( $file_path ) {
                 }
                 srl_write_to_log("Se encontraron " . count($events_data) . " eventos para el campeonato '{$champ_name}'.", $log_file);
 
-                // 3. Procesar las hojas de resultados para este campeonato
                 foreach ($events_data as $round => $event_info) {
                     $event_sheet_name = srl_find_event_sheet($sheet_names, $round, $champ_name);
                     if ($event_sheet_name) {
@@ -91,7 +85,6 @@ function srl_parse_automobilista_history_file( $file_path ) {
             }
         }
 
-        // 4. Recálculo final
         $unique_affected_drivers = array_unique($all_affected_drivers);
         srl_write_to_log('Recalculando estadísticas para ' . count($unique_affected_drivers) . ' pilotos afectados.', $log_file);
         foreach ($unique_affected_drivers as $driver_id) {
@@ -125,6 +118,14 @@ function srl_parse_automobilista_history_file( $file_path ) {
  */
 function srl_process_event_sheet($worksheet, $championship_id, $event_info, $round, $log_file) {
     global $wpdb;
+
+    // --- OBTENER REGLAS DE PUNTUACIÓN ---
+    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
+    $scoring_rules = json_decode( $scoring_rules_json, true );
+    $points_map = $scoring_rules['points'] ?? [];
+    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
+    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+
     $event_title = "R{$round}: {$event_info['circuit']} - (" . date('d/m/Y', strtotime($event_info['date'])) . ")";
     $event_id = wp_insert_post([
         'post_title'  => $event_title,
@@ -161,17 +162,35 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
         }
     }
 
+    // Calcular Grid Position basado en la mejor vuelta
+    uasort($results_data, function($a, $b) {
+        if ($a['best_lap_time'] == 0) return 1;
+        if ($b['best_lap_time'] == 0) return -1;
+        return $a['best_lap_time'] <=> $b['best_lap_time'];
+    });
+    
+    $grid_pos_counter = 1;
+    foreach ($results_data as $name_key => &$data) {
+        $data['grid_position'] = $grid_pos_counter++;
+    }
+    unset($data);
+
     foreach ($results_data as $name_key => $data) {
         $driver_id = srl_ams_get_or_create_driver_by_name($data['original_name']);
         if (!$driver_id) continue;
         $affected_drivers[] = $driver_id;
         
-        $grid_pos = $data['has_pole'] ? 1 : $data['position'];
+        // --- CÁLCULO DE PUNTOS ---
+        $points_awarded = 0;
+        $points_awarded += ($points_map[ $data['position'] ] ?? 0);
+        if ($data['has_pole']) $points_awarded += $bonus_pole;
+        if ($data['has_fastest_lap']) $points_awarded += $bonus_fastest_lap;
 
         $wpdb->insert($wpdb->prefix . 'srl_results', [
-            'session_id' => $session_id, 'driver_id' => $driver_id, 'position' => $data['position'], 'grid_position' => $grid_pos,
+            'session_id' => $session_id, 'driver_id' => $driver_id, 'position' => $data['position'], 'grid_position' => $data['grid_position'],
             'has_pole' => $data['has_pole'], 'has_fastest_lap' => $data['has_fastest_lap'], 'best_lap_time' => $data['best_lap_time'],
-            'total_time' => $data['total_time'], 'is_dnf' => ($data['total_time'] == 0)
+            'total_time' => $data['total_time'], 'is_dnf' => ($data['total_time'] == 0),
+            'points_awarded' => $points_awarded
         ]);
     }
     return $affected_drivers;

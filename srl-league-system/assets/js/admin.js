@@ -235,7 +235,7 @@ jQuery(document).ready(function($) {
             }
         });
     });
-      // --- NUEVO: Lógica para el formulario de migración histórica ---
+    // --- Lógica para el formulario de migración histórica ---
     const historyForm = $('#srl-history-upload-form');
     const historySpinner = historyForm.find('.spinner');
     const historyResponseDiv = $('#srl-history-response');
@@ -263,11 +263,17 @@ jQuery(document).ready(function($) {
             processData: false,
             contentType: false,
             success: function(response) {
+                // CORRECCIÓN: Procesar el log como un string y dividirlo en líneas
                 let logHtml = `<h4>Registro de Migración:</h4><ul style="font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ccd0d4; padding: 10px;">`;
-                response.data.log.forEach(function(line) {
-                    const isError = line.startsWith('Error:');
-                    logHtml += `<li style="color: ${isError ? '#dc3545' : '#000'};">${line}</li>`;
-                });
+                if (typeof response.data.log === 'string') {
+                    const logLines = response.data.log.split('\n');
+                    logLines.forEach(function(line) {
+                        if (line.trim() !== '') {
+                            const isError = line.toLowerCase().includes('error:') || line.toLowerCase().includes('advertencia:');
+                            logHtml += `<li style="color: ${isError ? '#dc3545' : '#000'};">${line}</li>`;
+                        }
+                    });
+                }
                 logHtml += '</ul>';
 
                 if (response.success) {
@@ -277,11 +283,47 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function() {
-                historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor.</p></div>').show();
+                historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor. Revisa el archivo de log en el plugin para más detalles.</p></div>').show();
             },
             complete: function() {
                 historySpinner.removeClass('is-active');
                 historyForm.find('input[type="submit"]').prop('disabled', false);
+            }
+        });
+    });
+    // --- NUEVO: Lógica para el botón de limpiar huérfanos ---
+    const cleanupBtn = $('#srl-cleanup-orphans-btn');
+    const cleanupSpinner = cleanupBtn.next('.spinner');
+    const cleanupResponseDiv = $('#srl-cleanup-response');
+
+    cleanupBtn.on('click', function() {
+        if ( ! confirm('¿Estás seguro de que quieres buscar y eliminar resultados huérfanos? Esta acción no se puede deshacer.') ) {
+            return;
+        }
+        cleanupSpinner.addClass('is-active');
+        cleanupResponseDiv.html('').hide();
+        cleanupBtn.prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_cleanup_orphan_results',
+                nonce: srl_ajax_object.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    cleanupResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show();
+                } else {
+                    cleanupResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
+                }
+            },
+            error: function() {
+                cleanupResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
+            },
+            complete: function() {
+                cleanupSpinner.removeClass('is-active');
+                cleanupBtn.prop('disabled', false);
             }
         });
     });
