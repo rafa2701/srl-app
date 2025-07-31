@@ -125,6 +125,8 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
     $points_map = $scoring_rules['points'] ?? [];
     $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
     $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+    // Obtener la regla de % de vueltas
+    $min_lap_percentage = $scoring_rules['rules']['min_lap_percentage_for_points'] ?? 0;
 
     $event_title = "R{$round}: {$event_info['circuit']} - (" . date('d/m/Y', strtotime($event_info['date'])) . ")";
     $event_id = wp_insert_post([
@@ -142,6 +144,7 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
 
     $results_data = [];
     $affected_drivers = [];
+    $winner_laps = 0;
     for ($row_index = 2; $row_index <= $worksheet->getHighestRow(); $row_index++) {
         $driver_name = trim($worksheet->getCell('C' . $row_index)->getValue());
         if (empty($driver_name)) continue;
@@ -151,14 +154,18 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
         $vr = (int)$worksheet->getCell('H' . $row_index)->getValue() === 1;
         $best_lap = srl_ams_parse_time_to_ms($worksheet->getCell('I' . $row_index)->getValue());
         $total_time = srl_ams_parse_time_to_ms($worksheet->getCell('K' . $row_index)->getValue());
+        $laps = (int)$worksheet->getCell('J' . $row_index)->getValue();
+        if ($pos == 1) {
+            $winner_laps = $laps;
+        }
         
         $driver_name_key = strtolower($driver_name);
         if (isset($results_data[$driver_name_key])) {
             if ($pos < $results_data[$driver_name_key]['position']) {
-                $results_data[$driver_name_key] = ['original_name' => $driver_name, 'position' => $pos, 'has_pole' => $pole, 'has_fastest_lap' => $vr, 'best_lap_time' => $best_lap, 'total_time' => $total_time];
+                $results_data[$driver_name_key] = ['original_name' => $driver_name, 'position' => $pos, 'has_pole' => $pole, 'has_fastest_lap' => $vr, 'best_lap_time' => $best_lap, 'total_time' => $total_time, 'laps_completed' => $laps];
             }
         } else {
-            $results_data[$driver_name_key] = ['original_name' => $driver_name, 'position' => $pos, 'has_pole' => $pole, 'has_fastest_lap' => $vr, 'best_lap_time' => $best_lap, 'total_time' => $total_time];
+            $results_data[$driver_name_key] = ['original_name' => $driver_name, 'position' => $pos, 'has_pole' => $pole, 'has_fastest_lap' => $vr, 'best_lap_time' => $best_lap, 'total_time' => $total_time, 'laps_completed' => $laps];
         }
     }
 
@@ -181,16 +188,29 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
         $affected_drivers[] = $driver_id;
         
         // --- CÁLCULO DE PUNTOS ---
-        $points_awarded = 0;
-        $points_awarded += ($points_map[ $data['position'] ] ?? 0);
-        if ($data['has_pole']) $points_awarded += $bonus_pole;
-        if ($data['has_fastest_lap']) $points_awarded += $bonus_fastest_lap;
+         $points_awarded = 0;
+        $is_dnf = ($data['total_time'] == 0);
+        $can_score = !$is_dnf;
+
+        if ($is_dnf && $min_lap_percentage > 0 && $winner_laps > 0) {
+            $lap_percentage = ($data['laps'] / $winner_laps) * 100;
+            if ($lap_percentage >= $min_lap_percentage) {
+                $can_score = true;
+            }
+        }
+
+        if ($can_score) {
+            $points_awarded += ($points_map[ $data['position'] ] ?? 0);
+            if ($data['has_pole']) $points_awarded += $bonus_pole;
+            if ($data['has_fastest_lap']) $points_awarded += $bonus_fastest_lap;
+        }
 
         $wpdb->insert($wpdb->prefix . 'srl_results', [
             'session_id' => $session_id, 'driver_id' => $driver_id, 'position' => $data['position'], 'grid_position' => $data['grid_position'],
             'has_pole' => $data['has_pole'], 'has_fastest_lap' => $data['has_fastest_lap'], 'best_lap_time' => $data['best_lap_time'],
             'total_time' => $data['total_time'], 'is_dnf' => ($data['total_time'] == 0),
-            'points_awarded' => $points_awarded
+            'points_awarded' => $points_awarded, 'laps_completed' => $data['laps'],
+            'is_dnf' => $is_dnf
         ]);
     }
     return $affected_drivers;

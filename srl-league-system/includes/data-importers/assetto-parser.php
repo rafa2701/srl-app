@@ -36,6 +36,14 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
             }
         }
     }
+    // Obtener la regla de % de vueltas
+    $min_lap_percentage = $scoring_rules['rules']['min_lap_percentage_for_points'] ?? 0;
+     // Encontrar las vueltas del ganador
+    $winner_laps = 0;
+    if (!empty($data['Result'])) {
+        $winner_guid = $data['Result'][0]['DriverGuid'];
+        $winner_laps = count( array_filter($data['Laps'], fn($lap) => $lap['DriverGuid'] === $winner_guid) );
+    }
 
     if ( empty( $data['Result'] ) ) {
         return ['status' => 'error', 'message' => 'El archivo JSON no contiene la sección "Result".'];
@@ -51,14 +59,24 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
         
         $processed_drivers[] = $driver_id;
 
-        // --- CALCULAR PUNTOS ---
+        $laps_completed = count( array_filter($data['Laps'], fn($lap) => $lap['DriverGuid'] === $driver_guid) );
+        $is_dnf = ( $result_item['TotalTime'] == 0 );
+
+        // --- LÓGICA DE PUNTOS CON REGLA DE DNF ---
         $points_awarded = 0;
-        $has_pole = ( $result_item['GridPosition'] == 1 );
-        $has_fastest_lap = ( $driver_guid === $fastest_lap_driver_guid );
+        $can_score = !$is_dnf;
+        if ($is_dnf && $min_lap_percentage > 0 && $winner_laps > 0) {
+            $lap_percentage = ($laps_completed / $winner_laps) * 100;
+            if ($lap_percentage >= $min_lap_percentage) {
+                $can_score = true;
+            }
+        }
         
-        $points_awarded += ($points_map[ $position ] ?? 0);
-        if ($has_pole) $points_awarded += $bonus_pole;
-        if ($has_fastest_lap) $points_awarded += $bonus_fastest_lap;
+        if ($can_score) {
+            $points_awarded += ($points_map[ $position ] ?? 0);
+            if ($has_pole) $points_awarded += $bonus_pole;
+            if ($has_fastest_lap) $points_awarded += $bonus_fastest_lap;
+        }
 
         $result_data = [
             'session_id'      => $session_id,
@@ -69,11 +87,11 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
             'grid_position'   => $result_item['GridPosition'],
             'best_lap_time'   => $result_item['BestLap'],
             'total_time'      => $result_item['TotalTime'],
-            'laps_completed'  => count( array_filter($data['Laps'], fn($lap) => $lap['DriverGuid'] === $driver_guid) ),
             'has_pole'        => $has_pole,
             'has_fastest_lap' => $has_fastest_lap,
-            'is_dnf'          => ( $result_item['TotalTime'] == 0 ),
-            'points_awarded'  => $points_awarded, // <-- PUNTOS GUARDADOS
+            'laps_completed'  => $laps_completed,
+            'is_dnf'          => $is_dnf,
+            'points_awarded'  => $points_awarded,
         ];
         
         $wpdb->replace( $wpdb->prefix . 'srl_results', $result_data );
