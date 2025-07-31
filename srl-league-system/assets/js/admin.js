@@ -328,8 +328,7 @@ jQuery(document).ready(function($) {
             }
         });
     });
-
-    // --- Lógica para el botón de recalcular puntos de un campeonato ---
+ // --- Lógica para el botón de recalcular puntos de un campeonato ---
     const recalcPointsBtn = $('#srl-recalculate-points-btn');
     const recalcPointsSpinner = recalcPointsBtn.next('.spinner');
     const recalcPointsResponseDiv = $('#srl-recalculate-points-response');
@@ -355,14 +354,21 @@ jQuery(document).ready(function($) {
                 championship_id: championshipId
             },
             success: function(response) {
-                if (response.success) {
-                    recalcPointsResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
+                // CORRECCIÓN: Añadir validación para la respuesta del servidor
+                if (response && response.data && response.data.message) {
+                    if (response.success) {
+                        recalcPointsResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
+                    } else {
+                        recalcPointsResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                    }
                 } else {
-                    recalcPointsResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                    // Si la respuesta no tiene el formato esperado, mostrar un error genérico y registrar la respuesta completa en la consola
+                    recalcPointsResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado. Revisa la consola del navegador para más detalles.</div>').show();
+                    console.error("Respuesta inesperada del servidor:", response);
                 }
             },
             error: function() {
-                recalcPointsResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado.</div>').show();
+                recalcPointsResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error de servidor.</div>').show();
             },
             complete: function() {
                 recalcPointsSpinner.removeClass('is-active');
