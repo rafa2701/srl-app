@@ -283,6 +283,7 @@
 /* --- Modal de Logros --- */
 .srl-modal-overlay {
     position: fixed;
+    padding-top: 40px;
     top: 0;
     left: 0;
     width: 100%;
@@ -290,7 +291,7 @@
     background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: start;
     z-index: 1000;
 }
 .srl-modal-content {
