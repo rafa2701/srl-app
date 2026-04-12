@@ -9,16 +9,13 @@ if ( ! defined( 'WPINC' ) ) die;
 
 /**
  * Añade JavaScript al pie de página en las pantallas de edición de Campeonatos.
- * Este script maneja la lógica de las plantillas de puntuación.
  */
 function srl_add_championship_edit_script() {
     $screen = get_current_screen();
-    // Asegurarse de que el script solo se ejecute en la pantalla de edición del CPT 'srl_championship'
     if ( $screen && $screen->id === 'srl_championship' ) {
         ?>
         <script type="text/javascript">
             jQuery(document).ready(function($) {
-                // Plantillas de puntuación predefinidas
                 const scoreTemplates = {
                     'f1': {
                         "points": { "1": 25, "2": 18, "3": 15, "4": 12, "5": 10, "6": 8, "7": 6, "8": 4, "9": 2, "10": 1 },
@@ -33,30 +30,35 @@ function srl_add_championship_edit_script() {
                     'srl': {
                         "points": { "1": 30, "2": 26, "3": 24, "4": 22, "5": 20, "6": 18, "7": 16, "8": 14, "9": 12, "10": 11, "11": 10, "12": 9, "13": 8, "14": 7, "15": 6, "16": 5, "17": 4, "18": 3, "19": 2, "20": 1 },
                         "bonuses": { "pole": 1, "fastest_lap": 1 },
-                        "rules": { "drop_worst_results": 0 }
+                        "rules": { "drop_worst_results": 0, "min_lap_percentage_for_points": 80 }
+                    },
+                    'srl_legacy_2021': {
+                        "points": { "1": 30, "2": 25, "3": 22, "4": 19, "5": 16, "6": 13, "7": 10, "8": 8, "9": 6, "10": 4, "11": 2, "12": 1 },
+                        "bonuses": { "pole": 1, "fastest_lap": 1 },
+                        "rules": { "drop_worst_results": 0, "min_lap_percentage_for_points": 80 }
+                    },
+                    'f3_2022': {
+                        "points": { "1": 30, "2": 26, "3": 24, "4": 22, "5": 20, "6": 17, "7": 15, "8": 13, "9": 12, "10": 11, "11": 10, "12": 9, "13": 8, "14": 7, "15": 6, "16": 5, "17": 4, "18": 3, "19": 2, "20": 1 },
+                        "bonuses": { "pole": 1, "fastest_lap": 1 },
+                        "rules": { "drop_worst_results": 0, "min_lap_percentage_for_points": 80 }
                     }
                 };
 
-                // CORRECCIÓN: Usar selectores que funcionan con la estructura de ACF/SCF
-                // Busca el div contenedor por su data-name y luego encuentra el input/select/textarea dentro.
                 const templateSelector = $('div[data-name="_srl_scoring_template"] select');
                 const rulesTextarea = $('div[data-name="_srl_scoring_rules"] textarea');
 
                 templateSelector.on('change', function() {
                     const selectedTemplate = $(this).val();
-                    console.log(selectedTemplate);
                     if (selectedTemplate && scoreTemplates[selectedTemplate]) {
                         const jsonString = JSON.stringify(scoreTemplates[selectedTemplate], null, 2);
-                        rulesTextarea.val(jsonString).trigger('change'); // Trigger change para que el plugin de campos detecte la modificación
-                        
+                        rulesTextarea.val(jsonString).trigger('change');
                         console.log('Plantilla de puntuación rellenada con: ' + selectedTemplate);
-                    } 
+                    }
                 });
             });
         </script>
         <?php
     }
 }
-// Enganchar la función al footer de las páginas de edición y creación de posts
 add_action( 'admin_footer-post.php', 'srl_add_championship_edit_script' );
 add_action( 'admin_footer-post-new.php', 'srl_add_championship_edit_script' );
