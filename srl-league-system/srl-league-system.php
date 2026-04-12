@@ -58,6 +58,7 @@ require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
 // --- Hooks ---
+// Registro del menú de administración
 add_action( 'admin_menu', 'srl_admin_menu' );
 function srl_admin_menu() {
     $steering_wheel_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZHRoPSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjxsaW5lIHgxPSIxMiIgeTE9IjIyIiB4Mj0iMTIiIHkyPSIxNSIvPjxsaW5lIHgxPSI1LjQiIHkxPSI4LjQiIHgyPSI5LjUiIHkyPSIxMC41Ii8+PGxpbmUgeDE9IjE4LjYiIHkxPSI4LjQiIHgyPSIxNC41IiB5Mj0iMTAuNSIvPjwvc3ZnPg==';
