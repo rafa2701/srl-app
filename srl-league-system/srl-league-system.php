@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- * Version:           1.8.1
+ * Version:           1.8.2
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.8.1' );
+define( 'SRL_PLUGIN_VERSION', '1.8.2' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -41,6 +41,15 @@ function srl_check_for_updates() {
     if ( $installed_version !== SRL_PLUGIN_VERSION ) {
         require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
         srl_create_database_tables();
+
+        // REPARACIÓN AGRESIVA: Si dbDelta falló en añadir la columna 'id' (el error reportado)
+        global $wpdb;
+        $table_results = $wpdb->prefix . 'srl_results';
+        $column = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'id' ) );
+        if ( empty( $column ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD id INT UNSIGNED NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (id)" );
+        }
+
         update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
     }
 }
