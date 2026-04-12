@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- * Version:           1.8.2
+ * Version:           1.8.3
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.8.2' );
+define( 'SRL_PLUGIN_VERSION', '1.8.3' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -38,19 +38,30 @@ function srl_activate_plugin() {
  */
 function srl_check_for_updates() {
     $installed_version = get_option( 'srl_league_system_version' );
+
     if ( $installed_version !== SRL_PLUGIN_VERSION ) {
         require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
         srl_create_database_tables();
+        update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+    }
 
-        // REPARACIÓN AGRESIVA: Si dbDelta falló en añadir la columna 'id' (el error reportado)
+    // REPARACIÓN DE EMERGENCIA: Se ejecuta siempre en el admin si falta la columna 'id'
+    // Esto soluciona el error "Unknown column 'r.id'" reportado por el usuario.
+    if ( is_admin() ) {
         global $wpdb;
         $table_results = $wpdb->prefix . 'srl_results';
-        $column = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'id' ) );
-        if ( empty( $column ) ) {
-            $wpdb->query( "ALTER TABLE $table_results ADD id INT UNSIGNED NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (id)" );
-        }
+        $column_id = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'id' ) );
 
-        update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+        if ( empty( $column_id ) ) {
+            // 1. Eliminar cualquier clave primaria anterior si existe (dbDelta a veces crea un desastre)
+            $wpdb->query( "ALTER TABLE $table_results DROP PRIMARY KEY, DROP INDEX IF EXISTS uk_session_driver" );
+
+            // 2. Añadir la columna id como PK Auto-incremental
+            $wpdb->query( "ALTER TABLE $table_results ADD id bigint(20) unsigned NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (id)" );
+
+            // 3. Restaurar la clave única que quitamos
+            $wpdb->query( "ALTER TABLE $table_results ADD UNIQUE KEY uk_session_driver (session_id, driver_id)" );
+        }
     }
 }
 add_action( 'admin_init', 'srl_check_for_updates' );
