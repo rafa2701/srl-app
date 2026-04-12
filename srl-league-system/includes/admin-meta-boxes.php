@@ -51,7 +51,7 @@ function srl_render_event_results_meta_box( $post ) {
     $event_id = $post->ID;
 
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, r.position, r.grid_position, r.best_lap_time, r.total_time, r.points_awarded, r.is_dnf
+        SELECT d.full_name, r.id, r.position, r.grid_position, r.best_lap_time, r.total_time, r.points_awarded, r.is_dnf, r.time_penalty, r.is_disqualified
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -63,31 +63,56 @@ function srl_render_event_results_meta_box( $post ) {
         echo '<p>Aún no se han importado resultados para este evento.</p>';
         return;
     }
+
+    wp_nonce_field( 'srl_save_penalties_nonce', 'srl_penalties_nonce' );
     ?>
-    <table class="wp-list-table widefat striped">
+    <table class="wp-list-table widefat striped srl-results-edit-table">
         <thead>
             <tr>
                 <th style="width: 50px;">Pos</th>
                 <th>Piloto</th>
-                <th style="width: 80px;">Salida</th>
+                <th style="width: 60px;">Salida</th>
                 <th>Mejor Vuelta</th>
                 <th>Tiempo Total</th>
-                <th style="width: 80px;">Puntos</th>
+                <th style="width: 80px;">Penalización</th>
+                <th style="width: 40px;">DQ</th>
+                <th style="width: 60px;">Puntos</th>
+                <th style="width: 80px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ( $results as $result ) : ?>
-                <tr>
-                    <td><strong><?php echo $result->is_dnf ? 'DNF' : esc_html( $result->position ); ?></strong></td>
+                <tr data-result-id="<?php echo esc_attr($result->id); ?>">
+                    <td><strong><?php
+                        if ($result->is_disqualified) echo 'DQ';
+                        elseif ($result->is_dnf) echo 'DNF';
+                        else echo esc_html( $result->position );
+                    ?></strong></td>
                     <td><?php echo esc_html( $result->full_name ); ?></td>
                     <td><?php echo esc_html( $result->grid_position ); ?></td>
                     <td><?php echo function_exists('srl_format_time') ? srl_format_time( $result->best_lap_time ) : '-'; ?></td>
                     <td><?php echo $result->is_dnf ? '-' : (function_exists('srl_format_time') ? srl_format_time( $result->total_time, true ) : '-'); ?></td>
+                    <td class="col-penalty">
+                        <span class="penalty-value"><?php echo ($result->time_penalty / 1000); ?>s</span>
+                        <input type="number" class="penalty-input" step="0.001" value="<?php echo ($result->time_penalty / 1000); ?>" style="display:none; width: 70px;">
+                    </td>
+                    <td class="col-dq">
+                        <input type="checkbox" class="dq-checkbox" <?php checked($result->is_disqualified, 1); ?> disabled>
+                    </td>
                     <td><strong><?php echo esc_html( $result->points_awarded ); ?></strong></td>
+                    <td>
+                        <button type="button" class="button edit-result-btn">Editar</button>
+                        <button type="button" class="button button-primary save-result-btn" style="display:none;">Guardar</button>
+                        <button type="button" class="button cancel-result-btn" style="display:none;">X</button>
+                    </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
+    <style>
+        .srl-results-edit-table input[type="number"] { margin: 0; padding: 2px 5px; height: 28px; }
+        .srl-results-edit-table .button { min-height: 28px; line-height: 26px; padding: 0 8px; }
+    </style>
     <?php
 }
 

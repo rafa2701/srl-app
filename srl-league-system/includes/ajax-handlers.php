@@ -23,6 +23,7 @@ add_action( 'wp_ajax_srl_bulk_upload_results', 'srl_handle_bulk_upload' );
 add_action( 'wp_ajax_srl_import_history_file', 'srl_handle_history_import' );
 add_action( 'wp_ajax_srl_cleanup_orphan_results', 'srl_handle_cleanup_orphans' );
 add_action( 'wp_ajax_srl_recalculate_championship_points', 'srl_handle_recalculate_championship_points' );
+add_action( 'wp_ajax_srl_save_result_penalties', 'srl_handle_save_result_penalties' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -364,4 +365,38 @@ function srl_handle_recalculate_championship_points() {
     }
 
     wp_send_json_success( ['message' => count($results) . ' resultados actualizados. Se recalcularon las estadísticas de ' . count($unique_affected_drivers) . ' pilotos.'] );
+}
+
+/**
+ * Maneja el guardado de penalizaciones y recalcula la sesión.
+ */
+function srl_handle_save_result_penalties() {
+    check_ajax_referer( 'srl_save_penalties_nonce', 'nonce' );
+
+    if ( ! current_user_can('manage_options') || ! isset($_POST['result_id']) ) {
+        wp_send_json_error( ['message' => 'No tienes permisos o faltan datos.'] );
+    }
+
+    global $wpdb;
+    $result_id = intval($_POST['result_id']);
+    $penalty_ms = intval( floatval($_POST['penalty_seconds']) * 1000 );
+    $is_dq = intval($_POST['is_dq']);
+
+    // 1. Obtener información de la sesión
+    $session_id = $wpdb->get_var($wpdb->prepare("SELECT session_id FROM {$wpdb->prefix}srl_results WHERE id = %d", $result_id));
+    if (!$session_id) {
+        wp_send_json_error( ['message' => 'Resultado no encontrado.'] );
+    }
+
+    // 2. Actualizar el resultado editado
+    $wpdb->update(
+        $wpdb->prefix . 'srl_results',
+        [ 'time_penalty' => $penalty_ms, 'is_disqualified' => $is_dq ],
+        [ 'id' => $result_id ]
+    );
+
+    // 3. Recalcular toda la sesión
+    srl_recalculate_session_results($session_id);
+
+    wp_send_json_success( ['message' => 'Penalización aplicada y resultados recalculados.'] );
 }
