@@ -82,3 +82,95 @@ function srl_write_to_log( $message, $log_file_name = 'srl-main.log' ) {
     
     file_put_contents( $log_file, $formatted_message, FILE_APPEND );
 }
+
+/**
+ * RECALCULA POSICIONES Y PUNTOS DE UNA SESIÓN.
+ * Útil tras editar penalizaciones o DQs.
+ */
+function srl_recalculate_session_results( $session_id ) {
+    global $wpdb;
+
+    // 1. Obtener todos los resultados de la sesión
+    $results = $wpdb->get_results( $wpdb->prepare("SELECT * FROM {$wpdb->prefix}srl_results WHERE session_id = %d", $session_id) );
+    if ( empty($results) ) return;
+
+    // 2. Obtener reglas de puntuación del campeonato padre
+    $event_id = $wpdb->get_var($wpdb->prepare("SELECT event_id FROM {$wpdb->prefix}srl_sessions WHERE id = %d", $session_id));
+    $championship_id = get_post_meta( $event_id, '_srl_parent_championship', true );
+    $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
+    $scoring_rules = json_decode( $scoring_rules_json, true );
+    $points_map = $scoring_rules['points'] ?? [];
+    $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
+    $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+    $min_lap_percentage = $scoring_rules['rules']['min_lap_percentage_for_points'] ?? 0;
+
+    // 3. Separar en 3 grupos: Válidos, DNF, DQ
+    $valides = [];
+    $dnfs = [];
+    $dqs = [];
+
+    foreach ($results as $r) {
+        if ($r->is_disqualified) {
+            $dqs[] = $r;
+        } elseif ($r->is_dnf) {
+            $dnfs[] = $r;
+        } else {
+            // Calcular tiempo efectivo (TotalTime + Penalty)
+            $r->effective_time = (int)$r->total_time + (int)$r->time_penalty;
+            $valides[] = $r;
+        }
+    }
+
+    // 4. Ordenar válidos por tiempo efectivo
+    usort($valides, fn($a, $b) => $a->effective_time <=> $b->effective_time);
+
+    // 5. Ordenar DNFs por vueltas completadas (descendente)
+    usort($dnfs, fn($a, $b) => $b->laps_completed <=> $a->laps_completed);
+
+    // 6. Unir grupos (Válidos -> DNFs -> DQs)
+    $sorted_results = array_merge($valides, $dnfs, $dqs);
+
+    // 7. Encontrar vueltas del ganador (primero de válidos o primero de DNFs si no hay válidos)
+    $winner_laps = 0;
+    if (!empty($sorted_results)) {
+        $winner_laps = $sorted_results[0]->laps_completed;
+    }
+
+    // 8. Actualizar posiciones y puntos
+    $position = 1;
+    $affected_drivers = [];
+
+    foreach ($sorted_results as $r) {
+        $points = 0;
+        $affected_drivers[] = $r->driver_id;
+
+        if (!$r->is_disqualified) {
+            $can_score = !$r->is_dnf;
+            if ($r->is_dnf && $min_lap_percentage > 0 && $winner_laps > 0) {
+                $lap_percentage = ($r->laps_completed / $winner_laps) * 100;
+                if ($lap_percentage >= $min_lap_percentage) {
+                    $can_score = true;
+                }
+            }
+
+            if ($can_score) {
+                $points += ($points_map[$position] ?? 0);
+                if ($r->has_pole) $points += $bonus_pole;
+                if ($r->has_fastest_lap) $points += $bonus_fastest_lap;
+            }
+        }
+
+        $wpdb->update(
+            $wpdb->prefix . 'srl_results',
+            [ 'position' => $position, 'points_awarded' => $points ],
+            [ 'id' => $r->id ]
+        );
+
+        $position++;
+    }
+
+    // 9. Recalcular estadísticas globales de pilotos involucrados
+    foreach (array_unique($affected_drivers) as $driver_id) {
+        srl_update_driver_global_stats($driver_id);
+    }
+}
