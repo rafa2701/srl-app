@@ -59,8 +59,27 @@ function srl_render_event_results_meta_box( $post ) {
         ORDER BY r.position ASC
     ", $event_id) );
 
+    if ( $wpdb->last_error ) {
+        echo '<div class="notice notice-error"><p>Error de base de datos: ' . esc_html( $wpdb->last_error ) . '</p></div>';
+    }
+
     if ( empty( $results ) ) {
         echo '<p>Aún no se han importado resultados para este evento.</p>';
+
+        // Debug info for admin
+        if (current_user_can('manage_options')) {
+            $session_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d", $event_id));
+            echo '<p><small>Debug: Sesiones encontradas para este evento: ' . intval($session_count) . '</small></p>';
+            if ($session_count > 0) {
+                $sessions = $wpdb->get_results($wpdb->prepare("SELECT id, session_type FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d", $event_id));
+                echo '<ul>';
+                foreach ($sessions as $sess) {
+                    $res_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}srl_results WHERE session_id = %d", $sess->id));
+                    echo '<li><small>Sesión ID ' . $sess->id . ' (' . $sess->session_type . '): ' . $res_count . ' resultados.</small></li>';
+                }
+                echo '</ul>';
+            }
+        }
         return;
     }
 

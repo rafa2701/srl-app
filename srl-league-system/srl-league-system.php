@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- * Version:           1.8.0
+ * Version:           1.8.1
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.8.0' );
+define( 'SRL_PLUGIN_VERSION', '1.8.1' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -30,7 +30,21 @@ register_activation_hook( __FILE__, 'srl_activate_plugin' );
 function srl_activate_plugin() {
     require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
     srl_create_database_tables();
+    update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
 }
+
+/**
+ * Comprueba si es necesaria una actualización de la base de datos.
+ */
+function srl_check_for_updates() {
+    $installed_version = get_option( 'srl_league_system_version' );
+    if ( $installed_version !== SRL_PLUGIN_VERSION ) {
+        require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
+        srl_create_database_tables();
+        update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+    }
+}
+add_action( 'admin_init', 'srl_check_for_updates' );
 
 // --- Incluir todos los archivos necesarios ---
 require_once SRL_PLUGIN_PATH . 'includes/core-functions.php';
