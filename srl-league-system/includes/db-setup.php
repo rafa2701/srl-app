@@ -49,6 +49,7 @@ function srl_create_database_tables() {
       `fastest_laps_count` INT UNSIGNED NOT NULL DEFAULT 0,
       `hat_tricks_count` INT UNSIGNED NOT NULL DEFAULT 0,
       `dnfs_count` INT UNSIGNED NOT NULL DEFAULT 0,
+      `dq_count` INT UNSIGNED NOT NULL DEFAULT 0,
       PRIMARY KEY (`id`),
       KEY `idx_steam_id` (`steam_id`)
     ) $charset_collate;
@@ -81,12 +82,15 @@ function srl_create_database_tables() {
       `team_name` VARCHAR(255),
       `car_model` VARCHAR(255),
       `position` SMALLINT UNSIGNED NOT NULL,
+      `grid_position` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
       `best_lap_time` INT UNSIGNED COMMENT 'Tiempo de vuelta en milisegundos',
       `total_time` INT UNSIGNED COMMENT 'Tiempo total de carrera en milisegundos',
+      `time_penalty` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Penalización de tiempo en milisegundos',
       `laps_completed` SMALLINT UNSIGNED,
       `has_pole` BOOLEAN NOT NULL DEFAULT FALSE,
       `has_fastest_lap` BOOLEAN NOT NULL DEFAULT FALSE,
       `is_dnf` BOOLEAN NOT NULL DEFAULT FALSE,
+      `is_disqualified` BOOLEAN NOT NULL DEFAULT FALSE,
       `points_awarded` FLOAT NOT NULL DEFAULT 0,
       PRIMARY KEY (`id`),
       UNIQUE KEY `uk_session_driver` (`session_id`, `driver_id`),

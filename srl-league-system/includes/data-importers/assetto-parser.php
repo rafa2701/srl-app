@@ -30,19 +30,36 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
     $fastest_lap_driver_guid = null;
     if ( ! empty( $data['Laps'] ) ) {
         foreach ( $data['Laps'] as $lap ) {
+            $guid = $lap['DriverGuid'] ?? $lap['DriverID'] ?? null;
             if ( isset($lap['Cuts']) && $lap['Cuts'] == 0 && isset($lap['LapTime']) && $lap['LapTime'] > 0 && $lap['LapTime'] < $fastest_lap_time ) {
                 $fastest_lap_time = $lap['LapTime'];
-                $fastest_lap_driver_guid = $lap['DriverGuid'];
+                $fastest_lap_driver_guid = $guid;
             }
         }
     }
+
+    // --- Determinar el Poleman (GridPosition más bajo, usualmente 1 o 0) ---
+    $pole_driver_guid = null;
+    $min_grid_pos = PHP_INT_MAX;
+    if ( ! empty( $data['Result'] ) ) {
+        foreach ( $data['Result'] as $result_item ) {
+            if ( isset($result_item['GridPosition']) && $result_item['GridPosition'] >= 0 && $result_item['GridPosition'] < $min_grid_pos ) {
+                $min_grid_pos = $result_item['GridPosition'];
+                $pole_driver_guid = $result_item['DriverGuid'] ?? $result_item['DriverID'] ?? null;
+            }
+        }
+    }
+
     // Obtener la regla de % de vueltas
     $min_lap_percentage = $scoring_rules['rules']['min_lap_percentage_for_points'] ?? 0;
      // Encontrar las vueltas del ganador
     $winner_laps = 0;
     if (!empty($data['Result'])) {
-        $winner_guid = $data['Result'][0]['DriverGuid'];
-        $winner_laps = count( array_filter($data['Laps'], fn($lap) => $lap['DriverGuid'] === $winner_guid) );
+        $winner_guid = $data['Result'][0]['DriverGuid'] ?? $data['Result'][0]['DriverID'] ?? null;
+        $winner_laps = count( array_filter($data['Laps'], function($lap) use ($winner_guid) {
+             $guid = $lap['DriverGuid'] ?? $lap['DriverID'] ?? null;
+             return $guid === $winner_guid;
+        }) );
     }
 
     if ( empty( $data['Result'] ) ) {
@@ -52,15 +69,33 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
     $processed_drivers = [];
     $position = 1;
     foreach ( $data['Result'] as $result_item ) {
-        $driver_guid = $result_item['DriverGuid'];
-        $driver_name = $result_item['DriverName'];
+        $driver_guid = $result_item['DriverGuid'] ?? $result_item['DriverID'] ?? null;
+        $driver_name = $result_item['DriverName'] ?? '';
+
+        if (!$driver_guid && isset($result_item['CarId'], $data['Cars'])) {
+            // Intentar buscar el GUID en la sección Cars si no está en Result
+            foreach($data['Cars'] as $car) {
+                if ($car['CarId'] == $result_item['CarId']) {
+                    $driver_guid = $car['Driver']['Guid'] ?? null;
+                    $driver_name = $car['Driver']['Name'] ?? $driver_name;
+                    break;
+                }
+            }
+        }
+
         $driver_id = srl_get_or_create_driver( $driver_guid, $driver_name );
         if ( ! $driver_id ) continue;
         
         $processed_drivers[] = $driver_id;
 
-        $laps_completed = count( array_filter($data['Laps'], fn($lap) => $lap['DriverGuid'] === $driver_guid) );
+        $laps_completed = count( array_filter($data['Laps'], function($lap) use ($driver_guid) {
+            $guid = $lap['DriverGuid'] ?? $lap['DriverID'] ?? null;
+            return $guid === $driver_guid;
+        }) );
+
         $is_dnf = ( $result_item['TotalTime'] == 0 );
+        $has_pole = ( $driver_guid === $pole_driver_guid && $pole_driver_guid !== null );
+        $has_fastest_lap = ( $driver_guid === $fastest_lap_driver_guid && $fastest_lap_driver_guid !== null );
 
         // --- LÓGICA DE PUNTOS CON REGLA DE DNF ---
         $points_awarded = 0;
@@ -81,16 +116,16 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
         $result_data = [
             'session_id'      => $session_id,
             'driver_id'       => $driver_id,
-            'team_name'       => $result_item['CarModel'],
-            'car_model'       => $result_item['CarModel'],
+            'team_name'       => $result_item['CarModel'] ?? '',
+            'car_model'       => $result_item['CarModel'] ?? '',
             'position'        => $position,
-            'grid_position'   => $result_item['GridPosition'],
-            'best_lap_time'   => $result_item['BestLap'],
-            'total_time'      => $result_item['TotalTime'],
-            'has_pole'        => $has_pole,
-            'has_fastest_lap' => $has_fastest_lap,
+            'grid_position'   => $result_item['GridPosition'] ?? 0,
+            'best_lap_time'   => $result_item['BestLap'] ?? 0,
+            'total_time'      => $result_item['TotalTime'] ?? 0,
+            'has_pole'        => $has_pole ? 1 : 0,
+            'has_fastest_lap' => $has_fastest_lap ? 1 : 0,
             'laps_completed'  => $laps_completed,
-            'is_dnf'          => $is_dnf,
+            'is_dnf'          => $is_dnf ? 1 : 0,
             'points_awarded'  => $points_awarded,
         ];
         
@@ -128,13 +163,14 @@ function srl_update_driver_global_stats( $driver_id ) {
     global $wpdb;
     $stats = $wpdb->get_row( $wpdb->prepare("
         SELECT
-            SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END) as victories_count,
-            SUM(CASE WHEN r.position <= 3 THEN 1 ELSE 0 END) as podiums_count,
-            SUM(CASE WHEN r.position <= 5 THEN 1 ELSE 0 END) as top_5_count,
-            SUM(CASE WHEN r.position <= 10 THEN 1 ELSE 0 END) as top_10_count,
+            SUM(CASE WHEN r.position = 1 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as victories_count,
+            SUM(CASE WHEN r.position <= 3 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as podiums_count,
+            SUM(CASE WHEN r.position <= 5 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as top_5_count,
+            SUM(CASE WHEN r.position <= 10 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as top_10_count,
             SUM(r.has_pole) as poles_count,
             SUM(r.has_fastest_lap) as fastest_laps_count,
-            SUM(r.is_dnf) as dnfs_count
+            SUM(r.is_dnf) as dnfs_count,
+            SUM(r.is_disqualified) as dq_count
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
         WHERE r.driver_id = %d AND s.session_type = 'Race'
@@ -151,9 +187,10 @@ function srl_update_driver_global_stats( $driver_id ) {
                 'poles_count'        => $stats->poles_count,
                 'fastest_laps_count' => $stats->fastest_laps_count,
                 'dnfs_count'         => $stats->dnfs_count,
+                'dq_count'           => $stats->dq_count,
             ],
             [ 'id' => $driver_id ],
-            [ '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
+            [ '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
             [ '%d' ]
         );
     }

@@ -130,6 +130,7 @@ function srl_render_driver_profile_shortcode( $atts ) {
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div><div class="stat-label">Pos. Salida Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_finish'], 2 ); ?></div><div class="stat-label">Pos. Llegada Prom.</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dnfs_count; ?></div><div class="stat-label">Abandonos (DNF)</div></div>
+            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->dq_count; ?></div><div class="stat-label">Descalificaciones (DQ)</div></div>
         </div>
 
         <?php if ( ! empty( $championship_history ) ) : ?>

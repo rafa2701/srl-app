@@ -59,8 +59,12 @@ jQuery(document).ready(function($) {
         const eventId = $(this).val();
         if (eventId) {
             sessionSelect.prop('disabled', false);
+            // Asegurarse de restaurar las opciones si fueron borradas por el bug anterior
+            if (sessionSelect.find('option').length <= 1) {
+                sessionSelect.html('<option value="">-- Selecciona sesión --</option><option value="Qualifying">Clasificación (Qualy)</option><option value="Race">Carrera (Race)</option>');
+            }
         } else {
-            sessionSelect.prop('disabled', true).html('<option value="">-- Primero elige un evento --</option>');
+            sessionSelect.prop('disabled', true).val('');
         }
     });
 
@@ -373,6 +377,64 @@ jQuery(document).ready(function($) {
             complete: function() {
                 recalcPointsSpinner.removeClass('is-active');
                 recalcPointsBtn.prop('disabled', false);
+            }
+        });
+    });
+
+    // --- Lógica para la edición de resultados en el Meta Box ---
+    const resultsTable = $('.srl-results-edit-table');
+
+    resultsTable.on('click', '.edit-result-btn', function() {
+        const row = $(this).closest('tr');
+        row.find('.penalty-value').hide();
+        row.find('.penalty-input').show();
+        row.find('.dq-checkbox').prop('disabled', false);
+        row.find('.edit-result-btn').hide();
+        row.find('.save-result-btn, .cancel-result-btn').show();
+    });
+
+    resultsTable.on('click', '.cancel-result-btn', function() {
+        const row = $(this).closest('tr');
+        row.find('.penalty-input').hide().val(row.find('.penalty-value').text().replace('s', ''));
+        row.find('.penalty-value').show();
+        row.find('.dq-checkbox').prop('disabled', true);
+        // Reset checkbox to original state if needed (simpler to reload or just leave as is if not saved)
+        row.find('.edit-result-btn').show();
+        row.find('.save-result-btn, .cancel-result-btn').hide();
+    });
+
+    resultsTable.on('click', '.save-result-btn', function() {
+        const row = $(this).closest('tr');
+        const resultId = row.data('result-id');
+        const penaltySeconds = row.find('.penalty-input').val();
+        const isDq = row.find('.dq-checkbox').is(':checked') ? 1 : 0;
+        const nonce = $('#srl_penalties_nonce').val();
+        const saveBtn = $(this);
+
+        saveBtn.prop('disabled', true).text('...');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_save_result_penalties',
+                nonce: nonce,
+                result_id: resultId,
+                penalty_seconds: penaltySeconds,
+                is_dq: isDq
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Recargar la página para ver las nuevas posiciones y puntos
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data.message);
+                    saveBtn.prop('disabled', false).text('Guardar');
+                }
+            },
+            error: function() {
+                alert('Ocurrió un error de servidor.');
+                saveBtn.prop('disabled', false).text('Guardar');
             }
         });
     });
