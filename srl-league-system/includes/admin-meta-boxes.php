@@ -50,8 +50,13 @@ function srl_render_event_results_meta_box( $post ) {
     global $wpdb;
     $event_id = $post->ID;
 
+    // Verificar si la columna 'id' existe antes de pedirla
+    $table_results = $wpdb->prefix . 'srl_results';
+    $has_id = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'id' ) );
+    $id_field = !empty($has_id) ? 'r.id' : '0 as id';
+
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, r.id, r.position, r.grid_position, r.best_lap_time, r.total_time, r.points_awarded, r.is_dnf, r.time_penalty, r.is_disqualified
+        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.points_awarded, r.is_dnf, r.time_penalty, r.is_disqualified
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
