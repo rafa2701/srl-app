@@ -30,7 +30,21 @@ register_activation_hook( __FILE__, 'srl_activate_plugin' );
 function srl_activate_plugin() {
     require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
     srl_create_database_tables();
+    update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
 }
+
+/**
+ * Comprueba si es necesaria una actualización de la base de datos.
+ */
+function srl_check_for_updates() {
+    $installed_version = get_option( 'srl_league_system_version' );
+    if ( $installed_version !== SRL_PLUGIN_VERSION ) {
+        require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
+        srl_create_database_tables();
+        update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+    }
+}
+add_action( 'admin_init', 'srl_check_for_updates' );
 
 // --- Incluir todos los archivos necesarios ---
 require_once SRL_PLUGIN_PATH . 'includes/core-functions.php';
