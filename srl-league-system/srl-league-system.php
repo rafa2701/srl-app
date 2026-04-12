@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- * Version:           1.8.0
+ * Version:           1.8.1
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.8.0' );
+define( 'SRL_PLUGIN_VERSION', '1.8.1' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -30,7 +30,21 @@ register_activation_hook( __FILE__, 'srl_activate_plugin' );
 function srl_activate_plugin() {
     require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
     srl_create_database_tables();
+    update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
 }
+
+/**
+ * Comprueba si es necesaria una actualización de la base de datos.
+ */
+function srl_check_for_updates() {
+    $installed_version = get_option( 'srl_league_system_version' );
+    if ( $installed_version !== SRL_PLUGIN_VERSION ) {
+        require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
+        srl_create_database_tables();
+        update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+    }
+}
+add_action( 'admin_init', 'srl_check_for_updates' );
 
 // --- Incluir todos los archivos necesarios ---
 require_once SRL_PLUGIN_PATH . 'includes/core-functions.php';
@@ -44,6 +58,7 @@ require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
 // --- Hooks ---
+// Registro del menú de administración
 add_action( 'admin_menu', 'srl_admin_menu' );
 function srl_admin_menu() {
     $steering_wheel_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZHRoPSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjxsaW5lIHgxPSIxMiIgeTE9IjIyIiB4Mj0iMTIiIHkyPSIxNSIvPjxsaW5lIHgxPSI1LjQiIHkxPSI4LjQiIHgyPSI5LjUiIHkyPSIxMC41Ii8+PGxpbmUgeDE9IjE4LjYiIHkxPSI4LjQiIHgyPSIxNC41IiB5Mj0iMTAuNSIvPjwvc3ZnPg==';
