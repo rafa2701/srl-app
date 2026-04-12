@@ -77,18 +77,23 @@ add_action( 'wp_enqueue_scripts', 'srl_public_enqueue_assets' );
 
 /**
  * Carga las plantillas personalizadas para los CPTs.
+ * Se da prioridad a las plantillas del tema si existen.
  */
 function srl_include_template_function( $template ) {
     if ( is_singular( 'srl_championship' ) ) {
-        $new_template = SRL_PLUGIN_PATH . 'templates/single-srl_championship.php';
-        if ( '' != $new_template ) return $new_template;
+        $theme_template = locate_template( array( 'single-srl_championship.php' ) );
+        if ( $theme_template ) return $theme_template;
+
+        return SRL_PLUGIN_PATH . 'templates/single-srl_championship.php';
     } elseif ( is_singular( 'srl_event' ) ) {
-        $new_template = SRL_PLUGIN_PATH . 'templates/single-srl_event.php';
-        if ( '' != $new_template ) return $new_template;
+        $theme_template = locate_template( array( 'single-srl_event.php' ) );
+        if ( $theme_template ) return $theme_template;
+
+        return SRL_PLUGIN_PATH . 'templates/single-srl_event.php';
     }
     return $template;
 }
-add_filter( 'template_include', 'srl_include_template_function', 1 );
+add_filter( 'template_include', 'srl_include_template_function', 20 );
 
 /**
  * NUEVO: Se activa antes de que un post sea eliminado.
