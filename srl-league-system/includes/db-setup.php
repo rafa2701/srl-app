@@ -96,6 +96,7 @@ function srl_create_database_tables() {
       has_fastest_lap tinyint(1) NOT NULL DEFAULT 0,
       is_dnf tinyint(1) NOT NULL DEFAULT 0,
       is_nc tinyint(1) NOT NULL DEFAULT 0,
+      is_nc_forced tinyint(1) NOT NULL DEFAULT 0,
       is_disqualified tinyint(1) NOT NULL DEFAULT 0,
       points_awarded float NOT NULL DEFAULT 0,
       PRIMARY KEY  (id),

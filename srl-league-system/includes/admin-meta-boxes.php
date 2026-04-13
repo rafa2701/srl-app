@@ -56,7 +56,7 @@ function srl_render_event_results_meta_box( $post ) {
     $id_field = !empty($has_id) ? 'r.id' : '0 as id';
 
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.points_awarded, r.is_dnf, r.is_nc, r.time_penalty, r.is_disqualified, r.session_id
+        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.is_dnf, r.is_nc, r.time_penalty, r.is_disqualified, r.session_id
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -104,6 +104,7 @@ function srl_render_event_results_meta_box( $post ) {
                     <th style="width: 50px;">Pos</th>
                     <th>Piloto</th>
                     <th style="width: 60px;">Salida</th>
+                    <th style="width: 60px;">Vueltas</th>
                     <th style="width: 100px;">Mejor Vuelta</th>
                     <th style="width: 110px;">Tiempo Total</th>
                     <th style="width: 80px;">Penalización</th>
@@ -128,6 +129,10 @@ function srl_render_event_results_meta_box( $post ) {
                         <td class="col-grid">
                             <span class="view-value"><?php echo esc_html( $result->grid_position ); ?></span>
                             <input type="number" class="edit-input grid-input" value="<?php echo esc_attr($result->grid_position); ?>" style="display:none; width: 50px;">
+                        </td>
+                        <td class="col-laps">
+                            <span class="view-value"><?php echo esc_html( $result->laps_completed ); ?></span>
+                            <input type="number" class="edit-input laps-input" value="<?php echo esc_attr($result->laps_completed); ?>" style="display:none; width: 50px;">
                         </td>
                         <td class="col-best-lap">
                             <span class="view-value"><?php echo function_exists('srl_format_time') ? srl_format_time( $result->best_lap_time ) : '-'; ?></span>

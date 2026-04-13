@@ -121,13 +121,16 @@ function srl_recalculate_session_results( $session_id ) {
         $points = 0;
         $affected_drivers[] = $r->driver_id;
 
-        // Auto-NC logic based on percentage if not manually set
+        // Auto-NC logic based on percentage if not manually forced
         $is_nc = $r->is_nc;
-        if (!$is_nc && !$r->is_disqualified && $min_lap_percentage > 0 && $winner_laps > 0) {
+        if (!$r->is_nc_forced && !$r->is_disqualified && $min_lap_percentage > 0 && $winner_laps > 0) {
             $lap_percentage = ($r->laps_completed / $winner_laps) * 100;
             if ($lap_percentage < $min_lap_percentage) {
                 $is_nc = 1;
                 $wpdb->update($wpdb->prefix . 'srl_results', ['is_nc' => 1], ['id' => $r->id]);
+            } else {
+                $is_nc = 0;
+                $wpdb->update($wpdb->prefix . 'srl_results', ['is_nc' => 0], ['id' => $r->id]);
             }
         }
 

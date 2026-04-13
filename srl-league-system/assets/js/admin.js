@@ -406,10 +406,18 @@ jQuery(document).ready(function($) {
                     },
                     success: function(response) {
                         if (response.success) {
-                            location.reload();
+                            // Mostrar mensaje de éxito temporal antes de recargar
+                            const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Posiciones actualizadas correctamente.</p></div>');
+                            $('body').append(notice);
+                            setTimeout(function() {
+                                notice.fadeOut(function() { $(this).remove(); location.reload(); });
+                            }, 1000);
                         } else {
                             alert('Error al reordenar: ' + response.data.message);
                         }
+                    },
+                    error: function() {
+                        alert('Error de servidor al reordenar.');
                     }
                 });
             }
@@ -433,6 +441,7 @@ jQuery(document).ready(function($) {
         const row = $(this).closest('tr');
         const resultId = row.data('result-id');
         const gridPos = row.find('.grid-input').val();
+        const laps = row.find('.laps-input').val();
         const bestLap = row.find('.best-lap-input').val();
         const totalTime = row.find('.total-time-input').val();
         const penaltySeconds = row.find('.penalty-input').val();
@@ -452,6 +461,7 @@ jQuery(document).ready(function($) {
                 nonce: nonce,
                 result_id: resultId,
                 grid_position: gridPos,
+                laps_completed: laps,
                 best_lap_time: bestLap,
                 total_time: totalTime,
                 penalty_seconds: penaltySeconds,

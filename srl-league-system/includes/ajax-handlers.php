@@ -384,6 +384,7 @@ function srl_handle_save_result_details() {
     $result_id = intval($_POST['result_id']);
 
     $grid_pos = intval($_POST['grid_position']);
+    $laps = intval($_POST['laps_completed']);
     $best_lap = srl_parse_edit_time($_POST['best_lap_time']);
     $total_time = srl_parse_edit_time($_POST['total_time']);
     $penalty_ms = intval( floatval($_POST['penalty_seconds']) * 1000 );
@@ -402,11 +403,13 @@ function srl_handle_save_result_details() {
         $wpdb->prefix . 'srl_results',
         [
             'grid_position' => $grid_pos,
+            'laps_completed' => $laps,
             'best_lap_time' => $best_lap,
             'total_time' => $total_time,
             'time_penalty' => $penalty_ms,
             'is_dnf' => $is_dnf,
             'is_nc' => $is_nc,
+            'is_nc_forced' => 1,
             'is_disqualified' => $is_dq
         ],
         [ 'id' => $result_id ]
