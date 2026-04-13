@@ -104,69 +104,45 @@ function srl_recalculate_session_results( $session_id ) {
     $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
     $min_lap_percentage = $scoring_rules['rules']['min_lap_percentage_for_points'] ?? 0;
 
-    // 3. Separar en 3 grupos: Válidos, DNF, DQ
-    $valides = [];
-    $dnfs = [];
-    $dqs = [];
+    // 3. Ordenar resultados actuales para determinar vueltas del ganador
+    $temp_results = $results;
+    usort($temp_results, function($a, $b) {
+        if ($a->is_disqualified != $b->is_disqualified) return $a->is_disqualified <=> $b->is_disqualified;
+        if ($a->is_dnf != $b->is_dnf) return $a->is_dnf <=> $b->is_dnf;
+        if ($a->is_nc != $b->is_nc) return $a->is_nc <=> $b->is_nc;
+        return $a->position <=> $b->position;
+    });
 
-    foreach ($results as $r) {
-        if ($r->is_disqualified) {
-            $dqs[] = $r;
-        } elseif ($r->is_dnf) {
-            $dnfs[] = $r;
-        } else {
-            // Calcular tiempo efectivo (TotalTime + Penalty)
-            $r->effective_time = (int)$r->total_time + (int)$r->time_penalty;
-            $valides[] = $r;
-        }
-    }
+    $winner_laps = !empty($temp_results) ? $temp_results[0]->laps_completed : 0;
 
-    // 4. Ordenar válidos por tiempo efectivo
-    usort($valides, fn($a, $b) => $a->effective_time <=> $b->effective_time);
-
-    // 5. Ordenar DNFs por vueltas completadas (descendente)
-    usort($dnfs, fn($a, $b) => $b->laps_completed <=> $a->laps_completed);
-
-    // 6. Unir grupos (Válidos -> DNFs -> DQs)
-    $sorted_results = array_merge($valides, $dnfs, $dqs);
-
-    // 7. Encontrar vueltas del ganador (primero de válidos o primero de DNFs si no hay válidos)
-    $winner_laps = 0;
-    if (!empty($sorted_results)) {
-        $winner_laps = $sorted_results[0]->laps_completed;
-    }
-
-    // 8. Actualizar posiciones y puntos
-    $position = 1;
+    // 4. Actualizar puntos manteniendo posiciones actuales (que pudieron ser arrastradas)
     $affected_drivers = [];
-
-    foreach ($sorted_results as $r) {
+    foreach ($results as $r) {
         $points = 0;
         $affected_drivers[] = $r->driver_id;
 
-        if (!$r->is_disqualified) {
-            $can_score = !$r->is_dnf;
-            if ($r->is_dnf && $min_lap_percentage > 0 && $winner_laps > 0) {
-                $lap_percentage = ($r->laps_completed / $winner_laps) * 100;
-                if ($lap_percentage >= $min_lap_percentage) {
-                    $can_score = true;
-                }
+        // Auto-NC logic based on percentage if not manually set
+        $is_nc = $r->is_nc;
+        if (!$is_nc && !$r->is_disqualified && $min_lap_percentage > 0 && $winner_laps > 0) {
+            $lap_percentage = ($r->laps_completed / $winner_laps) * 100;
+            if ($lap_percentage < $min_lap_percentage) {
+                $is_nc = 1;
+                $wpdb->update($wpdb->prefix . 'srl_results', ['is_nc' => 1], ['id' => $r->id]);
             }
+        }
 
-            if ($can_score) {
-                $points += ($points_map[$position] ?? 0);
-                if ($r->has_pole) $points += $bonus_pole;
-                if ($r->has_fastest_lap) $points += $bonus_fastest_lap;
-            }
+        if (!$r->is_disqualified && !$is_nc) {
+            // El DNF ahora puede puntuar si cumplió el % (ya manejado arriba al no ser NC)
+            $points += ($points_map[$r->position] ?? 0);
+            if ($r->has_pole) $points += $bonus_pole;
+            if ($r->has_fastest_lap) $points += $bonus_fastest_lap;
         }
 
         $wpdb->update(
             $wpdb->prefix . 'srl_results',
-            [ 'position' => $position, 'points_awarded' => $points ],
+            [ 'points_awarded' => $points ],
             [ 'id' => $r->id ]
         );
-
-        $position++;
     }
 
     // 9. Recalcular estadísticas globales de pilotos involucrados

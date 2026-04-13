@@ -383,30 +383,61 @@ jQuery(document).ready(function($) {
 
     // --- Lógica para la edición de resultados en el Meta Box ---
     const resultsTable = $('.srl-results-edit-table');
+    const sortableContainer = document.getElementById('srl-results-sortable');
+
+    if (sortableContainer) {
+        new Sortable(sortableContainer, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                const resultIds = [];
+                $('#srl-results-sortable tr').each(function() {
+                    resultIds.push($(this).data('result-id'));
+                });
+
+                $.ajax({
+                    url: srl_ajax_object.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'srl_reorder_results',
+                        nonce: srl_ajax_object.nonce,
+                        result_ids: resultIds
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error al reordenar: ' + response.data.message);
+                        }
+                    }
+                });
+            }
+        });
+    }
 
     resultsTable.on('click', '.edit-result-btn', function() {
         const row = $(this).closest('tr');
-        row.find('.penalty-value').hide();
-        row.find('.penalty-input').show();
-        row.find('.dq-checkbox').prop('disabled', false);
+        row.find('.view-value').hide();
+        row.find('.edit-input').show();
+        row.find('.dnf-checkbox, .nc-checkbox, .dq-checkbox').prop('disabled', false);
         row.find('.edit-result-btn').hide();
-        row.find('.save-result-btn, .cancel-result-btn').show();
+        row.find('.save-result-btn, .cancel-result-btn, .delete-result-btn').show();
     });
 
     resultsTable.on('click', '.cancel-result-btn', function() {
-        const row = $(this).closest('tr');
-        row.find('.penalty-input').hide().val(row.find('.penalty-value').text().replace('s', ''));
-        row.find('.penalty-value').show();
-        row.find('.dq-checkbox').prop('disabled', true);
-        // Reset checkbox to original state if needed (simpler to reload or just leave as is if not saved)
-        row.find('.edit-result-btn').show();
-        row.find('.save-result-btn, .cancel-result-btn').hide();
+        location.reload(); // Simplest way to reset everything
     });
 
     resultsTable.on('click', '.save-result-btn', function() {
         const row = $(this).closest('tr');
         const resultId = row.data('result-id');
+        const gridPos = row.find('.grid-input').val();
+        const bestLap = row.find('.best-lap-input').val();
+        const totalTime = row.find('.total-time-input').val();
         const penaltySeconds = row.find('.penalty-input').val();
+        const isDnf = row.find('.dnf-checkbox').is(':checked') ? 1 : 0;
+        const isNc = row.find('.nc-checkbox').is(':checked') ? 1 : 0;
         const isDq = row.find('.dq-checkbox').is(':checked') ? 1 : 0;
         const nonce = $('#srl_penalties_nonce').val();
         const saveBtn = $(this);
@@ -417,15 +448,19 @@ jQuery(document).ready(function($) {
             url: srl_ajax_object.ajax_url,
             type: 'POST',
             data: {
-                action: 'srl_save_result_penalties',
+                action: 'srl_save_result_details',
                 nonce: nonce,
                 result_id: resultId,
+                grid_position: gridPos,
+                best_lap_time: bestLap,
+                total_time: totalTime,
                 penalty_seconds: penaltySeconds,
+                is_dnf: isDnf,
+                is_nc: isNc,
                 is_dq: isDq
             },
             success: function(response) {
                 if (response.success) {
-                    // Recargar la página para ver las nuevas posiciones y puntos
                     location.reload();
                 } else {
                     alert('Error: ' + response.data.message);
@@ -435,6 +470,54 @@ jQuery(document).ready(function($) {
             error: function() {
                 alert('Ocurrió un error de servidor.');
                 saveBtn.prop('disabled', false).text('Guardar');
+            }
+        });
+    });
+
+    resultsTable.on('click', '.delete-result-btn', function() {
+        if (!confirm('¿Seguro que quieres eliminar este resultado individual?')) return;
+        const row = $(this).closest('tr');
+        const resultId = row.data('result-id');
+        const nonce = srl_ajax_object.nonce;
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_delete_single_result',
+                nonce: nonce,
+                result_id: resultId
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data.message);
+                }
+            }
+        });
+    });
+
+    $('#srl-add-manual-driver-btn').on('click', function() {
+        const driverId = $('#srl-manual-driver-id').val();
+        const sessionId = $(this).data('session-id');
+        if (!driverId) { alert('Selecciona un piloto.'); return; }
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_add_manual_result',
+                nonce: srl_ajax_object.nonce,
+                driver_id: driverId,
+                session_id: sessionId
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data.message);
+                }
             }
         });
     });
