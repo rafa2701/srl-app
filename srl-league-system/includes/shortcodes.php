@@ -112,8 +112,31 @@ function srl_render_driver_profile_shortcode( $atts ) {
     ob_start();
     ?>
     <div class="srl-app-container srl-driver-profile">
-        <h1>Palmarés de <?php echo esc_html( $driver->full_name ); ?></h1>
-        <p class="srl-steam-id">SteamID: <?php echo esc_html( $driver->steam_id ); ?></p>
+        <div class="srl-profile-header" style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
+            <div class="srl-profile-photo">
+                <?php
+                $img_src = $driver->photo_url;
+                if ( $driver->photo_id ) {
+                    $img_src = wp_get_attachment_image_url($driver->photo_id, 'medium') ?: $img_src;
+                }
+                if ( $img_src ) : ?>
+                    <img src="<?php echo esc_url($img_src); ?>" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.3);">
+                <?php else : ?>
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; border: 3px solid #444;">
+                        <span class="dashicons dashicons-admin-users" style="font-size: 60px; width: 60px; height: 60px; color: #666;"></span>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="srl-profile-info">
+                <h1 style="margin: 0; line-height: 1;"><?php echo esc_html( $driver->full_name ); ?></h1>
+                <p class="srl-steam-id" style="margin: 5px 0 0; opacity: 0.7;">
+                    <?php if ($driver->nationality) : ?>
+                        <span class="srl-nationality" style="margin-right: 15px;">🏁 <?php echo esc_html($driver->nationality); ?></span>
+                    <?php endif; ?>
+                    SteamID: <?php echo esc_html( $driver->steam_id ); ?>
+                </p>
+            </div>
+        </div>
         
         <h2>Estadísticas Globales</h2>
         <div class="srl-stats-grid">
@@ -272,7 +295,7 @@ function srl_render_event_results_shortcode( $atts ) {
 
     global $wpdb;
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, d.steam_id, r.position, r.grid_position, r.best_lap_time, r.total_time, r.is_dnf, r.has_fastest_lap
+        SELECT d.full_name, d.steam_id, r.position, r.grid_position, r.best_lap_time, r.total_time, r.is_dnf, r.is_nc, r.is_disqualified, r.has_fastest_lap
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -304,7 +327,12 @@ function srl_render_event_results_shortcode( $atts ) {
                     if ( $result->grid_position == 1 ) $row_classes[] = 'srl-pole-position';
                     ?>
                     <tr class="<?php echo implode(' ', $row_classes); ?>">
-                        <td class="position"><?php echo $result->is_dnf ? 'DNF' : esc_html( $result->position ); ?></td>
+                        <td class="position"><?php
+                            if ($result->is_disqualified) echo 'DQ';
+                            elseif ($result->is_dnf) echo 'DNF';
+                            elseif ($result->is_nc) echo 'NC';
+                            else echo esc_html( $result->position );
+                        ?></td>
                         <td><a href="<?php echo esc_url( rtrim($atts['profile_page_url'], '/') . '/?steam_id=' . $result->steam_id ); ?>"><?php echo esc_html( $result->full_name ); ?></a></td>
                         <td class="numeric"><?php echo esc_html( $result->grid_position ); ?></td>
                         <td class="numeric"><?php echo srl_format_time( $result->best_lap_time ); ?></td>
@@ -373,6 +401,49 @@ function srl_render_main_menu_shortcode( $atts ) {
     </div>
     <?php
     return ob_get_clean();
+}
+
+/**
+ * Formatea milisegundos a MM:SS.ms para edición.
+ */
+function srl_format_time_for_edit( $ms, $is_total_time = false ) {
+    if ( ! $ms || $ms <= 0 ) return '';
+    $seconds_total = $ms / 1000;
+    $hours = floor($seconds_total / 3600);
+    $minutes = floor(($seconds_total % 3600) / 60);
+    $seconds = floor($seconds_total % 60);
+    $milliseconds = $ms % 1000;
+
+    if ($is_total_time && $hours > 0) {
+        return sprintf('%02d:%02d:%02d.%03d', $hours, $minutes, $seconds, $milliseconds);
+    }
+    return sprintf('%02d:%02d.%03d', $minutes, $seconds, $milliseconds);
+}
+
+/**
+ * Convierte MM:SS.ms a milisegundos.
+ */
+function srl_parse_edit_time( $time_str ) {
+    if ( empty($time_str) ) return 0;
+
+    // Formatos posibles: HH:MM:SS.ms o MM:SS.ms o SS.ms
+    $parts = explode(':', $time_str);
+    $hours = 0;
+    $minutes = 0;
+    $seconds_with_ms = 0;
+
+    if ( count($parts) === 3 ) {
+        $hours = intval($parts[0]);
+        $minutes = intval($parts[1]);
+        $seconds_with_ms = floatval($parts[2]);
+    } elseif ( count($parts) === 2 ) {
+        $minutes = intval($parts[0]);
+        $seconds_with_ms = floatval($parts[1]);
+    } else {
+        $seconds_with_ms = floatval($parts[0]);
+    }
+
+    return (int)round(($hours * 3600 + $minutes * 60 + $seconds_with_ms) * 1000);
 }
 
 /**

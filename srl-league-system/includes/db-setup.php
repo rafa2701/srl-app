@@ -52,6 +52,9 @@ function srl_create_database_tables() {
       championships_won_count int(11) NOT NULL DEFAULT 0,
       dnfs_count int(11) NOT NULL DEFAULT 0,
       dq_count int(11) NOT NULL DEFAULT 0,
+      nationality varchar(100),
+      photo_id bigint(20) unsigned,
+      photo_url text,
       PRIMARY KEY  (id),
       KEY idx_steam_id (steam_id)
     ) $charset_collate;
@@ -92,6 +95,8 @@ function srl_create_database_tables() {
       has_pole tinyint(1) NOT NULL DEFAULT 0,
       has_fastest_lap tinyint(1) NOT NULL DEFAULT 0,
       is_dnf tinyint(1) NOT NULL DEFAULT 0,
+      is_nc tinyint(1) NOT NULL DEFAULT 0,
+      is_nc_forced tinyint(1) NOT NULL DEFAULT 0,
       is_disqualified tinyint(1) NOT NULL DEFAULT 0,
       points_awarded float NOT NULL DEFAULT 0,
       PRIMARY KEY  (id),
