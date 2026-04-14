@@ -9,6 +9,15 @@ jQuery(document).ready(function($) {
         $($(this).attr('href')).addClass('active');
     });
 
+    // Helper for showing temporary notices
+    function srlShowNotice(message, type = 'success') {
+        const notice = $(`<div class="notice notice-${type} is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>${message}</p></div>`);
+        $('body').append(notice);
+        setTimeout(function() {
+            notice.fadeOut(function() { $(this).remove(); location.reload(); });
+        }, 1200);
+    }
+
     // --- Lógica del formulario de subida manual ---
     const championshipSelect = $('#srl-championship-select');
     const eventSelect = $('#srl-event-select');
@@ -59,7 +68,6 @@ jQuery(document).ready(function($) {
         const eventId = $(this).val();
         if (eventId) {
             sessionSelect.prop('disabled', false);
-            // Asegurarse de restaurar las opciones si fueron borradas por el bug anterior
             if (sessionSelect.find('option').length <= 1) {
                 sessionSelect.html('<option value="">-- Selecciona sesión --</option><option value="Qualifying">Clasificación (Qualy)</option><option value="Race">Carrera (Race)</option>');
             }
@@ -70,14 +78,11 @@ jQuery(document).ready(function($) {
 
     form.on('submit', function(e) {
         e.preventDefault();
-        
         spinner.addClass('is-active');
         responseDiv.html('').hide();
-
         const formData = new FormData(this);
         formData.append('action', 'srl_upload_results_file');
         formData.append('nonce', srl_ajax_object.nonce);
-
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
@@ -110,25 +115,15 @@ jQuery(document).ready(function($) {
 
     bulkForm.on('submit', function(e) {
         e.preventDefault();
-        
         const championshipId = $('#srl-bulk-championship-select').val();
-        if (!championshipId) {
-            alert('Por favor, selecciona un campeonato.');
-            return;
-        }
-        if (document.getElementById('srl-bulk-results-files').files.length === 0) {
-            alert('Por favor, selecciona al menos un archivo.');
-            return;
-        }
-
+        if (!championshipId) { alert('Por favor, selecciona un campeonato.'); return; }
+        if (document.getElementById('srl-bulk-results-files').files.length === 0) { alert('Por favor, selecciona al menos un archivo.'); return; }
         bulkSpinner.addClass('is-active');
         bulkResponseDiv.html('').hide();
         $(this).find('input[type="submit"]').prop('disabled', true);
-
         const formData = new FormData(this);
         formData.append('action', 'srl_bulk_upload_results');
         formData.append('nonce', srl_ajax_object.nonce);
-
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
@@ -149,13 +144,8 @@ jQuery(document).ready(function($) {
                     bulkResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
                 }
             },
-            error: function() {
-                bulkResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
-            },
-            complete: function() {
-                bulkSpinner.removeClass('is-active');
-                bulkForm.find('input[type="submit"]').prop('disabled', false);
-            }
+            error: function() { bulkResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show(); },
+            complete: function() { bulkSpinner.removeClass('is-active'); bulkForm.find('input[type="submit"]').prop('disabled', false); }
         });
     });
 
@@ -166,20 +156,13 @@ jQuery(document).ready(function($) {
 
     historyForm.on('submit', function(e) {
         e.preventDefault();
-        
-        if (document.getElementById('srl-history-file').files.length === 0) {
-            alert('Por favor, selecciona un archivo .xlsx.');
-            return;
-        }
-
+        if (document.getElementById('srl-history-file').files.length === 0) { alert('Por favor, selecciona un archivo .xlsx.'); return; }
         historySpinner.addClass('is-active');
         historyResponseDiv.html('<p>Procesando archivo... Esto puede tardar varios minutos. Por favor, no cierres esta ventana.</p>').show();
         $(this).find('input[type="submit"]').prop('disabled', true);
-
         const formData = new FormData(this);
         formData.append('action', 'srl_import_history_file');
         formData.append('nonce', srl_ajax_object.nonce);
-
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
@@ -198,194 +181,109 @@ jQuery(document).ready(function($) {
                     });
                 }
                 logHtml += '</div>';
-
-                if (response.success) {
-                    historyResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
-                } else {
-                    historyResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show();
-                }
+                if (response.success) { historyResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show(); }
+                else { historyResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>` + logHtml).show(); }
             },
-            error: function() {
-                historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor. Revisa el archivo de log en el plugin para más detalles.</p></div>').show();
-            },
-            complete: function() {
-                historySpinner.removeClass('is-active');
-                historyForm.find('input[type="submit"]').prop('disabled', false);
-            }
+            error: function() { historyResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado de servidor.</p></div>').show(); },
+            complete: function() { historySpinner.removeClass('is-active'); historyForm.find('input[type="submit"]').prop('disabled', false); }
         });
     });
 
-    // --- Lógica para el botón de eliminar resultados ---
-    const deleteBtn = $('#srl-delete-results-btn');
-    const deleteSpinner = deleteBtn.next('.spinner');
-    const deleteResponseDiv = $('#srl-delete-response');
-
-    deleteBtn.on('click', function() {
-        if ( ! confirm('¡ATENCIÓN!\n\nEstás a punto de eliminar permanentemente todos los resultados de este evento.\n\n¿Estás seguro de que quieres continuar?') ) {
-            return;
-        }
-
-        const eventId = $(this).data('event-id');
-        const nonce = $('#srl_event_actions_nonce').val();
-
-        deleteSpinner.addClass('is-active');
-        deleteResponseDiv.html('').hide();
-        deleteBtn.prop('disabled', true);
-
+    // --- Lógica para el botón de eliminar resultados del evento ---
+    $('#srl-delete-results-btn').on('click', function() {
+        if (!confirm('¡ATENCIÓN!\n\nEstás a punto de eliminar permanentemente todos los resultados de este evento.\n\n¿Estás seguro?')) return;
+        const btn = $(this);
+        const spinner = btn.next('.spinner');
+        const responseDiv = $('#srl-delete-response');
+        spinner.addClass('is-active');
+        btn.prop('disabled', true);
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
             data: {
                 action: 'srl_delete_event_results',
-                nonce: nonce,
-                event_id: eventId
+                nonce: $('#srl_event_actions_nonce').val(),
+                event_id: btn.data('event-id')
             },
             success: function(response) {
                 if (response.success) {
-                    deleteResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
-                    setTimeout(function() { location.reload(); }, 2000);
+                    responseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
+                    setTimeout(function() { location.reload(); }, 1500);
                 } else {
-                    deleteResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
+                    responseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
                 }
             },
-            error: function() {
-                deleteResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado.</div>').show();
-            },
-            complete: function() {
-                deleteSpinner.removeClass('is-active');
-                deleteBtn.prop('disabled', false);
-            }
+            complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
     });
 
-    // --- Lógica para el botón de recalcular ---
-    const recalcBtn = $('#srl-recalculate-stats-btn');
-    const recalcSpinner = recalcBtn.next('.spinner');
-    const recalcResponseDiv = $('#srl-recalculate-response');
-
-    recalcBtn.on('click', function() {
-        if ( ! confirm('¿Estás seguro de que quieres recalcular todas las estadísticas? Este proceso puede tardar un poco.') ) {
-            return;
-        }
-
-        recalcSpinner.addClass('is-active');
-        recalcResponseDiv.html('').hide();
-        recalcBtn.prop('disabled', true);
-
+    // --- Lógica para el botón de recalcular estadísticas globales ---
+    $('#srl-recalculate-stats-btn').on('click', function() {
+        if (!confirm('¿Estás seguro de que quieres recalcular todas las estadísticas?')) return;
+        const btn = $(this);
+        const spinner = btn.next('.spinner');
+        const responseDiv = $('#srl-recalculate-response');
+        spinner.addClass('is-active');
+        btn.prop('disabled', true);
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_recalculate_all_stats',
-                nonce: srl_ajax_object.nonce
-            },
+            data: { action: 'srl_recalculate_all_stats', nonce: srl_ajax_object.nonce },
             success: function(response) {
-                if (response.success) {
-                    recalcResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show();
-                } else {
-                    recalcResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
-                }
+                if (response.success) { responseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show(); }
+                else { responseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show(); }
             },
-            error: function() {
-                recalcResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado durante el recálculo.</p></div>').show();
-            },
-            complete: function() {
-                recalcSpinner.removeClass('is-active');
-                recalcBtn.prop('disabled', false);
-            }
+            complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
     });
 
     // --- Lógica para el botón de limpiar huérfanos ---
-    const cleanupBtn = $('#srl-cleanup-orphans-btn');
-    const cleanupSpinner = cleanupBtn.next('.spinner');
-    const cleanupResponseDiv = $('#srl-cleanup-response');
-
-    cleanupBtn.on('click', function() {
-        if ( ! confirm('¿Estás seguro de que quieres buscar y eliminar resultados huérfanos? Esta acción no se puede deshacer.') ) {
-            return;
-        }
-        cleanupSpinner.addClass('is-active');
-        cleanupResponseDiv.html('').hide();
-        cleanupBtn.prop('disabled', true);
-
+    $('#srl-cleanup-orphans-btn').on('click', function() {
+        if (!confirm('¿Seguro que quieres eliminar resultados huérfanos?')) return;
+        const btn = $(this);
+        const spinner = btn.next('.spinner');
+        const responseDiv = $('#srl-cleanup-response');
+        spinner.addClass('is-active');
+        btn.prop('disabled', true);
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_cleanup_orphan_results',
-                nonce: srl_ajax_object.nonce
-            },
+            data: { action: 'srl_cleanup_orphan_results', nonce: srl_ajax_object.nonce },
             success: function(response) {
-                if (response.success) {
-                    cleanupResponseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show();
-                } else {
-                    cleanupResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
-                }
+                if (response.success) { responseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show(); }
+                else { responseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show(); }
             },
-            error: function() {
-                cleanupResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
-            },
-            complete: function() {
-                cleanupSpinner.removeClass('is-active');
-                cleanupBtn.prop('disabled', false);
-            }
+            complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
     });
- // --- Lógica para el botón de recalcular puntos de un campeonato ---
-    const recalcPointsBtn = $('#srl-recalculate-points-btn');
-    const recalcPointsSpinner = recalcPointsBtn.next('.spinner');
-    const recalcPointsResponseDiv = $('#srl-recalculate-points-response');
 
-    recalcPointsBtn.on('click', function() {
-        if ( ! confirm('Esto recalculará los puntos para TODOS los eventos de este campeonato usando las reglas de puntuación guardadas actualmente. ¿Estás seguro?') ) {
-            return;
-        }
-
-        const championshipId = $(this).data('championship-id');
-        const nonce = $('#srl_championship_actions_nonce').val();
-
-        recalcPointsSpinner.addClass('is-active');
-        recalcPointsResponseDiv.html('').hide();
-        recalcPointsBtn.prop('disabled', true);
-
+    // --- Recalcular puntos de campeonato ---
+    $('#srl-recalculate-points-btn').on('click', function() {
+        if (!confirm('Esto recalculará puntos para TODOS los eventos. ¿Seguro?')) return;
+        const btn = $(this);
+        const spinner = btn.next('.spinner');
+        const responseDiv = $('#srl-recalculate-points-response');
+        spinner.addClass('is-active');
+        btn.prop('disabled', true);
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_recalculate_championship_points',
-                nonce: nonce,
-                championship_id: championshipId
-            },
+            data: { action: 'srl_recalculate_championship_points', nonce: $('#srl_championship_actions_nonce').val(), championship_id: btn.data('championship-id') },
             success: function(response) {
-                // CORRECCIÓN: Añadir validación para la respuesta del servidor
                 if (response && response.data && response.data.message) {
-                    if (response.success) {
-                        recalcPointsResponseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
-                    } else {
-                        recalcPointsResponseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
-                    }
-                } else {
-                    // Si la respuesta no tiene el formato esperado, mostrar un error genérico y registrar la respuesta completa en la consola
-                    recalcPointsResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error inesperado. Revisa la consola del navegador para más detalles.</div>').show();
-                    console.error("Respuesta inesperada del servidor:", response);
+                    if (response.success) { responseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show(); }
+                    else { responseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show(); }
                 }
             },
-            error: function() {
-                recalcPointsResponseDiv.html('<div style="color: #dc3545;">Ocurrió un error de servidor.</div>').show();
-            },
-            complete: function() {
-                recalcPointsSpinner.removeClass('is-active');
-                recalcPointsBtn.prop('disabled', false);
-            }
+            complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
     });
 
-    // --- Lógica para la edición de resultados en el Meta Box ---
+    // --- Lógica para el Meta Box de Resultados ---
     const resultsTable = $('.srl-results-edit-table');
     const sortableContainer = document.getElementById('srl-results-sortable');
 
-    if (sortableContainer) {
+    if (sortableContainer && typeof Sortable !== 'undefined') {
         new Sortable(sortableContainer, {
             handle: '.drag-handle',
             animation: 150,
@@ -395,7 +293,6 @@ jQuery(document).ready(function($) {
                 $('#srl-results-sortable tr').each(function() {
                     resultIds.push($(this).data('result-id'));
                 });
-
                 $.ajax({
                     url: srl_ajax_object.ajax_url,
                     type: 'POST',
@@ -406,18 +303,10 @@ jQuery(document).ready(function($) {
                     },
                     success: function(response) {
                         if (response.success) {
-                            // Mostrar mensaje de éxito temporal antes de recargar
-                            const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Posiciones actualizadas correctamente.</p></div>');
-                            $('body').append(notice);
-                            setTimeout(function() {
-                                notice.fadeOut(function() { $(this).remove(); location.reload(); });
-                            }, 1000);
+                            srlShowNotice('Posiciones actualizadas correctamente.');
                         } else {
-                            alert('Error al reordenar: ' + response.data.message);
+                            alert('Error: ' + response.data.message);
                         }
-                    },
-                    error: function() {
-                        alert('Error de servidor al reordenar.');
                     }
                 });
             }
@@ -429,86 +318,62 @@ jQuery(document).ready(function($) {
         row.find('.view-value').hide();
         row.find('.edit-input').show();
         row.find('.dnf-checkbox, .nc-checkbox, .dq-checkbox').prop('disabled', false);
-        row.find('.edit-result-btn').hide();
+        $(this).hide();
         row.find('.save-result-btn, .cancel-result-btn, .delete-result-btn').show();
     });
 
     resultsTable.on('click', '.cancel-result-btn', function() {
-        location.reload(); // Simplest way to reset everything
+        location.reload();
     });
 
     resultsTable.on('click', '.save-result-btn', function() {
         const row = $(this).closest('tr');
-        const resultId = row.data('result-id');
-        const gridPos = row.find('.grid-input').val();
-        const laps = row.find('.laps-input').val();
-        const bestLap = row.find('.best-lap-input').val();
-        const totalTime = row.find('.total-time-input').val();
-        const penaltySeconds = row.find('.penalty-input').val();
-        const isDnf = row.find('.dnf-checkbox').is(':checked') ? 1 : 0;
-        const isNc = row.find('.nc-checkbox').is(':checked') ? 1 : 0;
-        const isDq = row.find('.dq-checkbox').is(':checked') ? 1 : 0;
-        const nonce = $('#srl_penalties_nonce').val();
         const saveBtn = $(this);
-
         saveBtn.prop('disabled', true).text('...');
-
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
             data: {
                 action: 'srl_save_result_details',
-                nonce: nonce,
-                result_id: resultId,
-                grid_position: gridPos,
-                laps_completed: laps,
-                best_lap_time: bestLap,
-                total_time: totalTime,
-                penalty_seconds: penaltySeconds,
-                is_dnf: isDnf,
-                is_nc: isNc,
-                is_dq: isDq
+                nonce: $('#srl_penalties_nonce').val(),
+                result_id: row.data('result-id'),
+                grid_position: row.find('.grid-input').val(),
+                laps_completed: row.find('.laps-input').val(),
+                best_lap_time: row.find('.best-lap-input').val(),
+                total_time: row.find('.total-time-input').val(),
+                penalty_seconds: row.find('.penalty-input').val(),
+                is_dnf: row.find('.dnf-checkbox').is(':checked') ? 1 : 0,
+                is_nc: row.find('.nc-checkbox').is(':checked') ? 1 : 0,
+                is_dq: row.find('.dq-checkbox').is(':checked') ? 1 : 0
             },
             success: function(response) {
                 if (response.success) {
-                    const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Resultado actualizado y recalculado.</p></div>');
-                    $('body').append(notice);
-                    setTimeout(function() {
-                        notice.fadeOut(function() { $(this).remove(); location.reload(); });
-                    }, 1000);
+                    srlShowNotice('Resultado actualizado.');
                 } else {
                     alert('Error: ' + response.data.message);
                     saveBtn.prop('disabled', false).text('Guardar');
                 }
             },
             error: function() {
-                alert('Ocurrió un error de servidor.');
+                alert('Error de servidor.');
                 saveBtn.prop('disabled', false).text('Guardar');
             }
         });
     });
 
     resultsTable.on('click', '.delete-result-btn', function() {
-        if (!confirm('¿Seguro que quieres eliminar este resultado individual?')) return;
-        const row = $(this).closest('tr');
-        const resultId = row.data('result-id');
-        const nonce = srl_ajax_object.nonce;
-
+        if (!confirm('¿Eliminar este resultado?')) return;
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
             data: {
                 action: 'srl_delete_single_result',
-                nonce: nonce,
-                result_id: resultId
+                nonce: srl_ajax_object.nonce,
+                result_id: $(this).closest('tr').data('result-id')
             },
             success: function(response) {
                 if (response.success) {
-                    const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Resultado eliminado.</p></div>');
-                    $('body').append(notice);
-                    setTimeout(function() {
-                        notice.fadeOut(function() { $(this).remove(); location.reload(); });
-                    }, 1000);
+                    srlShowNotice('Resultado eliminado.');
                 } else {
                     alert('Error: ' + response.data.message);
                 }
@@ -518,9 +383,7 @@ jQuery(document).ready(function($) {
 
     $('#srl-add-manual-driver-btn').on('click', function() {
         const driverId = $('#srl-manual-driver-id').val();
-        const sessionId = $(this).data('session-id');
         if (!driverId) { alert('Selecciona un piloto.'); return; }
-
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
@@ -528,15 +391,30 @@ jQuery(document).ready(function($) {
                 action: 'srl_add_manual_result',
                 nonce: srl_ajax_object.nonce,
                 driver_id: driverId,
-                session_id: sessionId
+                session_id: $(this).data('session-id')
             },
             success: function(response) {
                 if (response.success) {
-                    const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Piloto añadido al resultado.</p></div>');
-                    $('body').append(notice);
-                    setTimeout(function() {
-                        notice.fadeOut(function() { $(this).remove(); location.reload(); });
-                    }, 1000);
+                    srlShowNotice('Piloto añadido.');
+                } else {
+                    alert('Error: ' + response.data.message);
+                }
+            }
+        });
+    });
+
+    $('#srl-create-manual-session-btn').on('click', function() {
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_create_manual_session',
+                nonce: srl_ajax_object.nonce,
+                event_id: $(this).data('event-id')
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
                 } else {
                     alert('Error: ' + response.data.message);
                 }

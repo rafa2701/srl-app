@@ -62,6 +62,16 @@ function srl_check_for_updates() {
             // 3. Restaurar la clave única que quitamos
             $wpdb->query( "ALTER TABLE $table_results ADD UNIQUE KEY uk_session_driver (session_id, driver_id)" );
         }
+
+        // REPARACIÓN ADICIONAL: Asegurar columnas para NC
+        $column_nc = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_nc' ) );
+        if ( empty( $column_nc ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_nc tinyint(1) NOT NULL DEFAULT 0 AFTER is_dnf" );
+        }
+        $column_nc_forced = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_nc_forced' ) );
+        if ( empty( $column_nc_forced ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_nc_forced tinyint(1) NOT NULL DEFAULT 0 AFTER is_nc" );
+        }
     }
 }
 add_action( 'admin_init', 'srl_check_for_updates' );
