@@ -471,7 +471,11 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Resultado actualizado y recalculado.</p></div>');
+                    $('body').append(notice);
+                    setTimeout(function() {
+                        notice.fadeOut(function() { $(this).remove(); location.reload(); });
+                    }, 1000);
                 } else {
                     alert('Error: ' + response.data.message);
                     saveBtn.prop('disabled', false).text('Guardar');
@@ -500,7 +504,11 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Resultado eliminado.</p></div>');
+                    $('body').append(notice);
+                    setTimeout(function() {
+                        notice.fadeOut(function() { $(this).remove(); location.reload(); });
+                    }, 1000);
                 } else {
                     alert('Error: ' + response.data.message);
                 }
@@ -524,7 +532,11 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    const notice = $('<div class="notice notice-success is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>Piloto añadido al resultado.</p></div>');
+                    $('body').append(notice);
+                    setTimeout(function() {
+                        notice.fadeOut(function() { $(this).remove(); location.reload(); });
+                    }, 1000);
                 } else {
                     alert('Error: ' + response.data.message);
                 }
