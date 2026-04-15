@@ -1,5 +1,37 @@
 jQuery(document).ready(function($) {
 
+    // --- Persistent Notification System ---
+    function srlSetPendingNotice(message, type = 'success') {
+        sessionStorage.setItem('srl_pending_notice', JSON.stringify({ message, type }));
+    }
+
+    function srlCheckPendingNotices() {
+        const pending = sessionStorage.getItem('srl_pending_notice');
+        if (pending) {
+            const { message, type } = JSON.parse(pending);
+            const noticeHtml = `<div class="notice notice-${type} is-dismissible srl-auto-notice"><p>${message}</p><button type="button" class="notice-dismiss"><span class="screen-reader-text">Descartar este aviso.</span></button></div>`;
+            $('.wrap h1').first().after(noticeHtml);
+            sessionStorage.removeItem('srl_pending_notice');
+
+            // Auto-dismiss after 5 seconds if not already clicked
+            setTimeout(function() {
+                $('.srl-auto-notice').fadeOut(function() { $(this).remove(); });
+            }, 5000);
+        }
+    }
+    srlCheckPendingNotices();
+
+    // Helper for showing immediate or pending notices
+    function srlShowNotice(message, type = 'success', reload = true) {
+        if (reload) {
+            srlSetPendingNotice(message, type);
+            location.reload();
+        } else {
+            const notice = $(`<div class="notice notice-${type} is-dismissible" style="margin-top:15px;"><p>${message}</p></div>`);
+            $('.wrap h1').first().after(notice);
+        }
+    }
+
     // --- Lógica de Pestañas ---
     $('.nav-tab-wrapper a').on('click', function(e) {
         e.preventDefault();
@@ -8,15 +40,6 @@ jQuery(document).ready(function($) {
         $(this).addClass('nav-tab-active');
         $($(this).attr('href')).addClass('active');
     });
-
-    // Helper for showing temporary notices
-    function srlShowNotice(message, type = 'success') {
-        const notice = $(`<div class="notice notice-${type} is-dismissible" style="position:fixed; top:40px; right:20px; z-index:9999; box-shadow:0 2px 5px rgba(0,0,0,0.2);"><p>${message}</p></div>`);
-        $('body').append(notice);
-        setTimeout(function() {
-            notice.fadeOut(function() { $(this).remove(); location.reload(); });
-        }, 1200);
-    }
 
     // --- Lógica del formulario de subida manual ---
     const championshipSelect = $('#srl-championship-select');
@@ -28,38 +51,22 @@ jQuery(document).ready(function($) {
 
     championshipSelect.on('change', function() {
         const champId = $(this).val();
-        
         eventSelect.prop('disabled', true).html('<option value="">Cargando eventos...</option>');
         sessionSelect.prop('disabled', true).html('<option value="">-- Primero elige un evento --</option>');
-
-        if (!champId) {
-            eventSelect.html('<option value="">-- Primero elige un campeonato --</option>');
-            return;
-        }
-
+        if (!champId) { eventSelect.html('<option value="">-- Primero elige un campeonato --</option>'); return; }
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_get_events',
-                nonce: srl_ajax_object.nonce,
-                championship_id: champId
-            },
+            data: { action: 'srl_get_events', nonce: srl_ajax_object.nonce, championship_id: champId },
             success: function(response) {
                 if (response.success) {
                     let options = '<option value="">-- Elige un evento --</option>';
                     if (response.data.length > 0) {
-                        response.data.forEach(function(event) {
-                            options += `<option value="${event.id}">${event.name}</option>`;
-                        });
+                        response.data.forEach(function(event) { options += `<option value="${event.id}">${event.name}</option>`; });
                         eventSelect.prop('disabled', false);
-                    } else {
-                        options = '<option value="">-- No hay eventos para este campeonato --</option>';
-                    }
+                    } else { options = '<option value="">-- No hay eventos para este campeonato --</option>'; }
                     eventSelect.html(options);
-                } else {
-                    eventSelect.html('<option value="">-- Error al cargar --</option>');
-                }
+                } else { eventSelect.html('<option value="">-- Error al cargar --</option>'); }
             }
         });
     });
@@ -71,9 +78,7 @@ jQuery(document).ready(function($) {
             if (sessionSelect.find('option').length <= 1) {
                 sessionSelect.html('<option value="">-- Selecciona sesión --</option><option value="Qualifying">Clasificación (Qualy)</option><option value="Race">Carrera (Race)</option>');
             }
-        } else {
-            sessionSelect.prop('disabled', true).val('');
-        }
+        } else { sessionSelect.prop('disabled', true).val(''); }
     });
 
     form.on('submit', function(e) {
@@ -91,20 +96,13 @@ jQuery(document).ready(function($) {
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    responseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show();
-                    form[0].reset();
-                    eventSelect.prop('disabled', true).html('<option value="">-- Primero elige un campeonato --</option>');
-                    sessionSelect.prop('disabled', true).html('<option value="">-- Primero elige un evento --</option>');
+                    srlShowNotice(response.data.message, 'success', true);
                 } else {
                     responseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
                 }
             },
-            error: function() {
-                responseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show();
-            },
-            complete: function() {
-                spinner.removeClass('is-active');
-            }
+            error: function() { responseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show(); },
+            complete: function() { spinner.removeClass('is-active'); }
         });
     });
 
@@ -140,9 +138,7 @@ jQuery(document).ready(function($) {
                     logHtml += '</ul>';
                     bulkResponseDiv.html(logHtml).show();
                     bulkForm[0].reset();
-                } else {
-                    bulkResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show();
-                }
+                } else { bulkResponseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show(); }
             },
             error: function() { bulkResponseDiv.html('<div class="notice notice-error is-dismissible"><p>Ocurrió un error inesperado.</p></div>').show(); },
             complete: function() { bulkSpinner.removeClass('is-active'); bulkForm.find('input[type="submit"]').prop('disabled', false); }
@@ -194,24 +190,15 @@ jQuery(document).ready(function($) {
         if (!confirm('¡ATENCIÓN!\n\nEstás a punto de eliminar permanentemente todos los resultados de este evento.\n\n¿Estás seguro?')) return;
         const btn = $(this);
         const spinner = btn.next('.spinner');
-        const responseDiv = $('#srl-delete-response');
         spinner.addClass('is-active');
         btn.prop('disabled', true);
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_delete_event_results',
-                nonce: $('#srl_event_actions_nonce').val(),
-                event_id: btn.data('event-id')
-            },
+            data: { action: 'srl_delete_event_results', nonce: $('#srl_event_actions_nonce').val(), event_id: btn.data('event-id') },
             success: function(response) {
-                if (response.success) {
-                    responseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show();
-                    setTimeout(function() { location.reload(); }, 1500);
-                } else {
-                    responseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show();
-                }
+                if (response.success) { srlShowNotice(response.data.message, 'success', true); }
+                else { alert('Error: ' + response.data.message); }
             },
             complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
@@ -222,7 +209,6 @@ jQuery(document).ready(function($) {
         if (!confirm('¿Estás seguro de que quieres recalcular todas las estadísticas?')) return;
         const btn = $(this);
         const spinner = btn.next('.spinner');
-        const responseDiv = $('#srl-recalculate-response');
         spinner.addClass('is-active');
         btn.prop('disabled', true);
         $.ajax({
@@ -230,28 +216,8 @@ jQuery(document).ready(function($) {
             type: 'POST',
             data: { action: 'srl_recalculate_all_stats', nonce: srl_ajax_object.nonce },
             success: function(response) {
-                if (response.success) { responseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show(); }
-                else { responseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show(); }
-            },
-            complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
-        });
-    });
-
-    // --- Lógica para el botón de limpiar huérfanos ---
-    $('#srl-cleanup-orphans-btn').on('click', function() {
-        if (!confirm('¿Seguro que quieres eliminar resultados huérfanos?')) return;
-        const btn = $(this);
-        const spinner = btn.next('.spinner');
-        const responseDiv = $('#srl-cleanup-response');
-        spinner.addClass('is-active');
-        btn.prop('disabled', true);
-        $.ajax({
-            url: srl_ajax_object.ajax_url,
-            type: 'POST',
-            data: { action: 'srl_cleanup_orphan_results', nonce: srl_ajax_object.nonce },
-            success: function(response) {
-                if (response.success) { responseDiv.html(`<div class="notice notice-success is-dismissible"><p>${response.data.message}</p></div>`).show(); }
-                else { responseDiv.html(`<div class="notice notice-error is-dismissible"><p>${response.data.message}</p></div>`).show(); }
+                if (response.success) { srlShowNotice(response.data.message, 'success', false); }
+                else { alert('Error: ' + response.data.message); }
             },
             complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
@@ -262,7 +228,6 @@ jQuery(document).ready(function($) {
         if (!confirm('Esto recalculará puntos para TODOS los eventos. ¿Seguro?')) return;
         const btn = $(this);
         const spinner = btn.next('.spinner');
-        const responseDiv = $('#srl-recalculate-points-response');
         spinner.addClass('is-active');
         btn.prop('disabled', true);
         $.ajax({
@@ -270,10 +235,8 @@ jQuery(document).ready(function($) {
             type: 'POST',
             data: { action: 'srl_recalculate_championship_points', nonce: $('#srl_championship_actions_nonce').val(), championship_id: btn.data('championship-id') },
             success: function(response) {
-                if (response && response.data && response.data.message) {
-                    if (response.success) { responseDiv.html(`<div style="color: #28a745;">${response.data.message}</div>`).show(); }
-                    else { responseDiv.html(`<div style="color: #dc3545;">${response.data.message}</div>`).show(); }
-                }
+                if (response.success) { srlShowNotice(response.data.message, 'success', false); }
+                else { alert('Error: ' + response.data.message); }
             },
             complete: function() { spinner.removeClass('is-active'); btn.prop('disabled', false); }
         });
@@ -290,23 +253,14 @@ jQuery(document).ready(function($) {
             ghostClass: 'sortable-ghost',
             onEnd: function() {
                 const resultIds = [];
-                $('#srl-results-sortable tr').each(function() {
-                    resultIds.push($(this).data('result-id'));
-                });
+                $('#srl-results-sortable tr').each(function() { resultIds.push($(this).data('result-id')); });
                 $.ajax({
                     url: srl_ajax_object.ajax_url,
                     type: 'POST',
-                    data: {
-                        action: 'srl_reorder_results',
-                        nonce: srl_ajax_object.nonce,
-                        result_ids: resultIds
-                    },
+                    data: { action: 'srl_reorder_results', nonce: srl_ajax_object.nonce, result_ids: resultIds },
                     success: function(response) {
-                        if (response.success) {
-                            srlShowNotice('Posiciones actualizadas correctamente.');
-                        } else {
-                            alert('Error: ' + response.data.message);
-                        }
+                        if (response.success) { srlShowNotice('Posiciones actualizadas correctamente.', 'success', true); }
+                        else { alert('Error: ' + response.data.message); }
                     }
                 });
             }
@@ -322,9 +276,7 @@ jQuery(document).ready(function($) {
         row.find('.save-result-btn, .cancel-result-btn, .delete-result-btn').show();
     });
 
-    resultsTable.on('click', '.cancel-result-btn', function() {
-        location.reload();
-    });
+    resultsTable.on('click', '.cancel-result-btn', function() { location.reload(); });
 
     resultsTable.on('click', '.save-result-btn', function() {
         const row = $(this).closest('tr');
@@ -347,17 +299,10 @@ jQuery(document).ready(function($) {
                 is_dq: row.find('.dq-checkbox').is(':checked') ? 1 : 0
             },
             success: function(response) {
-                if (response.success) {
-                    srlShowNotice('Resultado actualizado.');
-                } else {
-                    alert('Error: ' + response.data.message);
-                    saveBtn.prop('disabled', false).text('Guardar');
-                }
+                if (response.success) { srlShowNotice('Resultado actualizado.', 'success', true); }
+                else { alert('Error: ' + response.data.message); saveBtn.prop('disabled', false).text('Guardar'); }
             },
-            error: function() {
-                alert('Error de servidor.');
-                saveBtn.prop('disabled', false).text('Guardar');
-            }
+            error: function() { alert('Error de servidor.'); saveBtn.prop('disabled', false).text('Guardar'); }
         });
     });
 
@@ -366,17 +311,10 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_delete_single_result',
-                nonce: srl_ajax_object.nonce,
-                result_id: $(this).closest('tr').data('result-id')
-            },
+            data: { action: 'srl_delete_single_result', nonce: srl_ajax_object.nonce, result_id: $(this).closest('tr').data('result-id') },
             success: function(response) {
-                if (response.success) {
-                    srlShowNotice('Resultado eliminado.');
-                } else {
-                    alert('Error: ' + response.data.message);
-                }
+                if (response.success) { srlShowNotice('Resultado eliminado.', 'success', true); }
+                else { alert('Error: ' + response.data.message); }
             }
         });
     });
@@ -387,18 +325,10 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_add_manual_result',
-                nonce: srl_ajax_object.nonce,
-                driver_id: driverId,
-                session_id: $(this).data('session-id')
-            },
+            data: { action: 'srl_add_manual_result', nonce: srl_ajax_object.nonce, driver_id: driverId, session_id: $(this).data('session-id') },
             success: function(response) {
-                if (response.success) {
-                    srlShowNotice('Piloto añadido.');
-                } else {
-                    alert('Error: ' + response.data.message);
-                }
+                if (response.success) { srlShowNotice('Piloto añadido.', 'success', true); }
+                else { alert('Error: ' + response.data.message); }
             }
         });
     });
@@ -407,17 +337,10 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: {
-                action: 'srl_create_manual_session',
-                nonce: srl_ajax_object.nonce,
-                event_id: $(this).data('event-id')
-            },
+            data: { action: 'srl_create_manual_session', nonce: srl_ajax_object.nonce, event_id: $(this).data('event-id') },
             success: function(response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + response.data.message);
-                }
+                if (response.success) { srlShowNotice('Sesión de carrera creada.', 'success', true); }
+                else { alert('Error: ' + response.data.message); }
             }
         });
     });
