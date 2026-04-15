@@ -56,7 +56,7 @@ function srl_render_event_results_meta_box( $post ) {
     $id_field = !empty($has_id) ? 'r.id' : '0 as id';
 
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.is_dnf, r.is_nc, r.time_penalty, r.is_disqualified, r.session_id
+        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.is_dnf, r.is_nc, r.is_nc_forced, r.time_penalty, r.is_disqualified, r.session_id
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -68,26 +68,6 @@ function srl_render_event_results_meta_box( $post ) {
         echo '<div class="notice notice-error"><p>Error de base de datos: ' . esc_html( $wpdb->last_error ) . '</p></div>';
     }
 
-    if ( empty( $results ) ) {
-        echo '<p>Aún no se han importado resultados para este evento.</p>';
-
-        // Debug info for admin
-        if (current_user_can('manage_options')) {
-            $session_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d", $event_id));
-            echo '<p><small>Debug: Sesiones encontradas para este evento: ' . intval($session_count) . '</small></p>';
-            if ($session_count > 0) {
-                $sessions = $wpdb->get_results($wpdb->prepare("SELECT id, session_type FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d", $event_id));
-                echo '<ul>';
-                foreach ($sessions as $sess) {
-                    $res_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}srl_results WHERE session_id = %d", $sess->id));
-                    echo '<li><small>Sesión ID ' . $sess->id . ' (' . $sess->session_type . '): ' . $res_count . ' resultados.</small></li>';
-                }
-                echo '</ul>';
-            }
-        }
-        return;
-    }
-
     wp_nonce_field( 'srl_save_penalties_nonce', 'srl_penalties_nonce' );
     $session_id = !empty($results) ? $results[0]->session_id : 0;
 
@@ -95,8 +75,18 @@ function srl_render_event_results_meta_box( $post ) {
     if (!$session_id) {
         $session_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d AND session_type = 'Race' LIMIT 1", $event_id));
     }
+
+    // FALLBACK: Si no hay sesión de carrera, ofrecer crearla para permitir carga manual
+    if ( !$session_id && current_user_can('manage_options') ) {
+        echo '<div id="srl-no-session-notice"><p>Este evento no tiene una sesión de carrera importada.</p>';
+        echo '<button type="button" id="srl-create-manual-session-btn" class="button button-secondary" data-event-id="'.esc_attr($event_id).'">Crear Sesión para Carga Manual</button></div>';
+        return;
+    }
     ?>
     <div class="srl-results-container">
+        <?php if ( empty( $results ) ) : ?>
+            <p id="srl-empty-results-msg">Aún no se han importado resultados para este evento. Puedes añadir pilotos manualmente abajo.</p>
+        <?php endif; ?>
         <table class="wp-list-table widefat striped srl-results-edit-table">
             <thead>
                 <tr>

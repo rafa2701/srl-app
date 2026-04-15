@@ -27,6 +27,7 @@ add_action( 'wp_ajax_srl_save_result_details', 'srl_handle_save_result_details' 
 add_action( 'wp_ajax_srl_reorder_results', 'srl_handle_reorder_results' );
 add_action( 'wp_ajax_srl_add_manual_result', 'srl_handle_add_manual_result' );
 add_action( 'wp_ajax_srl_delete_single_result', 'srl_handle_delete_single_result' );
+add_action( 'wp_ajax_srl_create_manual_session', 'srl_handle_create_manual_session' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -486,6 +487,31 @@ function srl_handle_add_manual_result() {
 
     srl_recalculate_session_results($session_id);
     wp_send_json_success( ['message' => 'Piloto añadido.'] );
+}
+
+/**
+ * Crea una sesión de carrera manual si no existe ninguna.
+ */
+function srl_handle_create_manual_session() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! current_user_can('manage_options') || ! isset($_POST['event_id']) ) {
+        wp_send_json_error( ['message' => 'Sin permisos o faltan datos.'] );
+    }
+
+    global $wpdb;
+    $event_id = intval($_POST['event_id']);
+
+    $wpdb->insert( $wpdb->prefix . 'srl_sessions', [
+        'event_id' => $event_id,
+        'session_type' => 'Race',
+        'source_file' => 'Manual'
+    ] );
+
+    if ($wpdb->insert_id) {
+        wp_send_json_success( ['message' => 'Sesión creada.'] );
+    } else {
+        wp_send_json_error( ['message' => 'Error al crear sesión.'] );
+    }
 }
 
 /**
