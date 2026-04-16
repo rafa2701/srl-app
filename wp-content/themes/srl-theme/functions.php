@@ -16,6 +16,45 @@ function srl_theme_setup() {
 }
 add_action( 'after_setup_theme', 'srl_theme_setup' );
 
+/**
+ * Automatically create and assign the main menu if it doesn't exist
+ */
+function srl_setup_default_menus() {
+    $menu_name = 'Main Menu';
+    $menu_exists = wp_get_nav_menu_object( $menu_name );
+
+    if ( ! $menu_exists ) {
+        $menu_id = wp_create_nav_menu( $menu_name );
+
+        // Add Home link
+        wp_update_nav_menu_item( $menu_id, 0, [
+            'menu-item-title'  =>  __( 'Inicio', 'srl-theme' ),
+            'menu-item-url'    => home_url( '/' ),
+            'menu-item-status' => 'publish',
+        ] );
+
+        // Add Championships link
+        wp_update_nav_menu_item( $menu_id, 0, [
+            'menu-item-title'  =>  __( 'Campeonatos', 'srl-theme' ),
+            'menu-item-url'    => get_post_type_archive_link( 'srl_championship' ) ?: home_url( '/campeonatos/' ),
+            'menu-item-status' => 'publish',
+        ] );
+
+        // Add Drivers link
+        wp_update_nav_menu_item( $menu_id, 0, [
+            'menu-item-title'  =>  __( 'Pilotos', 'srl-theme' ),
+            'menu-item-url'    => get_post_type_archive_link( 'driver' ) ?: home_url( '/pilotos/' ),
+            'menu-item-status' => 'publish',
+        ] );
+
+        // Assign to location
+        $locations = get_theme_mod( 'nav_menu_locations' );
+        $locations['main-menu'] = $menu_id;
+        set_theme_mod( 'nav_menu_locations', $locations );
+    }
+}
+add_action( 'after_setup_theme', 'srl_setup_default_menus' );
+
 function srl_theme_scripts() {
     // Fonts
     wp_enqueue_style( 'google-fonts', 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap', [], null );

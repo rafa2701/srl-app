@@ -116,7 +116,20 @@ function srl_admin_menu() {
 add_action( 'admin_enqueue_scripts', 'srl_admin_enqueue_scripts' );
 function srl_admin_enqueue_scripts( $hook ) {
     $screen = get_current_screen();
-    if ( 'toplevel_page_srl-league-management' != $hook && 'toplevel_page_srl-drivers' != $hook && 'srl_championship' != $screen->post_type && 'srl_event' != $screen->post_type ) return;
+
+    // Lista de hooks o post_types donde necesitamos nuestros scripts
+    $srl_pages = [
+        'toplevel_page_srl-league-management',
+        'toplevel_page_srl-drivers',
+        'srl_championship',
+        'srl_event',
+        'driver',
+        'srl_session'
+    ];
+
+    if ( ! in_array( $hook, $srl_pages ) && ! in_array( $screen->post_type, $srl_pages ) ) {
+        return;
+    }
 
     wp_enqueue_media();
     wp_enqueue_script( 'srl-sortable', 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js', [], '1.15.0', true );
