@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.8.3' );
+define( 'SRL_PLUGIN_VERSION', '1.9.1' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -62,6 +62,16 @@ function srl_check_for_updates() {
             // 3. Restaurar la clave única que quitamos
             $wpdb->query( "ALTER TABLE $table_results ADD UNIQUE KEY uk_session_driver (session_id, driver_id)" );
         }
+
+        // REPARACIÓN ADICIONAL: Asegurar columnas para NC
+        $column_nc = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_nc' ) );
+        if ( empty( $column_nc ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_nc tinyint(1) NOT NULL DEFAULT 0 AFTER is_dnf" );
+        }
+        $column_nc_forced = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_nc_forced' ) );
+        if ( empty( $column_nc_forced ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_nc_forced tinyint(1) NOT NULL DEFAULT 0 AFTER is_nc" );
+        }
     }
 }
 add_action( 'admin_init', 'srl_check_for_updates' );
@@ -74,6 +84,7 @@ require_once SRL_PLUGIN_PATH . 'includes/admin-meta-boxes.php';
 require_once SRL_PLUGIN_PATH . 'includes/data-importers/assetto-parser.php';
 require_once SRL_PLUGIN_PATH . 'includes/data-importers/automobilista-parser.php';
 require_once SRL_PLUGIN_PATH . 'includes/admin-page.php';
+require_once SRL_PLUGIN_PATH . 'includes/admin-drivers.php';
 require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
@@ -83,13 +94,27 @@ add_action( 'admin_menu', 'srl_admin_menu' );
 function srl_admin_menu() {
     $steering_wheel_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZHRoPSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjxsaW5lIHgxPSIxMiIgeTE9IjIyIiB4Mj0iMTIiIHkyPSIxNSIvPjxsaW5lIHgxPSI1LjQiIHkxPSI4LjQiIHgyPSI5LjUiIHkyPSIxMC41Ii8+PGxpbmUgeDE9IjE4LjYiIHkxPSI4LjQiIHgyPSIxNC41IiB5Mj0iMTAuNSIvPjwvc3ZnPg==';
     add_menu_page( 'Gestión de Ligas SRL', 'Gestión SRL', 'manage_options', 'srl-league-management', 'srl_render_admin_page', $steering_wheel_svg, 20 );
+
+    // Nueva página de gestión de pilotos
+    add_menu_page(
+        'Gestión de Pilotos SRL',
+        'Pilotos',
+        'manage_options',
+        'srl-drivers',
+        'srl_render_drivers_admin_page',
+        'dashicons-groups',
+        22
+    );
 }
 
 add_action( 'admin_enqueue_scripts', 'srl_admin_enqueue_scripts' );
 function srl_admin_enqueue_scripts( $hook ) {
     $screen = get_current_screen();
-    if ( 'toplevel_page_srl-league-management' != $hook && 'srl_championship' != $screen->post_type && 'srl_event' != $screen->post_type ) return;
-    wp_enqueue_script( 'srl-admin-js', SRL_PLUGIN_URL . 'assets/js/admin.js', ['jquery'], SRL_PLUGIN_VERSION, true );
+    if ( 'toplevel_page_srl-league-management' != $hook && 'toplevel_page_srl-drivers' != $hook && 'srl_championship' != $screen->post_type && 'srl_event' != $screen->post_type ) return;
+
+    wp_enqueue_media();
+    wp_enqueue_script( 'srl-sortable', 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js', [], '1.15.0', true );
+    wp_enqueue_script( 'srl-admin-js', SRL_PLUGIN_URL . 'assets/js/admin.js', ['jquery', 'srl-sortable'], SRL_PLUGIN_VERSION, true );
     wp_localize_script( 'srl-admin-js', 'srl_ajax_object', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'srl-ajax-nonce' ) ]);
 }
 
