@@ -163,12 +163,13 @@ function srl_update_driver_global_stats( $driver_id ) {
     global $wpdb;
     $stats = $wpdb->get_row( $wpdb->prepare("
         SELECT
-            SUM(CASE WHEN r.position = 1 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as victories_count,
-            SUM(CASE WHEN r.position <= 3 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as podiums_count,
-            SUM(CASE WHEN r.position <= 5 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as top_5_count,
-            SUM(CASE WHEN r.position <= 10 AND r.is_disqualified = 0 THEN 1 ELSE 0 END) as top_10_count,
+            SUM(CASE WHEN r.position = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as victories_count,
+            SUM(CASE WHEN r.position <= 3 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as podiums_count,
+            SUM(CASE WHEN r.position <= 5 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as top_5_count,
+            SUM(CASE WHEN r.position <= 10 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as top_10_count,
             SUM(r.has_pole) as poles_count,
             SUM(r.has_fastest_lap) as fastest_laps_count,
+            SUM(CASE WHEN r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as hat_tricks_count,
             SUM(r.is_dnf) as dnfs_count,
             SUM(r.is_disqualified) as dq_count
         FROM {$wpdb->prefix}srl_results r
@@ -186,11 +187,12 @@ function srl_update_driver_global_stats( $driver_id ) {
                 'top_10_count'       => $stats->top_10_count,
                 'poles_count'        => $stats->poles_count,
                 'fastest_laps_count' => $stats->fastest_laps_count,
+                'hat_tricks_count'   => $stats->hat_tricks_count,
                 'dnfs_count'         => $stats->dnfs_count,
                 'dq_count'           => $stats->dq_count,
             ],
             [ 'id' => $driver_id ],
-            [ '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
+            [ '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
             [ '%d' ]
         );
     }
