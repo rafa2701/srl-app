@@ -28,7 +28,7 @@ function srl_calculate_championship_standings( $championship_id ) {
     if ( empty($event_ids) ) return [];
 
     $event_ids_placeholder = implode( ',', array_fill( 0, count( $event_ids ), '%d' ) );
-    $results = $wpdb->get_results( $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $event_ids ) );
+    $results = $wpdb->get_results( $wpdb->prepare( "SELECT d.id as driver_id, d.full_name, d.steam_id, r.position, r.has_pole, r.has_fastest_lap, r.points_awarded, r.is_disqualified, r.is_nc FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE s.event_id IN ($event_ids_placeholder) AND s.session_type = 'Race'", $event_ids ) );
     
     if ( empty( $results ) ) return [];
 
@@ -38,13 +38,19 @@ function srl_calculate_championship_standings( $championship_id ) {
         if ( ! isset( $standings[ $driver_id ] ) ) {
             $standings[ $driver_id ] = [ 'name' => $result->full_name, 'steam_id' => $result->steam_id, 'points' => 0, 'races' => 0, 'wins' => 0, 'podiums' => 0, 'poles' => 0, 'fastest_laps' => 0, 'positions' => array_fill(1, 10, 0) ];
         }
-        $standings[ $driver_id ]['points'] += ($points_map[ $result->position ] ?? 0);
-        if ( $result->has_pole ) { $standings[ $driver_id ]['points'] += $bonus_pole; $standings[ $driver_id ]['poles']++; }
-        if ( $result->has_fastest_lap ) { $standings[ $driver_id ]['points'] += $bonus_fastest_lap; $standings[ $driver_id ]['fastest_laps']++; }
+
+        $standings[ $driver_id ]['points'] += $result->points_awarded;
         $standings[ $driver_id ]['races']++;
-        if ( $result->position == 1 ) $standings[ $driver_id ]['wins']++;
-        if ( $result->position <= 3 ) $standings[ $driver_id ]['podiums']++;
-        if ( $result->position <= 10 ) $standings[ $driver_id ]['positions'][$result->position]++;
+
+        if ( $result->has_pole ) { $standings[ $driver_id ]['poles']++; }
+        if ( $result->has_fastest_lap ) { $standings[ $driver_id ]['fastest_laps']++; }
+
+        // Stats only for classified and non-disqualified drivers
+        if ( !$result->is_disqualified && !$result->is_nc ) {
+            if ( $result->position == 1 ) $standings[ $driver_id ]['wins']++;
+            if ( $result->position <= 3 ) $standings[ $driver_id ]['podiums']++;
+            if ( $result->position <= 10 ) $standings[ $driver_id ]['positions'][$result->position]++;
+        }
     }
 
     uasort( $standings, function( $a, $b ) {

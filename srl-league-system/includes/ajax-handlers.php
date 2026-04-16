@@ -135,8 +135,8 @@ function srl_handle_get_achievement_details() {
     $stat_type = sanitize_key( $_POST['stat_type'] );
     $where_clause = '';
     switch ( $stat_type ) {
-        case 'victories': $where_clause = "r.position = 1"; break;
-        case 'podiums': $where_clause = "r.position <= 3"; break;
+        case 'victories': $where_clause = "r.position = 1 AND r.is_disqualified = 0 AND r.is_nc = 0"; break;
+        case 'podiums': $where_clause = "r.position <= 3 AND r.is_disqualified = 0 AND r.is_nc = 0"; break;
         case 'poles': $where_clause = "r.has_pole = 1"; break;
         case 'fastest_laps': $where_clause = "r.has_fastest_lap = 1"; break;
         default: wp_send_json_error( ['message' => 'Tipo de estadística no válido.'] );
