@@ -21,7 +21,8 @@ function srl_render_admin_page() {
         <h2 class="nav-tab-wrapper">
            <a href="#manual-import" class="nav-tab nav-tab-active">Importación Manual</a>
             <a href="#bulk-import" class="nav-tab">Importación en Lote (AC)</a>
-            <a href="#history-import" class="nav-tab">Importar Historial (XLSX)</a> <!-- NUEVA PESTAÑA -->
+            <a href="#history-import" class="nav-tab">Importar Historial (XLSX)</a>
+            <a href="#settings" class="nav-tab">Ajustes del Sitio</a>
             <a href="#tools" class="nav-tab">Herramientas</a>
         </h2>
 
@@ -62,6 +63,42 @@ function srl_render_admin_page() {
                     <p><?php submit_button( 'Iniciar Migración Histórica', 'primary', 'srl-submit-history', false ); ?><span class="spinner" style="float: none; vertical-align: middle;"></span></p>
                 </form>
                 <div id="srl-history-response" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <div id="settings" class="srl-tab-content">
+            <div id="srl-settings-wrapper" style="max-width: 600px;">
+                <h2>Ajustes Visuales de Sim Racing Latinoamérica</h2>
+                <form method="post" action="options.php">
+                    <?php
+                    settings_fields( 'srl_settings_group' );
+                    do_settings_sections( 'srl-settings-page' );
+
+                    $site_logo = get_option( 'srl_site_logo' );
+                    $footer_logo = get_option( 'srl_footer_logo' );
+                    ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">Logo del Sitio (Navbar)</th>
+                            <td>
+                                <input type="text" name="srl_site_logo" id="srl_site_logo" value="<?php echo esc_attr( $site_logo ); ?>" class="regular-text" />
+                                <input type="button" class="button srl-upload-button" value="Subir Imagen" data-target="srl_site_logo" />
+                                <p class="description">URL de la imagen del logo para la barra de navegación.</p>
+                                <?php if ( $site_logo ) : ?><img src="<?php echo esc_url( $site_logo ); ?>" style="max-width: 150px; display: block; margin-top: 10px;"><?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Logo del Pie de Página</th>
+                            <td>
+                                <input type="text" name="srl_footer_logo" id="srl_footer_logo" value="<?php echo esc_attr( $footer_logo ); ?>" class="regular-text" />
+                                <input type="button" class="button srl-upload-button" value="Subir Imagen" data-target="srl_footer_logo" />
+                                <p class="description">URL de la imagen del logo para el footer.</p>
+                                <?php if ( $footer_logo ) : ?><img src="<?php echo esc_url( $footer_logo ); ?>" style="max-width: 150px; display: block; margin-top: 10px;"><?php endif; ?>
+                            </td>
+                        </tr>
+                    </table>
+                    <?php submit_button(); ?>
+                </form>
             </div>
         </div>
 
