@@ -66,5 +66,33 @@ function srl_register_post_types() {
     ];
     register_post_type( 'srl_event', $args_event );
 
+    // --- CPT para Pilotos (Drivers) ---
+    $labels_driver = [
+        'name'                  => _x( 'Pilotos', 'Post Type General Name', 'srl-league-system' ),
+        'singular_name'         => _x( 'Piloto', 'Post Type Singular Name', 'srl-league-system' ),
+        'menu_name'             => __( 'Pilotos', 'srl-league-system' ),
+    ];
+    $args_driver = [
+        'label'                 => __( 'Piloto', 'srl-league-system' ),
+        'labels'                => $labels_driver,
+        'supports'              => [ 'title', 'thumbnail', 'custom-fields' ],
+        'public'                => true,
+        'show_ui'               => true,
+        'show_in_menu'          => 'edit.php?post_type=srl_championship',
+        'menu_icon'             => 'dashicons-admin-users',
+        'has_archive'           => true,
+        'rewrite'               => [ 'slug' => 'pilotos' ],
+    ];
+    register_post_type( 'driver', $args_driver );
+
+    // --- CPT para Sesiones (Legacy) ---
+    register_post_type( 'srl_session', [
+        'labels'        => [ 'name' => 'Sesiones', 'singular_name' => 'Sesión' ],
+        'public'        => true,
+        'rewrite'       => [ 'slug' => 'sessions' ],
+        'supports'      => [ 'title', 'editor', 'custom-fields' ],
+        'show_in_menu'  => 'edit.php?post_type=srl_championship',
+    ] );
+
 }
 add_action( 'init', 'srl_register_post_types', 0 );

@@ -41,6 +41,23 @@ jQuery(document).ready(function($) {
         $($(this).attr('href')).addClass('active');
     });
 
+    // --- Image Upload Logic for Settings ---
+    $('.srl-upload-button').on('click', function(e) {
+        e.preventDefault();
+        const button = $(this);
+        const targetId = button.data('target');
+        const custom_uploader = wp.media({
+            title: 'Seleccionar Imagen',
+            button: { text: 'Usar esta imagen' },
+            multiple: false
+        }).on('select', function() {
+            const attachment = custom_uploader.state().get('selection').first().toJSON();
+            $('#' + targetId).val(attachment.url);
+            // Update preview if exists
+            button.parent().find('img').attr('src', attachment.url);
+        }).open();
+    });
+
     // --- Lógica del formulario de subida manual ---
     const championshipSelect = $('#srl-championship-select');
     const eventSelect = $('#srl-event-select');

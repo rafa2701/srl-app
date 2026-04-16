@@ -90,6 +90,12 @@ require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
 // --- Hooks ---
 // Registro del menú de administración
+add_action( 'admin_init', 'srl_register_settings' );
+function srl_register_settings() {
+    register_setting( 'srl_settings_group', 'srl_site_logo' );
+    register_setting( 'srl_settings_group', 'srl_footer_logo' );
+}
+
 add_action( 'admin_menu', 'srl_admin_menu' );
 function srl_admin_menu() {
     $steering_wheel_svg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZHRoPSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjxsaW5lIHgxPSIxMiIgeTE9IjIyIiB4Mj0iMTIiIHkyPSIxNSIvPjxsaW5lIHgxPSI1LjQiIHkxPSI4LjQiIHgyPSI5LjUiIHkyPSIxMC41Ii8+PGxpbmUgeDE9IjE4LjYiIHkxPSI4LjQiIHgyPSIxNC41IiB5Mj0iMTAuNSIvPjwvc3ZnPg==';
@@ -110,7 +116,20 @@ function srl_admin_menu() {
 add_action( 'admin_enqueue_scripts', 'srl_admin_enqueue_scripts' );
 function srl_admin_enqueue_scripts( $hook ) {
     $screen = get_current_screen();
-    if ( 'toplevel_page_srl-league-management' != $hook && 'toplevel_page_srl-drivers' != $hook && 'srl_championship' != $screen->post_type && 'srl_event' != $screen->post_type ) return;
+
+    // Lista de hooks o post_types donde necesitamos nuestros scripts
+    $srl_pages = [
+        'toplevel_page_srl-league-management',
+        'toplevel_page_srl-drivers',
+        'srl_championship',
+        'srl_event',
+        'driver',
+        'srl_session'
+    ];
+
+    if ( ! in_array( $hook, $srl_pages ) && ! in_array( $screen->post_type, $srl_pages ) ) {
+        return;
+    }
 
     wp_enqueue_media();
     wp_enqueue_script( 'srl-sortable', 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js', [], '1.15.0', true );
@@ -137,14 +156,26 @@ add_action( 'wp_enqueue_scripts', 'srl_public_enqueue_assets' );
 
 /**
  * Carga las plantillas personalizadas para los CPTs.
+ * Prioriza las plantillas del tema si existen.
  */
 function srl_include_template_function( $template ) {
     if ( is_singular( 'srl_championship' ) ) {
-        $new_template = SRL_PLUGIN_PATH . 'templates/single-srl_championship.php';
-        if ( '' != $new_template ) return $new_template;
+        $theme_template = locate_template( [ 'single-srl_championship.php', 'templates/single-srl_championship.php' ] );
+        if ( $theme_template ) return $theme_template;
+        return SRL_PLUGIN_PATH . 'templates/single-srl_championship.php';
     } elseif ( is_singular( 'srl_event' ) ) {
-        $new_template = SRL_PLUGIN_PATH . 'templates/single-srl_event.php';
-        if ( '' != $new_template ) return $new_template;
+        $theme_template = locate_template( [ 'single-srl_event.php', 'templates/single-srl_event.php' ] );
+        if ( $theme_template ) return $theme_template;
+        return SRL_PLUGIN_PATH . 'templates/single-srl_event.php';
+    } elseif ( is_singular( 'driver' ) ) {
+        $theme_template = locate_template( [ 'single-driver.php' ] );
+        if ( $theme_template ) return $theme_template;
+    } elseif ( is_singular( 'srl_session' ) ) {
+        $theme_template = locate_template( [ 'single-srl_session.php' ] );
+        if ( $theme_template ) return $theme_template;
+    } elseif ( is_post_type_archive( 'driver' ) ) {
+        $theme_template = locate_template( [ 'archive-driver.php' ] );
+        if ( $theme_template ) return $theme_template;
     }
     return $template;
 }
