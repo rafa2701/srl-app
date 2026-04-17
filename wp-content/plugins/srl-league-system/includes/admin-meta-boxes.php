@@ -202,9 +202,6 @@ function srl_render_event_actions_meta_box( $post ) {
     // Añadir un nonce para seguridad
     wp_nonce_field( 'srl_delete_event_results_nonce', 'srl_event_actions_nonce' );
     ?>
-    <p>Usa este botón para eliminar permanentemente todos los resultados y sesiones asociadas a este evento.</p>
-    <p><strong>¡Esta acción no se puede deshacer!</strong></p>
-    
     <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
         <label for="srl_event_multiplier" style="display: block; margin-bottom: 5px;"><strong>Multiplicador de Puntos:</strong></label>
         <div style="display: flex; gap: 5px; align-items: center;">
@@ -213,6 +210,9 @@ function srl_render_event_actions_meta_box( $post ) {
         </div>
         <p class="description">Afecta a los puntos por posición (ej: 1.5 o 2.0). No afecta a poles o vueltas rápidas.</p>
     </div>
+
+    <p>Usa este botón para eliminar permanentemente todos los resultados y sesiones asociadas a este evento.</p>
+    <p><strong>¡Esta acción no se puede deshacer!</strong></p>
 
     <button type="button" id="srl-delete-results-btn" class="button button-danger" data-event-id="<?php echo esc_attr( $post->ID ); ?>">
         Eliminar Resultados
