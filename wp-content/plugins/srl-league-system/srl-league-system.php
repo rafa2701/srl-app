@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.9.1' );
+define( 'SRL_PLUGIN_VERSION', '1.9.2' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -71,6 +71,20 @@ function srl_check_for_updates() {
         $column_nc_forced = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_nc_forced' ) );
         if ( empty( $column_nc_forced ) ) {
             $wpdb->query( "ALTER TABLE $table_results ADD is_nc_forced tinyint(1) NOT NULL DEFAULT 0 AFTER is_nc" );
+        }
+
+        // REPARACIÓN ADICIONAL: Asegurar columnas para puntos manuales y penalizaciones
+        $column_point_penalty = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'point_penalty' ) );
+        if ( empty( $column_point_penalty ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD point_penalty float NOT NULL DEFAULT 0 AFTER points_awarded" );
+        }
+        $column_manual_points = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'manual_points' ) );
+        if ( empty( $column_manual_points ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD manual_points float NOT NULL DEFAULT 0 AFTER point_penalty" );
+        }
+        $column_is_points_manual = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_points_manual' ) );
+        if ( empty( $column_is_points_manual ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_points_manual tinyint(1) NOT NULL DEFAULT 0 AFTER manual_points" );
         }
     }
 }

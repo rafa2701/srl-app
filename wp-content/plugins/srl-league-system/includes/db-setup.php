@@ -99,7 +99,10 @@ function srl_create_database_tables() {
       is_nc_forced tinyint(1) NOT NULL DEFAULT 0,
       is_disqualified tinyint(1) NOT NULL DEFAULT 0,
       points_awarded float NOT NULL DEFAULT 0,
-      PRIMARY KEY  (id),
+      point_penalty float NOT NULL DEFAULT 0,
+      manual_points float NOT NULL DEFAULT 0,
+      is_points_manual tinyint(1) NOT NULL DEFAULT 0,
+      PRIMARY KEY  (id) ,
       UNIQUE KEY uk_session_driver (session_id, driver_id),
       KEY idx_session_id (session_id),
       KEY idx_driver_id (driver_id)

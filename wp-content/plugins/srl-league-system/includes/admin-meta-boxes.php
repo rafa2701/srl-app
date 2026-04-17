@@ -56,7 +56,7 @@ function srl_render_event_results_meta_box( $post ) {
     $id_field = !empty($has_id) ? 'r.id' : '0 as id';
 
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.is_dnf, r.is_nc, r.is_nc_forced, r.time_penalty, r.is_disqualified, r.session_id
+        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.point_penalty, r.manual_points, r.is_points_manual, r.is_dnf, r.is_nc, r.is_nc_forced, r.time_penalty, r.is_disqualified, r.session_id
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -101,6 +101,8 @@ function srl_render_event_results_meta_box( $post ) {
                     <th style="width: 35px;">DNF</th>
                     <th style="width: 35px;">NC</th>
                     <th style="width: 35px;">DQ</th>
+                    <th style="width: 60px;">Pen. Ptos</th>
+                    <th style="width: 60px;">Ptos Man.</th>
                     <th style="width: 60px;">Puntos</th>
                     <th style="width: 100px;">Acciones</th>
                 </tr>
@@ -144,6 +146,14 @@ function srl_render_event_results_meta_box( $post ) {
                         </td>
                         <td class="col-dq">
                             <input type="checkbox" class="dq-checkbox" <?php checked($result->is_disqualified, 1); ?> disabled>
+                        </td>
+                        <td class="col-point-penalty">
+                            <span class="view-value"><?php echo esc_html( $result->point_penalty ); ?></span>
+                            <input type="number" class="edit-input point-penalty-input" step="0.5" value="<?php echo esc_attr($result->point_penalty); ?>" style="display:none; width: 50px;">
+                        </td>
+                        <td class="col-manual-points">
+                            <input type="checkbox" class="is-points-manual-checkbox" <?php checked($result->is_points_manual, 1); ?> disabled>
+                            <input type="number" class="edit-input manual-points-input" step="0.5" value="<?php echo esc_attr($result->manual_points); ?>" style="display:none; width: 50px;">
                         </td>
                         <td class="col-points"><strong><?php echo esc_html( $result->points_awarded ); ?></strong></td>
                         <td>
@@ -195,6 +205,15 @@ function srl_render_event_actions_meta_box( $post ) {
     <p>Usa este botón para eliminar permanentemente todos los resultados y sesiones asociadas a este evento.</p>
     <p><strong>¡Esta acción no se puede deshacer!</strong></p>
     
+    <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
+        <label for="srl_event_multiplier" style="display: block; margin-bottom: 5px;"><strong>Multiplicador de Puntos:</strong></label>
+        <div style="display: flex; gap: 5px; align-items: center;">
+            <input type="number" id="srl_event_multiplier" step="0.1" min="0" value="<?php echo esc_attr( get_post_meta( $post->ID, '_srl_event_points_multiplier', true ) ?: '1.0' ); ?>" style="width: 70px;">
+            <button type="button" id="srl-save-multiplier-btn" class="button button-secondary" data-event-id="<?php echo esc_attr( $post->ID ); ?>">Guardar</button>
+        </div>
+        <p class="description">Afecta a los puntos por posición (ej: 1.5 o 2.0). No afecta a poles o vueltas rápidas.</p>
+    </div>
+
     <button type="button" id="srl-delete-results-btn" class="button button-danger" data-event-id="<?php echo esc_attr( $post->ID ); ?>">
         Eliminar Resultados
     </button>

@@ -103,6 +103,7 @@ function srl_recalculate_session_results( $session_id ) {
     // 2. Obtener reglas de puntuación del campeonato padre
     $event_id = $wpdb->get_var($wpdb->prepare("SELECT event_id FROM {$wpdb->prefix}srl_sessions WHERE id = %d", $session_id));
     $championship_id = get_post_meta( $event_id, '_srl_parent_championship', true );
+    $event_multiplier = floatval( get_post_meta( $event_id, '_srl_event_points_multiplier', true ) ?: 1.0 );
     $scoring_rules_json = get_post_meta( $championship_id, '_srl_scoring_rules', true );
     $scoring_rules = json_decode( $scoring_rules_json, true );
     $points_map = $scoring_rules['points'] ?? [];
@@ -127,6 +128,17 @@ function srl_recalculate_session_results( $session_id ) {
         $points = 0;
         $affected_drivers[] = $r->driver_id;
 
+        // Manual override takes precedence
+        if ($r->is_points_manual) {
+            $points = $r->manual_points;
+            $wpdb->update(
+                $wpdb->prefix . 'srl_results',
+                [ 'points_awarded' => $points ],
+                [ 'id' => $r->id ]
+            );
+            continue;
+        }
+
         // Auto-NC logic based on percentage if not manually forced
         $is_nc = $r->is_nc;
         if (!$r->is_nc_forced && !$r->is_disqualified && $min_lap_percentage > 0 && $winner_laps > 0) {
@@ -142,10 +154,18 @@ function srl_recalculate_session_results( $session_id ) {
 
         if (!$r->is_disqualified && !$is_nc) {
             // El DNF ahora puede puntuar si cumplió el % (ya manejado arriba al no ser NC)
-            $points += ($points_map[$r->position] ?? 0);
+            $position_points = ($points_map[$r->position] ?? 0);
+
+            // Apply multiplier only to position points
+            $points += ($position_points * $event_multiplier);
+
+            // Bonuses are NOT multiplied
             if ($r->has_pole) $points += $bonus_pole;
             if ($r->has_fastest_lap) $points += $bonus_fastest_lap;
         }
+
+        // Subtract penalty (penalty can lead to negative points)
+        $points -= $r->point_penalty;
 
         $wpdb->update(
             $wpdb->prefix . 'srl_results',
