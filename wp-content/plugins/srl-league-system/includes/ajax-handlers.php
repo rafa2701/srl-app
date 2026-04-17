@@ -28,6 +28,7 @@ add_action( 'wp_ajax_srl_reorder_results', 'srl_handle_reorder_results' );
 add_action( 'wp_ajax_srl_add_manual_result', 'srl_handle_add_manual_result' );
 add_action( 'wp_ajax_srl_delete_single_result', 'srl_handle_delete_single_result' );
 add_action( 'wp_ajax_srl_create_manual_session', 'srl_handle_create_manual_session' );
+add_action( 'wp_ajax_srl_save_event_multiplier', 'srl_handle_save_event_multiplier' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -392,6 +393,9 @@ function srl_handle_save_result_details() {
     $is_dnf = intval($_POST['is_dnf']);
     $is_nc = intval($_POST['is_nc']);
     $is_dq = intval($_POST['is_dq']);
+    $point_penalty = floatval($_POST['point_penalty']);
+    $manual_points = floatval($_POST['manual_points']);
+    $is_points_manual = intval($_POST['is_points_manual']);
 
     // 1. Obtener información de la sesión
     $session_id = $wpdb->get_var($wpdb->prepare("SELECT session_id FROM {$wpdb->prefix}srl_results WHERE id = %d", $result_id));
@@ -411,7 +415,10 @@ function srl_handle_save_result_details() {
             'is_dnf' => $is_dnf,
             'is_nc' => $is_nc,
             'is_nc_forced' => 1,
-            'is_disqualified' => $is_dq
+            'is_disqualified' => $is_dq,
+            'point_penalty' => $point_penalty,
+            'manual_points' => $manual_points,
+            'is_points_manual' => $is_points_manual
         ],
         [ 'id' => $result_id ]
     );
@@ -536,4 +543,30 @@ function srl_handle_delete_single_result() {
     } else {
         wp_send_json_error( ['message' => 'Resultado no encontrado.'] );
     }
+}
+
+/**
+ * Guarda el multiplicador de puntos para un evento.
+ */
+function srl_handle_save_event_multiplier() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+
+    if ( ! current_user_can('manage_options') || ! isset($_POST['event_id'], $_POST['multiplier']) ) {
+        wp_send_json_error( ['message' => 'Sin permisos o faltan datos.'] );
+    }
+
+    $event_id = intval($_POST['event_id']);
+    $multiplier = floatval($_POST['multiplier']);
+
+    update_post_meta($event_id, '_srl_event_points_multiplier', $multiplier);
+
+    // Recalcular la sesión de carrera si existe
+    global $wpdb;
+    $session_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}srl_sessions WHERE event_id = %d AND session_type = 'Race' LIMIT 1", $event_id));
+
+    if ($session_id) {
+        srl_recalculate_session_results($session_id);
+    }
+
+    wp_send_json_success( ['message' => 'Multiplicador guardado y puntos recalculados.'] );
 }

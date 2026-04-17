@@ -288,7 +288,7 @@ jQuery(document).ready(function($) {
         const row = $(this).closest('tr');
         row.find('.view-value').hide();
         row.find('.edit-input').show();
-        row.find('.dnf-checkbox, .nc-checkbox, .dq-checkbox').prop('disabled', false);
+        row.find('.dnf-checkbox, .nc-checkbox, .dq-checkbox, .is-points-manual-checkbox').prop('disabled', false);
         $(this).hide();
         row.find('.save-result-btn, .cancel-result-btn, .delete-result-btn').show();
     });
@@ -313,7 +313,10 @@ jQuery(document).ready(function($) {
                 penalty_seconds: row.find('.penalty-input').val(),
                 is_dnf: row.find('.dnf-checkbox').is(':checked') ? 1 : 0,
                 is_nc: row.find('.nc-checkbox').is(':checked') ? 1 : 0,
-                is_dq: row.find('.dq-checkbox').is(':checked') ? 1 : 0
+                is_dq: row.find('.dq-checkbox').is(':checked') ? 1 : 0,
+                point_penalty: row.find('.point-penalty-input').val(),
+                manual_points: row.find('.manual-points-input').val(),
+                is_points_manual: row.find('.is-points-manual-checkbox').is(':checked') ? 1 : 0
             },
             success: function(response) {
                 if (response.success) { srlShowNotice('Resultado actualizado.', 'success', true); }
@@ -332,6 +335,27 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) { srlShowNotice('Resultado eliminado.', 'success', true); }
                 else { alert('Error: ' + response.data.message); }
+            }
+        });
+    });
+
+    // --- Guardar Multiplicador del Evento ---
+    $('#srl-save-multiplier-btn').on('click', function() {
+        const btn = $(this);
+        const multiplier = $('#srl_event_multiplier').val();
+        btn.prop('disabled', true).text('Guardando...');
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_save_event_multiplier',
+                nonce: srl_ajax_object.nonce,
+                event_id: btn.data('event-id'),
+                multiplier: multiplier
+            },
+            success: function(response) {
+                if (response.success) { srlShowNotice(response.data.message, 'success', true); }
+                else { alert('Error: ' + response.data.message); btn.prop('disabled', false).text('Guardar'); }
             }
         });
     });
