@@ -78,7 +78,7 @@ function srl_register_post_types() {
         'supports'              => [ 'title', 'thumbnail', 'custom-fields' ],
         'public'                => true,
         'show_ui'               => true,
-        'show_in_menu'          => 'edit.php?post_type=srl_championship',
+        'show_in_menu'          => false, // Oculto del menú, usamos tabla personalizada srl_drivers
         'menu_icon'             => 'dashicons-admin-users',
         'has_archive'           => true,
         'rewrite'               => [ 'slug' => 'pilotos' ],
@@ -91,7 +91,7 @@ function srl_register_post_types() {
         'public'        => true,
         'rewrite'       => [ 'slug' => 'sessions' ],
         'supports'      => [ 'title', 'editor', 'custom-fields' ],
-        'show_in_menu'  => 'edit.php?post_type=srl_championship',
+        'show_in_menu'  => false, // Oculto del menú, usamos tabla personalizada srl_sessions
     ] );
 
 }

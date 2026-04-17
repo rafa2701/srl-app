@@ -55,6 +55,7 @@ function srl_render_drivers_admin_page() {
         <h1><?php echo esc_html( get_admin_page_title() ); ?>
             <?php if ( $action === 'list' ) : ?>
                 <a href="<?php echo admin_url('admin.php?page=srl-drivers&action=add'); ?>" class="page-title-action">Añadir Nuevo</a>
+                <button type="button" id="srl-open-merge-tool" class="page-title-action">Herramientas de Limpieza / Fusionar</button>
             <?php endif; ?>
         </h1>
 
@@ -178,5 +179,62 @@ function srl_render_drivers_admin_page() {
             </script>
         <?php endif; ?>
     </div>
+
+    <!-- Modal de Fusión de Pilotos -->
+    <div id="srl-merge-drivers-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000;">
+        <div style="background:#fff; width:90%; max-width:800px; margin:50px auto; padding:20px; border-radius:5px; position:relative; max-height: 85vh; overflow-y: auto;">
+            <button type="button" class="srl-close-modal" style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+            <h2>Herramientas de Limpieza de Pilotos</h2>
+
+            <div class="srl-merge-tool-tabs">
+                <button type="button" class="button srl-merge-tab-btn active" data-tab="find-duplicates">Buscar Duplicados</button>
+                <button type="button" class="button srl-merge-tab-btn" data-tab="manual-merge">Fusión Manual</button>
+            </div>
+
+            <hr>
+
+            <!-- Pestaña: Buscar Duplicados -->
+            <div id="srl-tab-find-duplicates" class="srl-merge-tab-content">
+                <p>Busca pilotos con nombres idénticos o similares que no tengan Steam ID en conflicto.</p>
+                <button type="button" id="srl-find-duplicates-btn" class="button button-primary">Buscar Ahora</button>
+                <div id="srl-duplicates-results" style="margin-top:20px;"></div>
+            </div>
+
+            <!-- Pestaña: Fusión Manual -->
+            <div id="srl-tab-manual-merge" class="srl-merge-tab-content" style="display:none;">
+                <p>Selecciona dos pilotos para fusionar. <strong>El Piloto A conservará su perfil y recibirá los datos del Piloto B. El Piloto B será eliminado.</strong></p>
+                <table class="form-table">
+                    <tr>
+                        <th><label>Piloto Principal (A - Se mantiene)</label></th>
+                        <td>
+                            <select id="srl-merge-driver-a" style="width:100%;">
+                                <option value="">-- Selecciona Piloto A --</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label>Piloto a Eliminar (B - Se fusiona en A)</label></th>
+                        <td>
+                            <select id="srl-merge-driver-b" style="width:100%;">
+                                <option value="">-- Selecciona Piloto B --</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+                <button type="button" id="srl-preview-merge-btn" class="button button-secondary">Previsualizar Fusión</button>
+                <div id="srl-merge-preview-container" style="margin-top:20px;"></div>
+            </div>
+
+            <div id="srl-merge-process-response" style="margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <style>
+        .srl-merge-tool-tabs { margin-bottom: 15px; }
+        .srl-merge-tab-btn.active { background: #0073aa; color: #fff; border-color: #0073aa; }
+        .srl-duplicate-group { border: 1px solid #ccd0d4; padding: 10px; margin-bottom: 10px; background: #f9f9f9; }
+        .srl-duplicate-group h4 { margin-top: 0; }
+        .srl-preview-box { border: 1px dashed #e60000; padding: 15px; background: #fff5f5; }
+    </style>
     <?php
 }
