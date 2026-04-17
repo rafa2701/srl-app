@@ -101,8 +101,8 @@ function srl_render_event_results_meta_box( $post ) {
                     <th style="width: 35px;">DNF</th>
                     <th style="width: 35px;">NC</th>
                     <th style="width: 35px;">DQ</th>
-                    <th style="width: 60px;">Pen. Ptos</th>
-                    <th style="width: 60px;">Ptos Man.</th>
+                    <th style="width: 60px;">Penal.</th>
+                    <th style="width: 60px;">Manual</th>
                     <th style="width: 60px;">Puntos</th>
                     <th style="width: 100px;">Acciones</th>
                 </tr>
