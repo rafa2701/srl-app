@@ -29,6 +29,10 @@ add_action( 'wp_ajax_srl_add_manual_result', 'srl_handle_add_manual_result' );
 add_action( 'wp_ajax_srl_delete_single_result', 'srl_handle_delete_single_result' );
 add_action( 'wp_ajax_srl_create_manual_session', 'srl_handle_create_manual_session' );
 add_action( 'wp_ajax_srl_save_event_multiplier', 'srl_handle_save_event_multiplier' );
+add_action( 'wp_ajax_srl_find_duplicate_drivers', 'srl_handle_find_duplicate_drivers' );
+add_action( 'wp_ajax_srl_get_merge_preview', 'srl_handle_get_merge_preview' );
+add_action( 'wp_ajax_srl_perform_driver_merge', 'srl_handle_perform_driver_merge' );
+add_action( 'wp_ajax_srl_get_all_drivers_simple', 'srl_handle_get_all_drivers_simple' );
 
 function srl_handle_results_upload() {
     check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
@@ -569,4 +573,168 @@ function srl_handle_save_event_multiplier() {
     }
 
     wp_send_json_success( ['message' => 'Multiplicador guardado y puntos recalculados.'] );
+}
+
+/**
+ * Obtiene todos los pilotos para los dropdowns de fusión.
+ */
+function srl_handle_get_all_drivers_simple() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! current_user_can('manage_options') ) wp_send_json_error();
+
+    global $wpdb;
+    $drivers = $wpdb->get_results("SELECT id, full_name, steam_id FROM {$wpdb->prefix}srl_drivers ORDER BY full_name ASC");
+    wp_send_json_success($drivers);
+}
+
+/**
+ * Busca pilotos con nombres idénticos o muy similares.
+ */
+function srl_handle_find_duplicate_drivers() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! current_user_can('manage_options') ) wp_send_json_error();
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'srl_drivers';
+
+    // 1. Buscar duplicados exactos por nombre
+    $exact_duplicates = $wpdb->get_results("
+        SELECT full_name, COUNT(*) as count
+        FROM $table
+        GROUP BY full_name
+        HAVING count > 1
+    ");
+
+    $groups = [];
+    foreach ($exact_duplicates as $dup) {
+        $drivers = $wpdb->get_results($wpdb->prepare("SELECT id, full_name, steam_id FROM $table WHERE full_name = %s", $dup->full_name));
+        $groups[] = [
+            'type' => 'exact',
+            'name' => $dup->full_name,
+            'drivers' => $drivers
+        ];
+    }
+
+    // 2. Buscar por Steam ID duplicado (si existiera, que no debería por el unique key de los importers, pero por si acaso)
+    $steam_duplicates = $wpdb->get_results("
+        SELECT steam_id, COUNT(*) as count
+        FROM $table
+        WHERE steam_id IS NOT NULL AND steam_id != ''
+        GROUP BY steam_id
+        HAVING count > 1
+    ");
+
+    foreach ($steam_duplicates as $dup) {
+        $drivers = $wpdb->get_results($wpdb->prepare("SELECT id, full_name, steam_id FROM $table WHERE steam_id = %s", $dup->steam_id));
+        $groups[] = [
+            'type' => 'steam_id',
+            'name' => 'Steam ID: ' . $dup->steam_id,
+            'drivers' => $drivers
+        ];
+    }
+
+    wp_send_json_success($groups);
+}
+
+/**
+ * Previsualiza los datos que se moverán en una fusión.
+ */
+function srl_handle_get_merge_preview() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! current_user_can('manage_options') ) wp_send_json_error();
+
+    global $wpdb;
+    $id_a = intval($_POST['driver_a']);
+    $id_b = intval($_POST['driver_b']);
+
+    if ($id_a === $id_b) wp_send_json_error(['message' => 'No puedes fusionar un piloto consigo mismo.']);
+
+    $driver_a = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $id_a));
+    $driver_b = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $id_b));
+
+    if (!$driver_a || !$driver_b) wp_send_json_error(['message' => 'Uno de los pilotos no existe.']);
+
+    // Validar Steam IDs
+    $can_merge = true;
+    $warning = '';
+    if (!empty($driver_a->steam_id) && !empty($driver_b->steam_id) && $driver_a->steam_id !== $driver_b->steam_id) {
+        $can_merge = false;
+        $warning = 'BLOQUEADO: Ambos pilotos tienen Steam IDs diferentes (' . $driver_a->steam_id . ' vs ' . $driver_b->steam_id . '). No se recomienda fusionar.';
+    }
+
+    $results_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}srl_results WHERE driver_id = %d", $id_b));
+    $achievements_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}srl_achievements WHERE driver_id = %d", $id_b));
+
+    wp_send_json_success([
+        'can_merge' => $can_merge,
+        'warning' => $warning,
+        'driver_a' => $driver_a,
+        'driver_b' => $driver_b,
+        'results_to_move' => $results_count,
+        'achievements_to_move' => $achievements_count
+    ]);
+}
+
+/**
+ * Ejecuta la fusión de dos pilotos.
+ */
+function srl_handle_perform_driver_merge() {
+    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
+    if ( ! current_user_can('manage_options') ) wp_send_json_error();
+
+    global $wpdb;
+    $id_a = intval($_POST['driver_a']);
+    $id_b = intval($_POST['driver_b']);
+    $force = isset($_POST['force']) && $_POST['force'] === 'true';
+
+    $driver_a = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $id_a));
+    $driver_b = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $id_b));
+
+    if (!$driver_a || !$driver_b) wp_send_json_error(['message' => 'Error: Pilotos no encontrados.']);
+
+    // Validación final de seguridad
+    if (!empty($driver_a->steam_id) && !empty($driver_b->steam_id) && $driver_a->steam_id !== $driver_b->steam_id && !$force) {
+        wp_send_json_error(['message' => 'Error de seguridad: Steam IDs incompatibles.']);
+    }
+
+    // 1. Mover resultados (usar INSERT IGNORE o similar no es necesario aquí porque el unique key es session_id + driver_id)
+    // Pero si el Piloto A ya tiene un resultado en una sesión donde el B también estaba, el update fallará por el UK.
+    // En ese caso, deberíamos borrar el resultado del Piloto B (el duplicado) o decidir qué hacer.
+
+    $sessions_a = $wpdb->get_col($wpdb->prepare("SELECT session_id FROM {$wpdb->prefix}srl_results WHERE driver_id = %d", $id_a));
+
+    if (!empty($sessions_a)) {
+        $placeholders = implode(',', array_fill(0, count($sessions_a), '%d'));
+        // Borrar resultados del Piloto B en sesiones donde A ya existe
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}srl_results WHERE driver_id = %d AND session_id IN ($placeholders)", array_merge([$id_b], $sessions_a)));
+    }
+
+    // Ahora mover el resto
+    $wpdb->update($wpdb->prefix . 'srl_results', ['driver_id' => $id_a], ['driver_id' => $id_b]);
+
+    // 2. Mover logros
+    $wpdb->update($wpdb->prefix . 'srl_achievements', ['driver_id' => $id_a], ['driver_id' => $id_b]);
+
+    // 3. Completar datos faltantes en A si B los tiene
+    $update_data = [];
+    if (empty($driver_a->steam_id) && !empty($driver_b->steam_id)) $update_data['steam_id'] = $driver_b->steam_id;
+    if (empty($driver_a->nationality) && !empty($driver_b->nationality)) $update_data['nationality'] = $driver_b->nationality;
+    if (empty($driver_a->photo_id) && !empty($driver_b->photo_id)) {
+        $update_data['photo_id'] = $driver_b->photo_id;
+        $update_data['photo_url'] = $driver_b->photo_url;
+    }
+
+    if (!empty($update_data)) {
+        $wpdb->update($wpdb->prefix . 'srl_drivers', $update_data, ['id' => $id_a]);
+    }
+
+    // 4. Recalcular estadísticas para Piloto A
+    if (function_exists('srl_update_driver_global_stats')) {
+        srl_update_driver_global_stats($id_a);
+    }
+
+    // 5. Eliminar Piloto B
+    $wpdb->delete($wpdb->prefix . 'srl_drivers', ['id' => $id_b]);
+
+    wp_send_json_success(['message' => 'Fusión completada con éxito. El Piloto B ha sido eliminado y sus datos transferidos al Piloto A.']);
 }

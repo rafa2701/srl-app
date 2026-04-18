@@ -385,4 +385,171 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // --- Herramientas de Fusión de Pilotos ---
+    const mergeModal = $('#srl-merge-drivers-modal');
+    const driverASelect = $('#srl-merge-driver-a');
+    const driverBSelect = $('#srl-merge-driver-b');
+
+    $('#srl-open-merge-tool').on('click', function() {
+        mergeModal.show();
+        loadAllDriversForMerge();
+    });
+
+    $('.srl-close-modal').on('click', function() {
+        mergeModal.hide();
+    });
+
+    $('.srl-merge-tab-btn').on('click', function() {
+        $('.srl-merge-tab-btn').removeClass('active');
+        $(this).addClass('active');
+        $('.srl-merge-tab-content').hide();
+        $('#srl-tab-' + $(this).data('tab')).show();
+    });
+
+    function srlEscapeHtml(text) {
+        if (!text) return '';
+        var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    function loadAllDriversForMerge() {
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: { action: 'srl_get_all_drivers_simple', nonce: srl_ajax_object.nonce },
+            success: function(response) {
+                if (response.success) {
+                    let options = '<option value="">-- Selecciona Piloto --</option>';
+                    response.data.forEach(function(d) {
+                        const name = srlEscapeHtml(d.full_name);
+                        const steam = d.steam_id ? srlEscapeHtml(d.steam_id) : 'Sin ID';
+                        options += `<option value="${d.id}">${name} (${steam})</option>`;
+                    });
+                    driverASelect.html(options);
+                    driverBSelect.html(options);
+                }
+            }
+        });
+    }
+
+    $('#srl-find-duplicates-btn').on('click', function() {
+        const btn = $(this);
+        const container = $('#srl-duplicates-results');
+        btn.prop('disabled', true).text('Buscando...');
+        container.html('<p>Buscando duplicados...</p>');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: { action: 'srl_find_duplicate_drivers', nonce: srl_ajax_object.nonce },
+            success: function(response) {
+                if (response.success && response.data.length > 0) {
+                    let html = '';
+                    response.data.forEach(function(group) {
+                        const groupName = srlEscapeHtml(group.name);
+                        html += `<div class="srl-duplicate-group">
+                            <h4>${groupName} (${group.type})</h4>
+                            <ul>`;
+                        group.drivers.forEach(function(d) {
+                            const dName = srlEscapeHtml(d.full_name);
+                            const dSteam = d.steam_id ? srlEscapeHtml(d.steam_id) : 'Sin Steam ID';
+                            html += `<li>ID: ${d.id} - <strong>${dName}</strong> (${dSteam})</li>`;
+                        });
+                        html += `</ul>
+                            <button type="button" class="button srl-set-merge-manual" data-id-a="${group.drivers[0].id}" data-id-b="${group.drivers[1].id}">Preparar Fusión</button>
+                        </div>`;
+                    });
+                    container.html(html);
+                } else {
+                    container.html('<p>No se encontraron duplicados obvios.</p>');
+                }
+            },
+            complete: function() { btn.prop('disabled', false).text('Buscar Ahora'); }
+        });
+    });
+
+    $(document).on('click', '.srl-set-merge-manual', function() {
+        const idA = $(this).data('id-a');
+        const idB = $(this).data('id-b');
+        $('.srl-merge-tab-btn[data-tab="manual-merge"]').click();
+        driverASelect.val(idA);
+        driverBSelect.val(idB);
+        $('#srl-preview-merge-btn').click();
+    });
+
+    $('#srl-preview-merge-btn').on('click', function() {
+        const idA = driverASelect.val();
+        const idB = driverBSelect.val();
+        const container = $('#srl-merge-preview-container');
+
+        if (!idA || !idB) { alert('Selecciona ambos pilotos.'); return; }
+        if (idA === idB) { alert('No puedes fusionar un piloto con sí mismo.'); return; }
+
+        container.html('<p>Calculando previsualización...</p>');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: { action: 'srl_get_merge_preview', nonce: srl_ajax_object.nonce, driver_a: idA, driver_b: idB },
+            success: function(response) {
+                if (response.success) {
+                    const d = response.data;
+                    const nameA = srlEscapeHtml(d.driver_a.full_name);
+                    const steamA = d.driver_a.steam_id ? srlEscapeHtml(d.driver_a.steam_id) : '';
+                    const nameB = srlEscapeHtml(d.driver_b.full_name);
+                    const steamB = d.driver_b.steam_id ? srlEscapeHtml(d.driver_b.steam_id) : '';
+
+                    let html = `<div class="srl-preview-box">
+                        <h3>Resumen de la Fusión</h3>
+                        <p><strong>Piloto A (Se queda):</strong> ${nameA} ${steamA ? '(' + steamA + ')' : ''}</p>
+                        <p><strong>Piloto B (DESAPARECE):</strong> ${nameB} ${steamB ? '(' + steamB + ')' : ''}</p>
+                        <hr>
+                        <p>Se moverán <strong>${d.results_to_move}</strong> resultados de carrera.</p>
+                        <p>Se moverán <strong>${d.achievements_to_move}</strong> logros/hitos.</p>`;
+
+                    if (d.warning) {
+                        html += `<div style="color:red; font-weight:bold; padding:10px; border:2px solid red; margin-bottom:10px;">${d.warning}</div>`;
+                    }
+
+                    if (d.can_merge) {
+                        html += `<button type="button" id="srl-confirm-merge-btn" class="button button-primary" style="background:#d63638; border-color:#d63638;">CONFIRMAR FUSIÓN PERMANENTE</button>`;
+                    } else {
+                        html += `<p><em>La fusión está bloqueada debido a Steam IDs en conflicto. Si estás absolutamente seguro, contacta con soporte técnico.</em></p>
+                        <button type="button" id="srl-confirm-merge-btn" class="button" data-force="true">FORZAR FUSIÓN (Bajo tu riesgo)</button>`;
+                    }
+                    html += `</div>`;
+                    container.html(html);
+                } else {
+                    container.html('<p>Error: ' + response.data.message + '</p>');
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '#srl-confirm-merge-btn', function() {
+        const force = $(this).data('force') === true;
+        const msg = force ? '¡ESTÁS FORZANDO UNA FUSIÓN CON STEAM IDS DIFERENTES!\n\nEsto puede causar inconsistencias. ¿Estás seguro?' : '¿Estás seguro de fusionar estos pilotos? Esta acción NO se puede deshacer y el Piloto B será eliminado permanentemente.';
+
+        if (!confirm(msg)) return;
+
+        const idA = driverASelect.val();
+        const idB = driverBSelect.val();
+        const btn = $(this);
+        btn.prop('disabled', true).text('Procesando...');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: { action: 'srl_perform_driver_merge', nonce: srl_ajax_object.nonce, driver_a: idA, driver_b: idB, force: force },
+            success: function(response) {
+                if (response.success) {
+                    srlShowNotice(response.data.message, 'success', true);
+                } else {
+                    alert('Error: ' + response.data.message);
+                    btn.prop('disabled', false).text('Confirmar Fusión');
+                }
+            }
+        });
+    });
 });
