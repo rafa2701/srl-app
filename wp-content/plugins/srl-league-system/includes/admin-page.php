@@ -23,6 +23,7 @@ function srl_render_admin_page() {
             <a href="#bulk-import" class="nav-tab">Importación en Lote (AC)</a>
             <a href="#history-import" class="nav-tab">Importar Historial (XLSX)</a>
             <a href="#settings" class="nav-tab">Ajustes del Sitio</a>
+            <a href="#achievements" class="nav-tab">Hitos (Logros)</a>
             <a href="#tools" class="nav-tab">Herramientas</a>
         </h2>
 
@@ -96,6 +97,48 @@ function srl_render_admin_page() {
                                 <?php if ( $footer_logo ) : ?><img src="<?php echo esc_url( $footer_logo ); ?>" style="max-width: 150px; display: block; margin-top: 10px;"><?php endif; ?>
                             </td>
                         </tr>
+                    </table>
+                    <?php submit_button(); ?>
+                </form>
+            </div>
+        </div>
+
+        <div id="achievements" class="srl-tab-content">
+            <div id="srl-achievements-settings-wrapper" style="max-width: 800px;">
+                <h2>Configuración de Hitos (Logros)</h2>
+                <form method="post" action="options.php">
+                    <?php
+                    settings_fields( 'srl_settings_group' );
+                    $labels = SRL_Achievement_Manager::get_achievement_keys();
+                    $settings = get_option( 'srl_achievement_settings', [] );
+                    ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th>Clave</th>
+                                <th>Etiqueta (Español)</th>
+                                <th style="width: 100px;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $labels as $key => $label ) :
+                                $is_enabled = isset( $settings[$key]['enabled'] ) ? (bool) $settings[$key]['enabled'] : true;
+                            ?>
+                                <tr>
+                                    <td><code><?php echo esc_html( $key ); ?></code></td>
+                                    <td>
+                                        <input type="text" name="srl_achievement_labels[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $label ); ?>" class="regular-text">
+                                    </td>
+                                    <td>
+                                        <label class="switch">
+                                            <input type="hidden" name="srl_achievement_settings[<?php echo esc_attr( $key ); ?>][enabled]" value="0">
+                                            <input type="checkbox" name="srl_achievement_settings[<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( $is_enabled ); ?>>
+                                            Habilitado
+                                        </label>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
                     </table>
                     <?php submit_button(); ?>
                 </form>

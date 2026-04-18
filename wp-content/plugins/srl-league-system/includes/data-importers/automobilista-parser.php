@@ -193,7 +193,7 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
         $can_score = !$is_dnf;
 
         if ($is_dnf && $min_lap_percentage > 0 && $winner_laps > 0) {
-            $lap_percentage = ($data['laps'] / $winner_laps) * 100;
+            $lap_percentage = ($data['laps_completed'] / $winner_laps) * 100;
             if ($lap_percentage >= $min_lap_percentage) {
                 $can_score = true;
             }
@@ -209,7 +209,7 @@ function srl_process_event_sheet($worksheet, $championship_id, $event_info, $rou
             'session_id' => $session_id, 'driver_id' => $driver_id, 'position' => $data['position'], 'grid_position' => $data['grid_position'],
             'has_pole' => $data['has_pole'], 'has_fastest_lap' => $data['has_fastest_lap'], 'best_lap_time' => $data['best_lap_time'],
             'total_time' => $data['total_time'], 'is_dnf' => ($data['total_time'] == 0),
-            'points_awarded' => $points_awarded, 'laps_completed' => $data['laps'],
+            'points_awarded' => $points_awarded, 'laps_completed' => $data['laps_completed'],
             'is_dnf' => $is_dnf
         ]);
     }

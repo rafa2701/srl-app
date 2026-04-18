@@ -80,8 +80,8 @@ function srl_register_post_types() {
         'show_ui'               => true,
         'show_in_menu'          => false, // Oculto del menú, usamos tabla personalizada srl_drivers
         'menu_icon'             => 'dashicons-admin-users',
-        'has_archive'           => true,
-        'rewrite'               => [ 'slug' => 'pilotos' ],
+        'has_archive'           => false,
+        'rewrite'               => [ 'slug' => 'piloto' ],
     ];
     register_post_type( 'driver', $args_driver );
 

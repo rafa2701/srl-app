@@ -31,6 +31,40 @@ function srl_activate_plugin() {
     require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
     srl_create_database_tables();
     update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+
+    // Asegurar CPTs para flush_rewrite_rules
+    require_once SRL_PLUGIN_PATH . 'includes/post-types.php';
+    srl_register_post_types();
+
+    // Crear la página de Hitos automáticamente
+    srl_create_achievements_page();
+
+    flush_rewrite_rules();
+}
+
+/**
+ * Crea la página de Hitos (Logros) si no existe.
+ */
+function srl_create_achievements_page() {
+    $page_title = 'Hitos';
+    $page_slug = 'hitos';
+    $page_content = '[srl_achievements_leaderboard]';
+
+    $page_check = get_page_by_path( $page_slug );
+
+    if ( ! isset( $page_check->ID ) ) {
+        $new_page_id = wp_insert_post( [
+            'post_title'   => $page_title,
+            'post_name'    => $page_slug,
+            'post_content' => $page_content,
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+        ] );
+
+        if ( $new_page_id ) {
+            flush_rewrite_rules();
+        }
+    }
 }
 
 /**
@@ -86,6 +120,63 @@ function srl_check_for_updates() {
         if ( empty( $column_is_points_manual ) ) {
             $wpdb->query( "ALTER TABLE $table_results ADD is_points_manual tinyint(1) NOT NULL DEFAULT 0 AFTER manual_points" );
         }
+
+        $column_led_all = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'led_every_lap' ) );
+        if ( empty( $column_led_all ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD led_every_lap tinyint(1) NOT NULL DEFAULT 0 AFTER is_points_manual" );
+        }
+
+        $column_late_overtakes = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'late_overtakes' ) );
+        if ( empty( $column_late_overtakes ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD late_overtakes int(11) NOT NULL DEFAULT 0 AFTER led_every_lap" );
+        }
+
+        // REPARACIÓN ADICIONAL: Actualizar tabla de logros (achievements)
+        $table_achievements = $wpdb->prefix . 'srl_achievements';
+        $column_ach_key = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'achievement_key' ) );
+        if ( empty( $column_ach_key ) ) {
+            // Si existe la columna vieja achievement_type, la renombramos
+            $old_column = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'achievement_type' ) );
+            if ( ! empty( $old_column ) ) {
+                $wpdb->query( "ALTER TABLE $table_achievements CHANGE achievement_type achievement_key varchar(100) NOT NULL" );
+            } else {
+                $wpdb->query( "ALTER TABLE $table_achievements ADD achievement_key varchar(100) NOT NULL AFTER id" );
+            }
+        }
+
+        $column_record = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'record_value' ) );
+        if ( empty( $column_record ) ) {
+            $wpdb->query( "ALTER TABLE $table_achievements ADD record_value varchar(255) NOT NULL AFTER driver_id" );
+        }
+
+        $column_updated_at = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'updated_at' ) );
+        if ( empty( $column_updated_at ) ) {
+            $old_achieved_at = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'achieved_at' ) );
+            if ( ! empty( $old_achieved_at ) ) {
+                $wpdb->query( "ALTER TABLE $table_achievements CHANGE achieved_at updated_at datetime NOT NULL" );
+            } else {
+                $wpdb->query( "ALTER TABLE $table_achievements ADD updated_at datetime NOT NULL" );
+            }
+        }
+
+        // Asegurar que event_id permita NULL (para hitos globales como eficiencia)
+        $column_event_id = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'event_id' ) );
+        if ( $column_event_id && $column_event_id->Null === 'NO' ) {
+            $wpdb->query( "ALTER TABLE $table_achievements MODIFY event_id bigint(20) unsigned NULL" );
+        }
+
+        $column_champ_id = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'championship_id' ) );
+        if ( empty( $column_champ_id ) ) {
+            $wpdb->query( "ALTER TABLE $table_achievements ADD championship_id bigint(20) unsigned NULL AFTER event_id, ADD KEY idx_championship_id (championship_id)" );
+        }
+
+        $column_opp_id = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'opponent_id' ) );
+        if ( empty( $column_opp_id ) ) {
+            $wpdb->query( "ALTER TABLE $table_achievements ADD opponent_id bigint(20) unsigned NULL AFTER championship_id" );
+        }
+
+        // Asegurar que la página de Hitos existe
+        srl_create_achievements_page();
     }
 }
 add_action( 'admin_init', 'srl_check_for_updates' );
@@ -99,6 +190,7 @@ require_once SRL_PLUGIN_PATH . 'includes/data-importers/assetto-parser.php';
 require_once SRL_PLUGIN_PATH . 'includes/data-importers/automobilista-parser.php';
 require_once SRL_PLUGIN_PATH . 'includes/admin-page.php';
 require_once SRL_PLUGIN_PATH . 'includes/admin-drivers.php';
+require_once SRL_PLUGIN_PATH . 'includes/achievement-manager.php';
 require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
@@ -108,6 +200,8 @@ add_action( 'admin_init', 'srl_register_settings' );
 function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_site_logo' );
     register_setting( 'srl_settings_group', 'srl_footer_logo' );
+    register_setting( 'srl_settings_group', 'srl_achievement_labels' );
+    register_setting( 'srl_settings_group', 'srl_achievement_settings' );
 }
 
 add_action( 'admin_menu', 'srl_admin_menu' );
