@@ -418,8 +418,9 @@ function srl_render_championship_list_shortcode( $atts ) {
  */
 function srl_render_driver_list_shortcode( $atts ) {
     // Intentar autodetectar la URL del perfil si es posible
+    // El perfil individual se muestra en la misma página "pilotos" vía query args
     $profile_page = get_page_by_path('pilotos');
-    $default_url = $profile_page ? get_permalink($profile_page->ID) : '/pilotos/';
+    $default_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
 
     $atts = shortcode_atts( [ 'profile_page_url' => $default_url ], $atts, 'srl_driver_list' );
     
@@ -698,15 +699,13 @@ function srl_achievements_leaderboard_shortcode() {
                                     <td class="rank-col">#<?php echo $rank; ?></td>
                                     <td class="driver-col">
                                         <a href="<?php
-                                            // Buscar el post del piloto (driver CPT) que tiene el driver_id de la DB
-                                            $driver_post_id = get_posts([
-                                                'post_type' => 'driver',
-                                                'meta_key' => '_srl_driver_id',
-                                                'meta_value' => $record->driver_id,
-                                                'posts_per_page' => 1,
-                                                'fields' => 'ids'
-                                            ]);
-                                            echo esc_url( get_permalink( $driver_post_id[0] ?? 0 ) );
+                                            // Enlace al perfil individual en la misma página de pilotos
+                                            $profile_page = get_page_by_path('pilotos');
+                                            $base_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
+
+                                            // Preferimos steam_id si está disponible en el registro del hito (si lo añadimos al query)
+                                            // pero por simplicidad usamos driver_id
+                                            echo esc_url( add_query_arg('driver_id', $record->driver_id, $base_url) );
                                         ?>">
                                             <?php echo esc_html( $record->full_name ); ?>
                                         </a>

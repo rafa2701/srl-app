@@ -32,8 +32,14 @@ function srl_activate_plugin() {
     srl_create_database_tables();
     update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
 
+    // Asegurar CPTs para flush_rewrite_rules
+    require_once SRL_PLUGIN_PATH . 'includes/post-types.php';
+    srl_register_post_types();
+
     // Crear la página de Hitos automáticamente
     srl_create_achievements_page();
+
+    flush_rewrite_rules();
 }
 
 /**

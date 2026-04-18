@@ -43,7 +43,7 @@ function srl_setup_default_menus() {
         // Add Drivers link
         wp_update_nav_menu_item( $menu_id, 0, [
             'menu-item-title'  =>  __( 'Pilotos', 'srl-theme' ),
-            'menu-item-url'    => get_post_type_archive_link( 'driver' ) ?: home_url( '/pilotos/' ),
+            'menu-item-url'    => home_url( '/pilotos/' ),
             'menu-item-status' => 'publish',
         ] );
 

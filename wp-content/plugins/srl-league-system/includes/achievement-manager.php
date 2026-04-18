@@ -32,6 +32,17 @@ class SRL_Achievement_Manager {
         $max_iron_man = 0; $current_iron_man = 0;
         $max_swiss_watch = 0; $current_swiss_watch = 0;
 
+        // Pre-fetch winner laps for all relevant sessions to avoid N+1 queries
+        $session_ids = array_unique(array_column($results, 'session_id'));
+        $winner_laps_map = [];
+        if (!empty($session_ids)) {
+            $placeholders = implode(',', array_fill(0, count($session_ids), '%d'));
+            $winners = $wpdb->get_results($wpdb->prepare("SELECT session_id, laps_completed FROM {$wpdb->prefix}srl_results WHERE session_id IN ($placeholders) AND position = 1", $session_ids));
+            foreach ($winners as $w) {
+                $winner_laps_map[$w->session_id] = $w->laps_completed;
+            }
+        }
+
         foreach ( $results as $res ) {
             $is_win = ( $res->position == 1 && ! $res->is_disqualified && ! $res->is_nc );
             $is_podium = ( $res->position <= 3 && ! $res->is_disqualified && ! $res->is_nc );
@@ -39,7 +50,7 @@ class SRL_Achievement_Manager {
             $is_finished = ( ! $res->is_dnf );
 
             // Swiss Watch Calculation (Lead Lap)
-            $winner_laps = $wpdb->get_var($wpdb->prepare("SELECT laps_completed FROM {$wpdb->prefix}srl_results WHERE session_id = %d AND position = 1", $res->session_id));
+            $winner_laps = $winner_laps_map[$res->session_id] ?? 0;
             $on_lead_lap = ( $winner_laps > 0 && $res->laps_completed >= $winner_laps );
 
             // Update streaks
