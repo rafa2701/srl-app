@@ -66,17 +66,27 @@ jQuery(document).ready(function($) {
     });
 
     // Toggles para los resultados detallados
-    $('#srl-toggle-detailed').on('click', function() {
-        $('#srl-detailed-standings-container').slideToggle(300);
-        $(this).toggleClass('active');
-        if ($(this).hasClass('active')) {
-            $(this).text('OCULTAR DETALLES');
+    $(document).on('click', '#srl-toggle-detailed', function() {
+        const container = $('#srl-detailed-standings-container');
+        const button = $(this);
+
+        container.slideToggle(300, function() {
+            if (container.is(':visible')) {
+                $('html, body').animate({
+                    scrollTop: container.offset().top - 100
+                }, 500);
+            }
+        });
+
+        button.toggleClass('active');
+        if (button.hasClass('active')) {
+            button.text('OCULTAR DETALLES');
         } else {
-            $(this).text('RESULTADOS DETALLADOS');
+            button.text('RESULTADOS DETALLADOS');
         }
     });
 
-    $('.srl-toggle-view').on('click', function() {
+    $(document).on('click', '.srl-toggle-view', function() {
         const view = $(this).data('view');
         const container = $(this).closest('#srl-detailed-standings-container');
 

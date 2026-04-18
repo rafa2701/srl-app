@@ -158,8 +158,22 @@ function srl_public_enqueue_assets() {
     wp_enqueue_style( 'srl-public-css', SRL_PLUGIN_URL . 'assets/css/main.css', [], SRL_PLUGIN_VERSION );
     
     global $post;
-    if ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'srl_driver_profile' ) || has_shortcode( $post->post_content, 'srl_standings' ) || has_shortcode( $post->post_content, 'srl_driver_list' ) || has_shortcode( $post->post_content, 'srl_event_results' ) ) ) {
+    $should_load = false;
+    if ( is_a( $post, 'WP_Post' ) ) {
+        if ( has_shortcode( $post->post_content, 'srl_driver_profile' ) ||
+             has_shortcode( $post->post_content, 'srl_standings' ) ||
+             has_shortcode( $post->post_content, 'srl_driver_list' ) ||
+             has_shortcode( $post->post_content, 'srl_event_results' ) ) {
+            $should_load = true;
+        }
         
+        // También cargar en páginas de CPTs donde solemos usar shortcodes en plantillas
+        if ( is_singular(['srl_championship', 'srl_event', 'driver']) || is_post_type_archive('driver') ) {
+            $should_load = true;
+        }
+    }
+
+    if ( $should_load ) {
         wp_enqueue_script( 'srl-tablesort', 'https://cdn.jsdelivr.net/npm/tablesort@5.2.1/src/tablesort.min.js', [], null, true );
         wp_enqueue_script( 'srl-tablesort-number', 'https://cdn.jsdelivr.net/npm/tablesort@5.2.1/src/sorts/tablesort.number.js', ['srl-tablesort'], null, true );
         wp_enqueue_script( 'srl-public-js', SRL_PLUGIN_URL . 'assets/js/public.js', ['jquery', 'srl-tablesort', 'srl-tablesort-number'], SRL_PLUGIN_VERSION, true );
