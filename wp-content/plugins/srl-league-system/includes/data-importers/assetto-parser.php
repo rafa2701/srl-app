@@ -195,5 +195,9 @@ function srl_update_driver_global_stats( $driver_id ) {
             [ '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
             [ '%d' ]
         );
+
+        // Actualizar hitos del piloto
+        SRL_Achievement_Manager::calculate_streaks( $driver_id );
+        SRL_Achievement_Manager::calculate_efficiency( $driver_id );
     }
 }

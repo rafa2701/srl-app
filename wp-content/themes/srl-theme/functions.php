@@ -47,6 +47,13 @@ function srl_setup_default_menus() {
             'menu-item-status' => 'publish',
         ] );
 
+        // Add Achievements link
+        wp_update_nav_menu_item( $menu_id, 0, [
+            'menu-item-title'  =>  __( 'Hitos', 'srl-theme' ),
+            'menu-item-url'    => home_url( '/hitos/' ),
+            'menu-item-status' => 'publish',
+        ] );
+
         // Assign to location
         $locations = get_theme_mod( 'nav_menu_locations' );
         $locations['main-menu'] = $menu_id;

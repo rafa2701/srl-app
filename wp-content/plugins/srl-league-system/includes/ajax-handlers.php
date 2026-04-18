@@ -127,9 +127,15 @@ function srl_handle_recalculate_all_stats() {
     }
     
     $final_message = 'Se han recalculado las estadísticas para ' . count( $driver_ids ) . ' pilotos y se han reasignado ' . $champs_recalculated . ' campeonatos.';
+
+    // Recalcular todos los hitos (Achievements)
+    srl_write_to_log('SRL Recalculate: Iniciando sincronización de hitos.');
+    SRL_Achievement_Manager::sync_all_achievements();
+    srl_write_to_log('SRL Recalculate: Hitos sincronizados.');
+
     srl_write_to_log('SRL Recalculate: ' . $final_message);
     srl_write_to_log('--- FIN DE RECÁLCULO DE ESTADÍSTICAS SRL ---');
-    wp_send_json_success( ['message' => $final_message] );
+    wp_send_json_success( ['message' => $final_message . ' También se han sincronizado los hitos (logros).'] );
 }
 
 function srl_handle_get_achievement_details() {

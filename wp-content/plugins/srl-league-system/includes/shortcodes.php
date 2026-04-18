@@ -13,6 +13,7 @@ add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
 add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
 add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
 add_shortcode( 'srl_event_results', 'srl_render_event_results_shortcode' );
+add_shortcode( 'srl_achievements_leaderboard', 'srl_achievements_leaderboard_shortcode' );
 add_shortcode( 'srl_main_menu', 'srl_render_main_menu_shortcode' );
 
 
@@ -650,4 +651,98 @@ function srl_format_time( $ms, $is_total_time = false ) {
         return sprintf('%d:%02d:%02d.%03d', $hours, $minutes, $seconds, $milliseconds);
     }
     return sprintf('%d:%02d.%03d', $minutes, $seconds, $milliseconds);
+}
+
+/**
+ * Shortcode para mostrar el salón de la fama / tabla de récords de hitos.
+ */
+function srl_achievements_leaderboard_shortcode() {
+    $leaderboard = SRL_Achievement_Manager::get_achievements_leaderboard();
+
+    if ( empty( $leaderboard ) ) {
+        return '<div class="srl-achievements-empty">Aún no hay hitos registrados.</div>';
+    }
+
+    ob_start();
+    ?>
+    <div class="srl-achievements-hall-of-fame">
+        <h2 class="srl-section-title">Hitos Históricos</h2>
+        <div class="srl-achievements-grid">
+            <?php foreach ( $leaderboard as $key => $data ) : ?>
+                <div class="srl-achievement-card">
+                    <div class="srl-achievement-header">
+                        <span class="srl-achievement-icon">🏆</span>
+                        <h3 class="srl-achievement-label"><?php echo esc_html( $data['label'] ); ?></h3>
+                    </div>
+                    <table class="srl-achievement-table">
+                        <tbody>
+                            <?php
+                            $rank = 1;
+                            foreach ( $data['records'] as $record ) :
+                                $value = $record->record_value;
+                                // Formatear valores según la clave
+                                if ( strpos($key, 'efficiency') !== false ) {
+                                    $value .= '%';
+                                } elseif ( strpos($key, 'margin') !== false || strpos($key, 'gap') !== false ) {
+                                    $value = srl_format_time($value);
+                                }
+                            ?>
+                                <tr class="rank-<?php echo $rank; ?>">
+                                    <td class="rank-col">#<?php echo $rank; ?></td>
+                                    <td class="driver-col">
+                                        <a href="<?php
+                                            // Buscar el post del piloto (driver CPT) que tiene el driver_id de la DB
+                                            $driver_post_id = get_posts([
+                                                'post_type' => 'driver',
+                                                'meta_key' => '_srl_driver_id',
+                                                'meta_value' => $record->driver_id,
+                                                'posts_per_page' => 1,
+                                                'fields' => 'ids'
+                                            ]);
+                                            echo esc_url( get_permalink( $driver_post_id[0] ?? 0 ) );
+                                        ?>">
+                                            <?php echo esc_html( $record->full_name ); ?>
+                                        </a>
+                                    </td>
+                                    <td class="value-col"><?php echo esc_html( $value ); ?></td>
+                                    <td class="event-col">
+                                        <?php if ( $record->event_id ) : ?>
+                                            <a href="<?php echo esc_url( get_permalink( $record->event_id ) ); ?>" title="Ver Evento">
+                                                📅
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php $rank++; endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php if ( strpos($key, 'efficiency') !== false ) : ?>
+                        <div class="srl-achievement-note">* Mínimo 10 carreras</div>
+                    <?php endif; ?>
+                    <?php if ( $key === 'largest_pole_gap' ) : ?>
+                        <div class="srl-achievement-note">* Pendiente de implementación completa</div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <style>
+        .srl-achievements-hall-of-fame { margin-top: 30px; }
+        .srl-achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .srl-achievement-card { background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 8px; }
+        .srl-achievement-header { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e60000; padding-bottom: 10px; }
+        .srl-achievement-icon { font-size: 24px; margin-right: 10px; }
+        .srl-achievement-label { margin: 0; font-size: 1.1rem; color: #fff; }
+        .srl-achievement-table { width: 100%; border-collapse: collapse; }
+        .srl-achievement-table td { padding: 8px 5px; border-bottom: 1px solid #222; font-size: 0.9rem; color: #ccc; }
+        .rank-col { width: 30px; color: #888; font-weight: bold; }
+        .value-col { text-align: right; font-weight: 700; color: #e60000; }
+        .event-col { width: 30px; text-align: center; }
+        .rank-1 .driver-col a { color: #ffd700 !important; font-weight: bold; }
+        .srl-achievement-table a { color: #fff; text-decoration: none; }
+        .srl-achievement-table a:hover { color: #e60000; }
+        .srl-achievement-note { font-size: 0.75rem; color: #666; margin-top: 10px; font-style: italic; }
+    </style>
+    <?php
+    return ob_get_clean();
 }
