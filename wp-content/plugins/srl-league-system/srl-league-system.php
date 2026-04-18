@@ -115,6 +115,16 @@ function srl_check_for_updates() {
             $wpdb->query( "ALTER TABLE $table_results ADD is_points_manual tinyint(1) NOT NULL DEFAULT 0 AFTER manual_points" );
         }
 
+        $column_led_all = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'led_every_lap' ) );
+        if ( empty( $column_led_all ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD led_every_lap tinyint(1) NOT NULL DEFAULT 0 AFTER is_points_manual" );
+        }
+
+        $column_late_overtakes = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'late_overtakes' ) );
+        if ( empty( $column_late_overtakes ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD late_overtakes int(11) NOT NULL DEFAULT 0 AFTER led_every_lap" );
+        }
+
         // REPARACIÓN ADICIONAL: Actualizar tabla de logros (achievements)
         $table_achievements = $wpdb->prefix . 'srl_achievements';
         $column_ach_key = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'achievement_key' ) );
@@ -147,6 +157,16 @@ function srl_check_for_updates() {
         $column_event_id = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'event_id' ) );
         if ( $column_event_id && $column_event_id->Null === 'NO' ) {
             $wpdb->query( "ALTER TABLE $table_achievements MODIFY event_id bigint(20) unsigned NULL" );
+        }
+
+        $column_champ_id = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'championship_id' ) );
+        if ( empty( $column_champ_id ) ) {
+            $wpdb->query( "ALTER TABLE $table_achievements ADD championship_id bigint(20) unsigned NULL AFTER event_id, ADD KEY idx_championship_id (championship_id)" );
+        }
+
+        $column_opp_id = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'opponent_id' ) );
+        if ( empty( $column_opp_id ) ) {
+            $wpdb->query( "ALTER TABLE $table_achievements ADD opponent_id bigint(20) unsigned NULL AFTER championship_id" );
         }
 
         // Asegurar que la página de Hitos existe

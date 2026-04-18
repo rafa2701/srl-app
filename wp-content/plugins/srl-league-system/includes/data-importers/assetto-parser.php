@@ -66,6 +66,46 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
         return ['status' => 'error', 'message' => 'El archivo JSON no contiene la sección "Result".'];
     }
 
+    // --- Lógica avanzada de carrera (Laps Analysis) ---
+    $lap_leaders = [];
+    $driver_positions_at_lap = [];
+    if ( ! empty( $data['Laps'] ) ) {
+        // Agrupar laps por driver y ordenarlas por Timestamp
+        $laps_by_driver = [];
+        foreach ( $data['Laps'] as $lap ) {
+            $guid = $lap['DriverGuid'] ?? $lap['DriverID'] ?? null;
+            if ( $guid ) {
+                $laps_by_driver[$guid][] = $lap;
+            }
+        }
+        foreach ( $laps_by_driver as $guid => &$laps ) {
+            usort( $laps, function($a, $b) { return $a['Timestamp'] <=> $b['Timestamp']; } );
+        }
+
+        // Determinar líder de cada vuelta y posiciones
+        $max_laps = 0;
+        foreach ( $laps_by_driver as $guid => $laps ) {
+            $max_laps = max($max_laps, count($laps));
+        }
+
+        for ( $i = 0; $i < $max_laps; $i++ ) {
+            $lap_ends = [];
+            foreach ( $laps_by_driver as $guid => $laps ) {
+                if ( isset($laps[$i]) ) {
+                    $lap_ends[$guid] = $laps[$i]['Timestamp'];
+                }
+            }
+            asort($lap_ends);
+            $ordered_drivers = array_keys($lap_ends);
+            if ( !empty($ordered_drivers) ) {
+                $lap_leaders[$i+1] = $ordered_drivers[0];
+                foreach ( $ordered_drivers as $idx => $guid ) {
+                    $driver_positions_at_lap[$guid][$i+1] = $idx + 1;
+                }
+            }
+        }
+    }
+
     $processed_drivers = [];
     $position = 1;
     foreach ( $data['Result'] as $result_item ) {
@@ -73,7 +113,6 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
         $driver_name = $result_item['DriverName'] ?? '';
 
         if (!$driver_guid && isset($result_item['CarId'], $data['Cars'])) {
-            // Intentar buscar el GUID en la sección Cars si no está en Result
             foreach($data['Cars'] as $car) {
                 if ($car['CarId'] == $result_item['CarId']) {
                     $driver_guid = $car['Driver']['Guid'] ?? null;
@@ -88,10 +127,31 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
         
         $processed_drivers[] = $driver_id;
 
-        $laps_completed = count( array_filter($data['Laps'], function($lap) use ($driver_guid) {
-            $guid = $lap['DriverGuid'] ?? $lap['DriverID'] ?? null;
-            return $guid === $driver_guid;
-        }) );
+        $laps_completed = isset($laps_by_driver[$driver_guid]) ? count($laps_by_driver[$driver_guid]) : 0;
+
+        // Lógica para Grand Slam y Closer (Solo AC)
+        $led_every_lap = 0;
+        $late_overtakes = 0;
+
+        if ( ! empty($lap_leaders) ) {
+            // 1. Led Every Lap?
+            $led_count = 0;
+            foreach ($lap_leaders as $lnum => $lguid) {
+                if ($lguid === $driver_guid) $led_count++;
+            }
+            if ($led_count === $winner_laps && $position === 1) {
+                $led_every_lap = 1;
+            }
+
+            // 2. Overtakes in final 10% (The Closer)
+            if ($winner_laps > 5) {
+                $threshold_lap = floor($winner_laps * 0.9);
+                $pos_at_threshold = $driver_positions_at_lap[$driver_guid][$threshold_lap] ?? 0;
+                if ($pos_at_threshold > 0 && $position < $pos_at_threshold) {
+                    $late_overtakes = $pos_at_threshold - $position;
+                }
+            }
+        }
 
         $is_dnf = ( $result_item['TotalTime'] == 0 );
         $has_pole = ( $driver_guid === $pole_driver_guid && $pole_driver_guid !== null );
@@ -127,6 +187,8 @@ function srl_parse_assetto_corsa_results( $json_content, $session_id, $event_id 
             'laps_completed'  => $laps_completed,
             'is_dnf'          => $is_dnf ? 1 : 0,
             'points_awarded'  => $points_awarded,
+            'led_every_lap'   => $led_every_lap,
+            'late_overtakes'  => $late_overtakes,
         ];
         
         $wpdb->replace( $wpdb->prefix . 'srl_results', $result_data );

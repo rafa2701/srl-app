@@ -417,12 +417,19 @@ function srl_render_championship_list_shortcode( $atts ) {
  * Renderiza la lista de pilotos.
  */
 function srl_render_driver_list_shortcode( $atts ) {
-    $atts = shortcode_atts( [ 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_driver_list' );
+    // Intentar autodetectar la URL del perfil si es posible
+    $profile_page = get_page_by_path('pilotos');
+    $default_url = $profile_page ? get_permalink($profile_page->ID) : '/pilotos/';
+
+    $atts = shortcode_atts( [ 'profile_page_url' => $default_url ], $atts, 'srl_driver_list' );
     
     global $wpdb;
-    $drivers = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}srl_drivers ORDER BY victories_count DESC, full_name ASC" );
+    $table = $wpdb->prefix . 'srl_drivers';
+    $drivers = $wpdb->get_results( "SELECT * FROM $table WHERE full_name != '' ORDER BY victories_count DESC, full_name ASC" );
 
-    if ( empty( $drivers ) ) return '<p>No hay pilotos registrados.</p>';
+    if ( empty( $drivers ) ) {
+        return '<p style="text-align: center; padding: 20px;">No se encontraron pilotos con estadísticas registradas.</p>';
+    }
 
     ob_start();
     ?>
@@ -683,7 +690,7 @@ function srl_achievements_leaderboard_shortcode() {
                                 // Formatear valores según la clave
                                 if ( strpos($key, 'efficiency') !== false ) {
                                     $value .= '%';
-                                } elseif ( strpos($key, 'margin') !== false || strpos($key, 'gap') !== false ) {
+                                } elseif ( strpos($key, 'margin') !== false || strpos($key, 'gap') !== false || $key === 'nerves_of_steel' || $key === 'one_lap_wonder' ) {
                                     $value = srl_format_time($value);
                                 }
                             ?>
@@ -704,7 +711,15 @@ function srl_achievements_leaderboard_shortcode() {
                                             <?php echo esc_html( $record->full_name ); ?>
                                         </a>
                                     </td>
-                                    <td class="value-col"><?php echo esc_html( $value ); ?></td>
+                                    <td class="value-col">
+                                        <?php echo esc_html( $value ); ?>
+                                        <?php if ( $key === 'nerves_of_steel' && $record->opponent_name ) : ?>
+                                            <br><small style="color: #888; font-weight: normal;">vs <?php echo esc_html($record->opponent_name); ?></small>
+                                        <?php endif; ?>
+                                        <?php if ( $record->championship_name ) : ?>
+                                            <br><small style="color: #888; font-weight: normal;"><?php echo esc_html($record->championship_name); ?></small>
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="event-col">
                                         <?php if ( $record->event_id ) : ?>
                                             <a href="<?php echo esc_url( get_permalink( $record->event_id ) ); ?>" title="Ver Evento">
