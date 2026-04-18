@@ -543,6 +543,7 @@ function srl_render_main_menu_shortcode( $atts ) {
     $atts = shortcode_atts( [
         'pilots_url' => '/pilotos/',
         'championships_url' => '/campeonatos/',
+        'achievements_url' => '/hitos/',
     ], $atts, 'srl_main_menu' );
 
     ob_start();
@@ -567,8 +568,7 @@ function srl_render_main_menu_shortcode( $atts ) {
                     <p>Consulta las clasificaciones y eventos de cada torneo.</p>
                 </div>
             </a>
-            <div class="srl-menu-card disabled">
-                 <div class="srl-card-badge">Próximamente</div>
+            <a href="<?php echo esc_url( home_url( $atts['achievements_url'] ) ); ?>" class="srl-menu-card">
                 <div class="srl-card-icon">
                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.89 1.45l.2-.05c.24-.05.48-.05.72 0l.22.05L15.3 2l.3.15c.1.05.2.1.3.15l2.12 1.22.18.1c.16.1.3.2.42.34l.12.13L20 5.18l.14.22c.08.13.15.27.2.4l.08.24 1.22 2.12.05.2c.05.24.05.48 0 .72l-.05.22L21.5 11l-.15.3c-.05.1-.1.2-.15.3l-1.22 2.12-.1.18c-.1.16-.2.3-.34.42l-.13.12-1.22 1.22-.22.14c.13-.08.27-.15.4-.2l.24-.08 2.12-1.22z"/><path d="M12 8v4l2 2"/></svg>
                 </div>
@@ -576,7 +576,7 @@ function srl_render_main_menu_shortcode( $atts ) {
                     <h3>Hitos</h3>
                     <p>Récords históricos, rachas y logros destacados.</p>
                 </div>
-            </div>
+            </a>
             <div class="srl-menu-card disabled">
                 <div class="srl-card-badge">Próximamente</div>
                 <div class="srl-card-icon">
