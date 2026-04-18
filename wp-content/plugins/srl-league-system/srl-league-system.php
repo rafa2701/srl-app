@@ -31,6 +31,34 @@ function srl_activate_plugin() {
     require_once SRL_PLUGIN_PATH . 'includes/db-setup.php';
     srl_create_database_tables();
     update_option( 'srl_league_system_version', SRL_PLUGIN_VERSION );
+
+    // Crear la página de Hitos automáticamente
+    srl_create_achievements_page();
+}
+
+/**
+ * Crea la página de Hitos (Logros) si no existe.
+ */
+function srl_create_achievements_page() {
+    $page_title = 'Hitos';
+    $page_slug = 'hitos';
+    $page_content = '[srl_achievements_leaderboard]';
+
+    $page_check = get_page_by_path( $page_slug );
+
+    if ( ! isset( $page_check->ID ) ) {
+        $new_page_id = wp_insert_post( [
+            'post_title'   => $page_title,
+            'post_name'    => $page_slug,
+            'post_content' => $page_content,
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+        ] );
+
+        if ( $new_page_id ) {
+            flush_rewrite_rules();
+        }
+    }
 }
 
 /**
@@ -120,6 +148,9 @@ function srl_check_for_updates() {
         if ( $column_event_id && $column_event_id->Null === 'NO' ) {
             $wpdb->query( "ALTER TABLE $table_achievements MODIFY event_id bigint(20) unsigned NULL" );
         }
+
+        // Asegurar que la página de Hitos existe
+        srl_create_achievements_page();
     }
 }
 add_action( 'admin_init', 'srl_check_for_updates' );
