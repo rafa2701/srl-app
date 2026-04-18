@@ -334,3 +334,76 @@
     font-size: 0.9rem;
     font-style: italic;
 }
+
+/* --- Detailed Championship Table (Wikipedia Style) --- */
+.srl-button {
+    background-color: var(--srl-red);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: background-color 0.2s;
+}
+.srl-button:hover {
+    background-color: #ff1a1a;
+}
+.srl-button.active {
+    background-color: #fff;
+    color: var(--srl-red);
+}
+
+.srl-detailed-table-wrapper {
+    overflow-x: auto;
+    position: relative;
+    max-width: 100%;
+}
+
+.srl-detailed-table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 800px;
+}
+
+.srl-detailed-table th,
+.srl-detailed-table td {
+    width: 60px;
+    text-align: center;
+    border: 1px solid #333;
+    padding: 8px 4px;
+}
+
+.srl-detailed-table .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: var(--srl-dark-gray);
+}
+
+.srl-detailed-table .first-col { width: 40px; left: 0; }
+.srl-detailed-table .second-col { width: 200px; left: 40px; text-align: left; padding-left: 15px; }
+
+.srl-detailed-table .round-col { width: 50px; }
+.srl-detailed-table .points-col { width: 60px; font-weight: bold; }
+
+/* Wikipedia Style Colors */
+.srl-res-gold { background-color: #FFFFBF !important; color: #000 !important; }
+.srl-res-silver { background-color: #DFDFDF !important; color: #000 !important; }
+.srl-res-bronze { background-color: #FFDF9F !important; color: #000 !important; }
+.srl-res-top10 { background-color: #DFFFDF !important; color: #000 !important; }
+.srl-res-points { background-color: #EFEFEF !important; color: #000 !important; }
+.srl-res-dnf { background-color: #EFCFFF !important; color: #000 !important; }
+.srl-res-dq { background-color: #000000 !important; color: #fff !important; }
+.srl-res-nc { background-color: #CFCFFF !important; color: #000 !important; }
+
+.srl-detailed-table tbody tr:hover td:not(.sticky-col) {
+    filter: brightness(0.9);
+}
+
+.srl-toggle-group {
+    display: flex;
+    gap: 5px;
+}

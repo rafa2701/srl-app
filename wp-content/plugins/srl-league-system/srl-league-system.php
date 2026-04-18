@@ -160,8 +160,9 @@ function srl_public_enqueue_assets() {
     global $post;
     if ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'srl_driver_profile' ) || has_shortcode( $post->post_content, 'srl_standings' ) || has_shortcode( $post->post_content, 'srl_driver_list' ) || has_shortcode( $post->post_content, 'srl_event_results' ) ) ) {
         
-        wp_enqueue_script( 'srl-tablesort', 'https://cdn.jsdelivr.net/npm/tablesort@5.6.0/src/tablesort.min.js', [], null, true );
-        wp_enqueue_script( 'srl-public-js', SRL_PLUGIN_URL . 'assets/js/public.js', ['jquery', 'srl-tablesort'], SRL_PLUGIN_VERSION, true );
+        wp_enqueue_script( 'srl-tablesort', 'https://cdn.jsdelivr.net/npm/tablesort@5.2.1/src/tablesort.min.js', [], null, true );
+        wp_enqueue_script( 'srl-tablesort-number', 'https://cdn.jsdelivr.net/npm/tablesort@5.2.1/src/sorts/tablesort.number.js', ['srl-tablesort'], null, true );
+        wp_enqueue_script( 'srl-public-js', SRL_PLUGIN_URL . 'assets/js/public.js', ['jquery', 'srl-tablesort', 'srl-tablesort-number'], SRL_PLUGIN_VERSION, true );
         
         wp_localize_script( 'srl-public-js', 'srl_ajax_object', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'srl-public-nonce' ) ]);
     }

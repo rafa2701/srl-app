@@ -64,4 +64,31 @@ jQuery(document).ready(function($) {
         new Tablesort(this);
         console.log('Tabla ordenada inicializada.');
     });
+
+    // Toggles para los resultados detallados
+    $('#srl-toggle-detailed').on('click', function() {
+        $('#srl-detailed-standings-container').slideToggle(300);
+        $(this).toggleClass('active');
+        if ($(this).hasClass('active')) {
+            $(this).text('OCULTAR DETALLES');
+        } else {
+            $(this).text('RESULTADOS DETALLADOS');
+        }
+    });
+
+    $('.srl-toggle-view').on('click', function() {
+        const view = $(this).data('view');
+        const container = $(this).closest('#srl-detailed-standings-container');
+
+        container.find('.srl-toggle-view').removeClass('active');
+        $(this).addClass('active');
+
+        if (view === 'points') {
+            container.find('.srl-val-points').show();
+            container.find('.srl-val-position').hide();
+        } else {
+            container.find('.srl-val-points').hide();
+            container.find('.srl-val-position').show();
+        }
+    });
 });
