@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- * Version:           1.8.3
+ * Version:           1.9.2
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later

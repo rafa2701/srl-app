@@ -96,3 +96,46 @@ function srl_register_post_types() {
 
 }
 add_action( 'init', 'srl_register_post_types', 0 );
+
+/**
+ * Añade un filtro de campeonato a la lista de eventos en el admin.
+ */
+function srl_add_event_filters() {
+    global $typenow;
+    if ( $typenow === 'srl_event' ) {
+        $selected      = isset( $_GET['championship_id'] ) ? $_GET['championship_id'] : '';
+        $championships = get_posts( [
+            'post_type'      => 'srl_championship',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+        ] );
+
+        echo '<select name="championship_id">';
+        echo '<option value="">' . __( 'Filtrar por Campeonato', 'srl-league-system' ) . '</option>';
+        foreach ( $championships as $championship ) {
+            printf(
+                '<option value="%s"%s>%s</option>',
+                esc_attr( $championship->ID ),
+                selected( $selected, $championship->ID, false ),
+                esc_html( $championship->post_title )
+            );
+        }
+        echo '</select>';
+    }
+}
+add_action( 'restrict_manage_posts', 'srl_add_event_filters' );
+
+/**
+ * Filtra la consulta de eventos según el campeonato seleccionado.
+ */
+function srl_filter_events_by_championship( $query ) {
+    global $pagenow;
+    $post_type = isset( $query->query_vars['post_type'] ) ? $query->query_vars['post_type'] : '';
+
+    if ( is_admin() && $pagenow === 'edit.php' && $post_type === 'srl_event' && isset( $_GET['championship_id'] ) && $_GET['championship_id'] !== '' ) {
+        $query->query_vars['meta_key']   = '_srl_parent_championship';
+        $query->query_vars['meta_value'] = $_GET['championship_id'];
+    }
+}
+add_filter( 'parse_query', 'srl_filter_events_by_championship' );
