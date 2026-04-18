@@ -64,4 +64,41 @@ jQuery(document).ready(function($) {
         new Tablesort(this);
         console.log('Tabla ordenada inicializada.');
     });
+
+    // Toggles para los resultados detallados
+    $(document).on('click', '#srl-toggle-detailed', function() {
+        const container = $('#srl-detailed-standings-container');
+        const button = $(this);
+
+        container.slideToggle(300, function() {
+            if (container.is(':visible')) {
+                $('html, body').animate({
+                    scrollTop: container.offset().top - 100
+                }, 500);
+            }
+        });
+
+        button.toggleClass('active');
+        if (button.hasClass('active')) {
+            button.text('OCULTAR DETALLES');
+        } else {
+            button.text('RESULTADOS DETALLADOS');
+        }
+    });
+
+    $(document).on('click', '.srl-toggle-view', function() {
+        const view = $(this).data('view');
+        const container = $(this).closest('#srl-detailed-standings-container');
+
+        container.find('.srl-toggle-view').removeClass('active');
+        $(this).addClass('active');
+
+        if (view === 'points') {
+            container.find('.srl-val-points').show();
+            container.find('.srl-val-position').hide();
+        } else {
+            container.find('.srl-val-points').hide();
+            container.find('.srl-val-position').show();
+        }
+    });
 });
