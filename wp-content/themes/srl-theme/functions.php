@@ -102,22 +102,28 @@ function srl_get_theme_logo_url($type = 'header') {
 }
 
 /**
- * Aggregate stats for a driver post ID
+ * Aggregate stats for a driver. Accepts either DB driver ID or Post ID.
  */
-function srl_get_driver_stats( $driver_id ) {
+function srl_get_driver_stats( $id, $is_post_id = true ) {
     global $wpdb;
-    $stats = get_transient( "srl_stats_$driver_id" );
+
+    $driver_db_id = $id;
+    if ( $is_post_id ) {
+        $driver_db_id = get_post_meta( $id, '_srl_driver_id', true ) ?: $id;
+    }
+
+    $stats = get_transient( "srl_stats_$driver_db_id" );
     if ( false === $stats ) {
         $stats = $wpdb->get_row( $wpdb->prepare(
             "SELECT
-               SUM(CASE WHEN position = 1 THEN 1 ELSE 0 END) AS wins,
-               SUM(CASE WHEN position <= 3 THEN 1 ELSE 0 END) AS podiums,
-               SUM(CASE WHEN position  = 1 THEN 1 ELSE 0 END) AS poles,
-               SUM(CASE WHEN fastest_lap IS NOT NULL THEN 1 ELSE 0 END) AS fastest_laps
+               SUM(CASE WHEN position = 1 AND is_disqualified = 0 AND is_nc = 0 THEN 1 ELSE 0 END) AS wins,
+               SUM(CASE WHEN position <= 3 AND is_disqualified = 0 AND is_nc = 0 THEN 1 ELSE 0 END) AS podiums,
+               SUM(has_pole) AS poles,
+               SUM(has_fastest_lap) AS fastest_laps
              FROM {$wpdb->prefix}srl_results WHERE driver_id = %d",
-            $driver_id
+            $driver_db_id
         ), ARRAY_A );
-        set_transient( "srl_stats_$driver_id", $stats, DAY_IN_SECONDS );
+        set_transient( "srl_stats_$driver_db_id", $stats, DAY_IN_SECONDS );
     }
     return $stats;
 }
@@ -125,16 +131,23 @@ function srl_get_driver_stats( $driver_id ) {
 /**
  * Simple HTML table of last 10 results for the driver
  */
-function srl_driver_results_table( $driver_id ) {
+function srl_driver_results_table( $id, $is_post_id = true ) {
     global $wpdb;
+
+    $driver_db_id = $id;
+    if ( $is_post_id ) {
+        $driver_db_id = get_post_meta( $id, '_srl_driver_id', true ) ?: $id;
+    }
+
     $rows = $wpdb->get_results( $wpdb->prepare(
-        "SELECT r.position, r.laps, r.fastest_lap, p.post_title AS session_name
+        "SELECT r.position, r.laps_completed as laps, r.best_lap_time as fastest_lap, p.post_title AS session_name, r.is_dnf, r.is_nc, r.is_disqualified
          FROM {$wpdb->prefix}srl_results r
-         JOIN {$wpdb->posts} p ON p.ID = r.session_id
+         JOIN {$wpdb->prefix}srl_sessions s ON s.id = r.session_id
+         JOIN {$wpdb->posts} p ON p.ID = s.event_id
          WHERE r.driver_id = %d
          ORDER BY p.post_date DESC
          LIMIT 10",
-        $driver_id
+        $driver_db_id
     ) );
 
     if ( ! $rows ) return '<p class="p-4 text-gray-500">No hay resultados todavía.</p>';
@@ -154,9 +167,14 @@ function srl_driver_results_table( $driver_id ) {
             <?php foreach ( $rows as $row ) : ?>
                 <tr>
                     <td><?php echo esc_html( $row->session_name ); ?></td>
-                    <td><?php echo esc_html( $row->position ); ?></td>
+                    <td><?php
+                        if ($row->is_disqualified) echo 'DQ';
+                        elseif ($row->is_dnf) echo 'DNF';
+                        elseif ($row->is_nc) echo 'NC';
+                        else echo esc_html( $row->position );
+                    ?></td>
                     <td><?php echo esc_html( $row->laps ); ?></td>
-                    <td><?php echo esc_html( $row->fastest_lap ); ?></td>
+                    <td><?php echo srl_format_time( $row->fastest_lap ); ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>

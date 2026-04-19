@@ -21,7 +21,9 @@ add_shortcode( 'srl_main_menu', 'srl_render_main_menu_shortcode' );
  * Renderiza la tabla de clasificación de un campeonato.
  */
 function srl_render_standings_shortcode( $atts ) {
-    $atts = shortcode_atts( [ 'championship_id' => get_the_ID(), 'profile_page_url' => '/driver-profile/', ], $atts, 'srl_standings' );
+    $profile_page = get_page_by_path('pilotos');
+    $default_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
+    $atts = shortcode_atts( [ 'championship_id' => get_the_ID(), 'profile_page_url' => $default_url, ], $atts, 'srl_standings' );
     $championship_id = intval( $atts['championship_id'] );
     if ( ! $championship_id ) return '<p>ID de campeonato no encontrado.</p>';
     
@@ -286,6 +288,9 @@ function srl_render_driver_profile_shortcode( $atts ) {
     ob_start();
     ?>
     <div class="srl-app-container srl-driver-profile">
+        <div class="srl-profile-actions" style="margin-bottom: 20px;">
+            <a href="<?php echo esc_url( strtok($_SERVER["REQUEST_URI"], '?') ); ?>" class="srl-button secondary">← Volver a la lista</a>
+        </div>
         <div class="srl-profile-header" style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
             <div class="srl-profile-photo">
                 <?php
@@ -417,8 +422,12 @@ function srl_render_championship_list_shortcode( $atts ) {
  * Renderiza la lista de pilotos.
  */
 function srl_render_driver_list_shortcode( $atts ) {
+    // Si se pasa un steam_id o driver_id por la URL, mostramos el perfil en lugar de la lista
+    if ( ! empty( $_GET['steam_id'] ) || ! empty( $_GET['driver_id'] ) ) {
+        return srl_render_driver_profile_shortcode( $atts );
+    }
+
     // Intentar autodetectar la URL del perfil si es posible
-    // El perfil individual se muestra en la misma página "pilotos" vía query args
     $profile_page = get_page_by_path('pilotos');
     $default_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
 
@@ -479,7 +488,9 @@ function srl_render_driver_list_shortcode( $atts ) {
  * Renderiza los resultados de un evento.
  */
 function srl_render_event_results_shortcode( $atts ) {
-    $atts = shortcode_atts( [ 'event_id' => get_the_ID(), 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_event_results' );
+    $profile_page = get_page_by_path('pilotos');
+    $default_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
+    $atts = shortcode_atts( [ 'event_id' => get_the_ID(), 'profile_page_url' => $default_url ], $atts, 'srl_event_results' );
     $event_id = intval( $atts['event_id'] );
     if ( ! $event_id ) return '<p>ID de evento no encontrado.</p>';
 
