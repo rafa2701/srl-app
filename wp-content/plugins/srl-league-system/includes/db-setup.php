@@ -102,6 +102,8 @@ function srl_create_database_tables() {
       point_penalty float NOT NULL DEFAULT 0,
       manual_points float NOT NULL DEFAULT 0,
       is_points_manual tinyint(1) NOT NULL DEFAULT 0,
+      led_every_lap tinyint(1) NOT NULL DEFAULT 0,
+      late_overtakes int(11) NOT NULL DEFAULT 0,
       PRIMARY KEY  (id) ,
       UNIQUE KEY uk_session_driver (session_id, driver_id),
       KEY idx_session_id (session_id),
@@ -110,13 +112,18 @@ function srl_create_database_tables() {
 
     CREATE TABLE {$table_prefix}achievements (
       id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+      achievement_key varchar(100) NOT NULL,
       driver_id bigint(20) unsigned NOT NULL,
-      event_id bigint(20) unsigned NOT NULL,
-      achievement_type varchar(50) NOT NULL,
-      achieved_at date NOT NULL,
+      record_value varchar(255) NOT NULL,
+      event_id bigint(20) unsigned NULL,
+      championship_id bigint(20) unsigned NULL,
+      opponent_id bigint(20) unsigned NULL,
+      updated_at datetime NOT NULL,
       PRIMARY KEY  (id),
+      KEY idx_achievement_key (achievement_key),
       KEY idx_driver_id (driver_id),
-      KEY idx_event_id (event_id)
+      KEY idx_event_id (event_id),
+      KEY idx_championship_id (championship_id)
     ) $charset_collate;
     ";
 

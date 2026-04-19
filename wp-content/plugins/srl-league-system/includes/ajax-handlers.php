@@ -100,6 +100,14 @@ function srl_handle_recalculate_all_stats() {
     srl_write_to_log('SRL Recalculate: Se encontraron ' . count($driver_ids) . ' pilotos para procesar.');
 
     foreach ( $driver_ids as $driver_id ) {
+        // Asegurarse de que el driver tiene nombre si venía de un import parcial
+        $driver_name = $wpdb->get_var($wpdb->prepare("SELECT full_name FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $driver_id));
+        if ( empty($driver_name) ) {
+            $last_name = $wpdb->get_var($wpdb->prepare("SELECT driver_name FROM {$wpdb->prefix}srl_results r JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id WHERE r.driver_id = %d AND s.source_file != 'history.xlsx' LIMIT 1", $driver_id));
+            if ($last_name) {
+                $wpdb->update($wpdb->prefix . 'srl_drivers', ['full_name' => $last_name], ['id' => $driver_id]);
+            }
+        }
         srl_update_driver_global_stats( $driver_id );
     }
     srl_write_to_log('SRL Recalculate: Se actualizaron las estadísticas básicas (victorias, podios, etc.).');
@@ -127,9 +135,15 @@ function srl_handle_recalculate_all_stats() {
     }
     
     $final_message = 'Se han recalculado las estadísticas para ' . count( $driver_ids ) . ' pilotos y se han reasignado ' . $champs_recalculated . ' campeonatos.';
+
+    // Recalcular todos los hitos (Achievements)
+    srl_write_to_log('SRL Recalculate: Iniciando sincronización de hitos.');
+    SRL_Achievement_Manager::sync_all_achievements();
+    srl_write_to_log('SRL Recalculate: Hitos sincronizados.');
+
     srl_write_to_log('SRL Recalculate: ' . $final_message);
     srl_write_to_log('--- FIN DE RECÁLCULO DE ESTADÍSTICAS SRL ---');
-    wp_send_json_success( ['message' => $final_message] );
+    wp_send_json_success( ['message' => $final_message . ' También se han sincronizado los hitos (logros).'] );
 }
 
 function srl_handle_get_achievement_details() {

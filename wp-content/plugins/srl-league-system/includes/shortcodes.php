@@ -13,6 +13,7 @@ add_shortcode( 'srl_driver_profile', 'srl_render_driver_profile_shortcode' );
 add_shortcode( 'srl_championship_list', 'srl_render_championship_list_shortcode' );
 add_shortcode( 'srl_driver_list', 'srl_render_driver_list_shortcode' );
 add_shortcode( 'srl_event_results', 'srl_render_event_results_shortcode' );
+add_shortcode( 'srl_achievements_leaderboard', 'srl_achievements_leaderboard_shortcode' );
 add_shortcode( 'srl_main_menu', 'srl_render_main_menu_shortcode' );
 
 
@@ -416,12 +417,25 @@ function srl_render_championship_list_shortcode( $atts ) {
  * Renderiza la lista de pilotos.
  */
 function srl_render_driver_list_shortcode( $atts ) {
-    $atts = shortcode_atts( [ 'profile_page_url' => '/driver-profile/' ], $atts, 'srl_driver_list' );
-    
-    global $wpdb;
-    $drivers = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}srl_drivers ORDER BY victories_count DESC, full_name ASC" );
+    // Intentar autodetectar la URL del perfil si es posible
+    // El perfil individual se muestra en la misma página "pilotos" vía query args
+    $profile_page = get_page_by_path('pilotos');
+    $default_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
 
-    if ( empty( $drivers ) ) return '<p>No hay pilotos registrados.</p>';
+    $atts = shortcode_atts( [ 'profile_page_url' => $default_url ], $atts, 'srl_driver_list' );
+    
+    // Si hay parámetros de piloto en la URL, renderizar el perfil individual
+    if ( isset( $_GET['steam_id'] ) || isset( $_GET['driver_id'] ) ) {
+        return srl_render_driver_profile_shortcode( $atts );
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'srl_drivers';
+    $drivers = $wpdb->get_results( "SELECT * FROM $table WHERE full_name != '' ORDER BY victories_count DESC, full_name ASC" );
+
+    if ( empty( $drivers ) ) {
+        return '<p style="text-align: center; padding: 20px;">No se encontraron pilotos con estadísticas registradas.</p>';
+    }
 
     ob_start();
     ?>
@@ -542,6 +556,7 @@ function srl_render_main_menu_shortcode( $atts ) {
     $atts = shortcode_atts( [
         'pilots_url' => '/pilotos/',
         'championships_url' => '/campeonatos/',
+        'achievements_url' => '/hitos/',
     ], $atts, 'srl_main_menu' );
 
     ob_start();
@@ -566,8 +581,7 @@ function srl_render_main_menu_shortcode( $atts ) {
                     <p>Consulta las clasificaciones y eventos de cada torneo.</p>
                 </div>
             </a>
-            <div class="srl-menu-card disabled">
-                 <div class="srl-card-badge">Próximamente</div>
+            <a href="<?php echo esc_url( home_url( $atts['achievements_url'] ) ); ?>" class="srl-menu-card">
                 <div class="srl-card-icon">
                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.89 1.45l.2-.05c.24-.05.48-.05.72 0l.22.05L15.3 2l.3.15c.1.05.2.1.3.15l2.12 1.22.18.1c.16.1.3.2.42.34l.12.13L20 5.18l.14.22c.08.13.15.27.2.4l.08.24 1.22 2.12.05.2c.05.24.05.48 0 .72l-.05.22L21.5 11l-.15.3c-.05.1-.1.2-.15.3l-1.22 2.12-.1.18c-.1.16-.2.3-.34.42l-.13.12-1.22 1.22-.22.14c.13-.08.27-.15.4-.2l.24-.08 2.12-1.22z"/><path d="M12 8v4l2 2"/></svg>
                 </div>
@@ -575,7 +589,7 @@ function srl_render_main_menu_shortcode( $atts ) {
                     <h3>Hitos</h3>
                     <p>Récords históricos, rachas y logros destacados.</p>
                 </div>
-            </div>
+            </a>
             <div class="srl-menu-card disabled">
                 <div class="srl-card-badge">Próximamente</div>
                 <div class="srl-card-icon">
@@ -650,4 +664,104 @@ function srl_format_time( $ms, $is_total_time = false ) {
         return sprintf('%d:%02d:%02d.%03d', $hours, $minutes, $seconds, $milliseconds);
     }
     return sprintf('%d:%02d.%03d', $minutes, $seconds, $milliseconds);
+}
+
+/**
+ * Shortcode para mostrar el salón de la fama / tabla de récords de hitos.
+ */
+function srl_achievements_leaderboard_shortcode() {
+    $leaderboard = SRL_Achievement_Manager::get_achievements_leaderboard();
+
+    if ( empty( $leaderboard ) ) {
+        return '<div class="srl-achievements-empty">Aún no hay hitos registrados.</div>';
+    }
+
+    ob_start();
+    ?>
+    <div class="srl-achievements-hall-of-fame">
+        <h2 class="srl-section-title">Hitos Históricos</h2>
+        <div class="srl-achievements-grid">
+            <?php foreach ( $leaderboard as $key => $data ) : ?>
+                <div class="srl-achievement-card">
+                    <div class="srl-achievement-header">
+                        <span class="srl-achievement-icon">🏆</span>
+                        <h3 class="srl-achievement-label"><?php echo esc_html( $data['label'] ); ?></h3>
+                    </div>
+                    <table class="srl-achievement-table">
+                        <tbody>
+                            <?php
+                            $rank = 1;
+                            foreach ( $data['records'] as $record ) :
+                                $value = $record->record_value;
+                                // Formatear valores según la clave
+                                if ( strpos($key, 'efficiency') !== false ) {
+                                    $value .= '%';
+                                } elseif ( strpos($key, 'margin') !== false || strpos($key, 'gap') !== false || $key === 'nerves_of_steel' || $key === 'one_lap_wonder' ) {
+                                    $value = srl_format_time($value);
+                                }
+                            ?>
+                                <tr class="rank-<?php echo $rank; ?>">
+                                    <td class="rank-col">#<?php echo $rank; ?></td>
+                                    <td class="driver-col">
+                                        <a href="<?php
+                                            // Enlace al perfil individual en la misma página de pilotos
+                                            $profile_page = get_page_by_path('pilotos');
+                                            $base_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
+
+                                            // Preferimos steam_id si está disponible en el registro del hito (si lo añadimos al query)
+                                            // pero por simplicidad usamos driver_id
+                                            echo esc_url( add_query_arg('driver_id', $record->driver_id, $base_url) );
+                                        ?>">
+                                            <?php echo esc_html( $record->full_name ); ?>
+                                        </a>
+                                    </td>
+                                    <td class="value-col">
+                                        <?php echo esc_html( $value ); ?>
+                                        <?php if ( $key === 'nerves_of_steel' && $record->opponent_name ) : ?>
+                                            <br><small style="color: #888; font-weight: normal;">vs <?php echo esc_html($record->opponent_name); ?></small>
+                                        <?php endif; ?>
+                                        <?php if ( $record->championship_name ) : ?>
+                                            <br><small style="color: #888; font-weight: normal;"><?php echo esc_html($record->championship_name); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="event-col">
+                                        <?php if ( $record->event_id ) : ?>
+                                            <a href="<?php echo esc_url( get_permalink( $record->event_id ) ); ?>" title="Ver Evento">
+                                                📅
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php $rank++; endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php if ( strpos($key, 'efficiency') !== false ) : ?>
+                        <div class="srl-achievement-note">* Mínimo 10 carreras</div>
+                    <?php endif; ?>
+                    <?php if ( $key === 'largest_pole_gap' ) : ?>
+                        <div class="srl-achievement-note">* Pendiente de implementación completa</div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <style>
+        .srl-achievements-hall-of-fame { margin-top: 30px; }
+        .srl-achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .srl-achievement-card { background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 8px; }
+        .srl-achievement-header { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e60000; padding-bottom: 10px; }
+        .srl-achievement-icon { font-size: 24px; margin-right: 10px; }
+        .srl-achievement-label { margin: 0; font-size: 1.1rem; color: #fff; }
+        .srl-achievement-table { width: 100%; border-collapse: collapse; }
+        .srl-achievement-table td { padding: 8px 5px; border-bottom: 1px solid #222; font-size: 0.9rem; color: #ccc; }
+        .rank-col { width: 30px; color: #888; font-weight: bold; }
+        .value-col { text-align: right; font-weight: 700; color: #e60000; }
+        .event-col { width: 30px; text-align: center; }
+        .rank-1 .driver-col a { color: #ffd700 !important; font-weight: bold; }
+        .srl-achievement-table a { color: #fff; text-decoration: none; }
+        .srl-achievement-table a:hover { color: #e60000; }
+        .srl-achievement-note { font-size: 0.75rem; color: #666; margin-top: 10px; font-style: italic; }
+    </style>
+    <?php
+    return ob_get_clean();
 }

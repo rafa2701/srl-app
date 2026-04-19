@@ -178,4 +178,19 @@ function srl_recalculate_session_results( $session_id ) {
     foreach (array_unique($affected_drivers) as $driver_id) {
         srl_update_driver_global_stats($driver_id);
     }
+
+    // 10. Recalcular hitos del evento
+    SRL_Achievement_Manager::calculate_grid_heroics( $event_id );
+    SRL_Achievement_Manager::calculate_timing_records( $event_id );
 }
+
+/**
+ * Registra variables de consulta personalizadas para asegurar que WP y plugins de SEO
+ * no las eliminen (redirección canónica) al consultar perfiles en la página de pilotos.
+ */
+function srl_register_query_vars( $vars ) {
+    $vars[] = 'steam_id';
+    $vars[] = 'driver_id';
+    return $vars;
+}
+add_filter( 'query_vars', 'srl_register_query_vars' );
