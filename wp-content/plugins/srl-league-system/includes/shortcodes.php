@@ -424,6 +424,11 @@ function srl_render_driver_list_shortcode( $atts ) {
 
     $atts = shortcode_atts( [ 'profile_page_url' => $default_url ], $atts, 'srl_driver_list' );
     
+    // Si hay parámetros de piloto en la URL, renderizar el perfil individual
+    if ( isset( $_GET['steam_id'] ) || isset( $_GET['driver_id'] ) ) {
+        return srl_render_driver_profile_shortcode( $atts );
+    }
+
     global $wpdb;
     $table = $wpdb->prefix . 'srl_drivers';
     $drivers = $wpdb->get_results( "SELECT * FROM $table WHERE full_name != '' ORDER BY victories_count DESC, full_name ASC" );
