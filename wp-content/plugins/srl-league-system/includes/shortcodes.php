@@ -322,7 +322,7 @@ function srl_render_driver_profile_shortcode( $atts ) {
             <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->top_10_count; ?></div><div class="stat-label">Top 10</div></div>
             <button class="srl-stat-card interactive" data-stat="poles" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->poles_count; ?></div><div class="stat-label">Poles</div></button>
             <button class="srl-stat-card interactive" data-stat="fastest_laps" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->fastest_laps_count; ?></div><div class="stat-label">Vueltas Rápidas</div></button>
-            <div class="srl-stat-card"><div class="stat-value"><?php echo $driver->hat_tricks_count; ?></div><div class="stat-label">Hat-Tricks</div></div>
+            <button class="srl-stat-card interactive" data-stat="hat_tricks" data-driver-id="<?php echo $driver->id; ?>"><div class="stat-value"><?php echo $driver->hat_tricks_count; ?></div><div class="stat-label">Hat-Tricks</div></button>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['win_percentage'], 2 ); ?>%</div><div class="stat-label">% Victorias</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['pole_percentage'], 2 ); ?>%</div><div class="stat-label">% Poles</div></div>
             <div class="srl-stat-card"><div class="stat-value"><?php echo number_format( $stats['avg_grid'], 2 ); ?></div><div class="stat-label">Pos. Salida Prom.</div></div>

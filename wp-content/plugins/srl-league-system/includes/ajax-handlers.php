@@ -158,6 +158,7 @@ function srl_handle_get_achievement_details() {
         case 'podiums': $where_clause = "r.position <= 3 AND r.is_disqualified = 0 AND r.is_nc = 0"; break;
         case 'poles': $where_clause = "r.has_pole = 1"; break;
         case 'fastest_laps': $where_clause = "r.has_fastest_lap = 1"; break;
+        case 'hat_tricks': $where_clause = "r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0"; break;
         default: wp_send_json_error( ['message' => 'Tipo de estadística no válido.'] );
     }
     $query = $wpdb->prepare("

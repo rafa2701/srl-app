@@ -1,4 +1,6 @@
 /srl-league-system/vendor/
+/resultados-ac-2024/
 /srl-league-system/composer.lock
 /srl-league-system/*.xlsx
 *.xlsx
+
