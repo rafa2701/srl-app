@@ -343,7 +343,7 @@ class SRL_Achievement_Manager {
             'pole_efficiency'            => 'Efectividad de Poles (%)',
             'iron_man'                   => 'Iron Man (Carreras sin DNF)',
             'swiss_watch'                => 'Reloj Suizo (Vueltas en el líder)',
-            'grand_slam'                 => 'Grand Slam (Pole, Win, FL, Led all)',
+            'grand_slam'                 => 'Grand Slam (Hattrick + Lideró todo)',
             'qualifying_ace'             => 'As de la Clasificación (Parrilla Media)',
             'sunday_driver'              => 'Especialista en Carrera (Remontada Media)',
             'win_from_farthest_back'     => 'Victoria desde más atrás',
