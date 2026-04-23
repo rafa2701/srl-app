@@ -739,6 +739,9 @@ function srl_achievements_leaderboard_shortcode() {
                     <?php if ( strpos($key, 'efficiency') !== false ) : ?>
                         <div class="srl-achievement-note">* Mínimo 10 carreras</div>
                     <?php endif; ?>
+                    <?php if ( strpos($key, 'grand_slam') !== false ) : ?>
+                        <div class="srl-achievement-note">* Resultados desde 2025</div>
+                    <?php endif; ?>
                     <?php if ( $key === 'largest_pole_gap' ) : ?>
                         <div class="srl-achievement-note">* Pendiente de implementación completa</div>
                     <?php endif; ?>
