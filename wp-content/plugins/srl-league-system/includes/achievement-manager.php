@@ -356,7 +356,7 @@ class SRL_Achievement_Manager {
             'iron_man'                   => 'Iron Man (Carreras sin DNF)',
             'swiss_watch'                => 'Reloj Suizo (Vueltas en el líder)',
             'hat_trick_total'            => 'Hat-tricks (Total)',
-            'grand_slam'                 => 'Grand Slam (Hattrick + Lideró todo) (2025 en adelante)',
+            'grand_slam'                 => 'Grand Slam (Hattrick + Lideró todo) (2024 en adelante)',
             'qualifying_ace'             => 'As de la Clasificación (Parrilla Media)',
             'sunday_driver'              => 'Especialista en Carrera (Remontada Media)',
             'win_from_farthest_back'     => 'Victoria desde más atrás',

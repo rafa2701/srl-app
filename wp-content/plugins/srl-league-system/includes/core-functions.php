@@ -257,7 +257,7 @@ function srl_update_driver_global_stats( $driver_id ) {
             SUM(r.has_pole) as poles_count,
             SUM(r.has_fastest_lap) as fastest_laps_count,
             SUM(CASE WHEN r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as hat_tricks_count,
-            SUM(CASE WHEN r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.led_every_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 AND p.post_date >= '2025-01-01' THEN 1 ELSE 0 END) as grand_chelems_count,
+            SUM(CASE WHEN r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.led_every_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 AND p.post_date >= '2024-01-01' THEN 1 ELSE 0 END) as grand_chelems_count,
             SUM(r.is_dnf) as dnfs_count,
             SUM(r.is_disqualified) as dq_count
         FROM {$wpdb->prefix}srl_results r
