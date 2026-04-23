@@ -109,9 +109,60 @@ function srl_recalculate_session_results( $session_id ) {
     $points_map = $scoring_rules['points'] ?? [];
     $bonus_pole = $scoring_rules['bonuses']['pole'] ?? 0;
     $bonus_fastest_lap = $scoring_rules['bonuses']['fastest_lap'] ?? 0;
+    $bonus_hat_trick = $scoring_rules['bonuses']['hat_trick'] ?? 0;
+    $bonus_grand_chelem = $scoring_rules['bonuses']['grand_chelem'] ?? 0;
     $min_lap_percentage = $scoring_rules['rules']['min_lap_percentage_for_points'] ?? 0;
 
-    // 3. Ordenar resultados actuales para determinar vueltas del ganador
+    // 3. Determinar Pole y VR automáticamente (si no están forzados)
+    $auto_pole_driver_id = 0;
+    $min_qualy_time = PHP_INT_MAX;
+    $min_grid_pos = PHP_INT_MAX;
+
+    $auto_vr_driver_id = 0;
+    $min_best_lap = PHP_INT_MAX;
+
+    foreach ($results as $r) {
+        // Lógica de Pole
+        if ($r->qualy_time > 0 && $r->qualy_time < $min_qualy_time) {
+            $min_qualy_time = $r->qualy_time;
+            $auto_pole_driver_id = $r->driver_id;
+        }
+        // Fallback grid position if no qualy times
+        if ($min_qualy_time === PHP_INT_MAX && $r->grid_position > 0 && $r->grid_position < $min_grid_pos) {
+            $min_grid_pos = $r->grid_position;
+            $auto_pole_driver_id = $r->driver_id;
+        }
+
+        // Lógica de VR
+        if ($r->best_lap_time > 0 && $r->best_lap_time < $min_best_lap) {
+            $min_best_lap = $r->best_lap_time;
+            $auto_vr_driver_id = $r->driver_id;
+        }
+    }
+
+    // Aplicar lógica automática respetando bloqueos manuales
+    foreach ($results as $r) {
+        $updates = [];
+        if (!$r->is_pole_forced) {
+            $new_has_pole = ($r->driver_id === $auto_pole_driver_id) ? 1 : 0;
+            if ($new_has_pole !== (int)$r->has_pole) {
+                $updates['has_pole'] = $new_has_pole;
+                $r->has_pole = $new_has_pole; // Actualizar en el objeto para el cálculo de puntos posterior
+            }
+        }
+        if (!$r->is_fastest_lap_forced) {
+            $new_has_vr = ($r->driver_id === $auto_vr_driver_id) ? 1 : 0;
+            if ($new_has_vr !== (int)$r->has_fastest_lap) {
+                $updates['has_fastest_lap'] = $new_has_vr;
+                $r->has_fastest_lap = $new_has_vr; // Actualizar en el objeto
+            }
+        }
+        if (!empty($updates)) {
+            $wpdb->update($wpdb->prefix . 'srl_results', $updates, ['id' => $r->id]);
+        }
+    }
+
+    // 4. Ordenar resultados actuales para determinar vueltas del ganador
     $temp_results = $results;
     usort($temp_results, function($a, $b) {
         if ($a->is_disqualified != $b->is_disqualified) return $a->is_disqualified <=> $b->is_disqualified;
@@ -162,6 +213,14 @@ function srl_recalculate_session_results( $session_id ) {
             // Bonuses are NOT multiplied
             if ($r->has_pole) $points += $bonus_pole;
             if ($r->has_fastest_lap) $points += $bonus_fastest_lap;
+
+            // Hattrick & Grand Chelem logic
+            $is_winner = ($r->position == 1);
+            $has_hat_trick = ($is_winner && $r->has_pole && $r->has_fastest_lap);
+            $has_grand_chelem = ($has_hat_trick && $r->led_every_lap);
+
+            if ($has_hat_trick) $points += $bonus_hat_trick;
+            if ($has_grand_chelem) $points += $bonus_grand_chelem;
         }
 
         // Subtract penalty (penalty can lead to negative points)
@@ -182,6 +241,56 @@ function srl_recalculate_session_results( $session_id ) {
     // 10. Recalcular hitos del evento
     SRL_Achievement_Manager::calculate_grid_heroics( $event_id );
     SRL_Achievement_Manager::calculate_timing_records( $event_id );
+}
+
+/**
+ * Recalcula y actualiza los contadores globales para un piloto específico.
+ */
+function srl_update_driver_global_stats( $driver_id ) {
+    global $wpdb;
+    $stats = $wpdb->get_row( $wpdb->prepare("
+        SELECT
+            SUM(CASE WHEN r.position = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as victories_count,
+            SUM(CASE WHEN r.position <= 3 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as podiums_count,
+            SUM(CASE WHEN r.position <= 5 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as top_5_count,
+            SUM(CASE WHEN r.position <= 10 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as top_10_count,
+            SUM(r.has_pole) as poles_count,
+            SUM(r.has_fastest_lap) as fastest_laps_count,
+            SUM(CASE WHEN r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 THEN 1 ELSE 0 END) as hat_tricks_count,
+            SUM(CASE WHEN r.position = 1 AND r.has_pole = 1 AND r.has_fastest_lap = 1 AND r.led_every_lap = 1 AND r.is_disqualified = 0 AND r.is_nc = 0 AND p.post_date >= '2024-01-01' THEN 1 ELSE 0 END) as grand_chelems_count,
+            SUM(r.is_dnf) as dnfs_count,
+            SUM(r.is_disqualified) as dq_count
+        FROM {$wpdb->prefix}srl_results r
+        JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+        JOIN {$wpdb->prefix}posts p ON s.event_id = p.ID
+        WHERE r.driver_id = %d AND s.session_type = 'Race'
+    ", $driver_id) );
+
+    if ( $stats ) {
+        $wpdb->update(
+            $wpdb->prefix . 'srl_drivers',
+            [
+                'victories_count'    => $stats->victories_count,
+                'podiums_count'      => $stats->podiums_count,
+                'top_5_count'        => $stats->top_5_count,
+                'top_10_count'       => $stats->top_10_count,
+                'poles_count'        => $stats->poles_count,
+                'fastest_laps_count' => $stats->fastest_laps_count,
+                'hat_tricks_count'   => $stats->hat_tricks_count,
+                'grand_chelems_count'=> $stats->grand_chelems_count,
+                'dnfs_count'         => $stats->dnfs_count,
+                'dq_count'           => $stats->dq_count,
+            ],
+            [ 'id' => $driver_id ],
+            [ '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d' ],
+            [ '%d' ]
+        );
+
+        // Actualizar hitos del piloto
+        SRL_Achievement_Manager::calculate_streaks( $driver_id );
+        SRL_Achievement_Manager::calculate_efficiency( $driver_id );
+        SRL_Achievement_Manager::calculate_counts( $driver_id );
+    }
 }
 
 /**

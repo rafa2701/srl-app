@@ -288,7 +288,7 @@ jQuery(document).ready(function($) {
         const row = $(this).closest('tr');
         row.find('.view-value').hide();
         row.find('.edit-input').show();
-        row.find('.dnf-checkbox, .nc-checkbox, .dq-checkbox, .is-points-manual-checkbox').prop('disabled', false);
+        row.find('.pole-checkbox, .vr-checkbox, .led-all-checkbox, .dnf-checkbox, .nc-checkbox, .dq-checkbox, .is-points-manual-checkbox').prop('disabled', false);
         $(this).hide();
         row.find('.save-result-btn, .cancel-result-btn, .delete-result-btn').show();
     });
@@ -307,10 +307,14 @@ jQuery(document).ready(function($) {
                 nonce: $('#srl_penalties_nonce').val(),
                 result_id: row.data('result-id'),
                 grid_position: row.find('.grid-input').val(),
+                qualy_time: row.find('.qualy-time-input').val(),
                 laps_completed: row.find('.laps-input').val(),
                 best_lap_time: row.find('.best-lap-input').val(),
                 total_time: row.find('.total-time-input').val(),
                 penalty_seconds: row.find('.penalty-input').val(),
+                has_pole: row.find('.pole-checkbox').is(':checked') ? 1 : 0,
+                has_vr: row.find('.vr-checkbox').is(':checked') ? 1 : 0,
+                led_all: row.find('.led-all-checkbox').is(':checked') ? 1 : 0,
                 is_dnf: row.find('.dnf-checkbox').is(':checked') ? 1 : 0,
                 is_nc: row.find('.nc-checkbox').is(':checked') ? 1 : 0,
                 is_dq: row.find('.dq-checkbox').is(':checked') ? 1 : 0,

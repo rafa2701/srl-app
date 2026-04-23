@@ -405,10 +405,16 @@ function srl_handle_save_result_details() {
     $result_id = intval($_POST['result_id']);
 
     $grid_pos = intval($_POST['grid_position']);
+    $qualy_time = srl_parse_edit_time($_POST['qualy_time']);
     $laps = intval($_POST['laps_completed']);
     $best_lap = srl_parse_edit_time($_POST['best_lap_time']);
     $total_time = srl_parse_edit_time($_POST['total_time']);
     $penalty_ms = intval( floatval($_POST['penalty_seconds']) * 1000 );
+
+    $has_pole = intval($_POST['has_pole']);
+    $has_vr = intval($_POST['has_vr']);
+    $led_all = intval($_POST['led_all']);
+
     $is_dnf = intval($_POST['is_dnf']);
     $is_nc = intval($_POST['is_nc']);
     $is_dq = intval($_POST['is_dq']);
@@ -416,29 +422,52 @@ function srl_handle_save_result_details() {
     $manual_points = floatval($_POST['manual_points']);
     $is_points_manual = intval($_POST['is_points_manual']);
 
-    // 1. Obtener información de la sesión
-    $session_id = $wpdb->get_var($wpdb->prepare("SELECT session_id FROM {$wpdb->prefix}srl_results WHERE id = %d", $result_id));
-    if (!$session_id) {
+    // 1. Obtener información de la sesión y el estado anterior
+    $old_data = $wpdb->get_row($wpdb->prepare("SELECT session_id, has_pole, has_fastest_lap, led_every_lap FROM {$wpdb->prefix}srl_results WHERE id = %d", $result_id));
+    if (!$old_data) {
         wp_send_json_error( ['message' => 'Resultado no encontrado.'] );
     }
+    $session_id = $old_data->session_id;
+
+    // Determinar si el usuario forzó manualmente Pole o VR
+    $is_pole_forced = ($has_pole !== (int)$old_data->has_pole) ? 1 : 0;
+    $is_vr_forced = ($has_vr !== (int)$old_data->has_fastest_lap) ? 1 : 0;
+
+    // Si ya estaban forzados, mantenemos el flag a menos que coincidan con el valor que vendría por defecto (pero es complejo, así que si cambian, forzamos)
+    // Una lógica más simple: si el valor enviado es diferente al actual, marcamos como forced.
+    // Pero espera, si el usuario solo guarda sin cambiar nada, no queremos marcar como forced.
+    // La UI envía el estado actual de los checkboxes.
 
     // 2. Actualizar el resultado editado
+    $update_data = [
+        'grid_position' => $grid_pos,
+        'qualy_time' => $qualy_time,
+        'laps_completed' => $laps,
+        'best_lap_time' => $best_lap,
+        'total_time' => $total_time,
+        'time_penalty' => $penalty_ms,
+        'has_pole' => $has_pole,
+        'has_fastest_lap' => $has_vr,
+        'led_every_lap' => $led_all,
+        'is_dnf' => $is_dnf,
+        'is_nc' => $is_nc,
+        'is_nc_forced' => 1,
+        'is_disqualified' => $is_dq,
+        'point_penalty' => $point_penalty,
+        'manual_points' => $manual_points,
+        'is_points_manual' => $is_points_manual
+    ];
+
+    if ($has_pole !== (int)$old_data->has_pole) {
+        $update_data['is_pole_forced'] = 1;
+    }
+    if ($has_vr !== (int)$old_data->has_fastest_lap) {
+        $update_data['is_fastest_lap_forced'] = 1;
+    }
+
     $wpdb->update(
         $wpdb->prefix . 'srl_results',
-        [
-            'grid_position' => $grid_pos,
-            'laps_completed' => $laps,
-            'best_lap_time' => $best_lap,
-            'total_time' => $total_time,
-            'time_penalty' => $penalty_ms,
-            'is_dnf' => $is_dnf,
-            'is_nc' => $is_nc,
-            'is_nc_forced' => 1,
-            'is_disqualified' => $is_dq,
-            'point_penalty' => $point_penalty,
-            'manual_points' => $manual_points,
-            'is_points_manual' => $is_points_manual
-        ],
+        $update_data,
         [ 'id' => $result_id ]
     );
 

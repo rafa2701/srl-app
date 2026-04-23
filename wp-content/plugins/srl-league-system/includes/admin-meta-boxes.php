@@ -56,7 +56,7 @@ function srl_render_event_results_meta_box( $post ) {
     $id_field = !empty($has_id) ? 'r.id' : '0 as id';
 
     $results = $wpdb->get_results( $wpdb->prepare("
-        SELECT d.full_name, $id_field, r.position, r.grid_position, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.point_penalty, r.manual_points, r.is_points_manual, r.is_dnf, r.is_nc, r.is_nc_forced, r.time_penalty, r.is_disqualified, r.session_id
+        SELECT d.full_name, $id_field, r.position, r.grid_position, r.qualy_time, r.best_lap_time, r.total_time, r.laps_completed, r.points_awarded, r.point_penalty, r.manual_points, r.is_points_manual, r.is_dnf, r.is_nc, r.is_nc_forced, r.time_penalty, r.is_disqualified, r.session_id, r.has_pole, r.is_pole_forced, r.has_fastest_lap, r.is_fastest_lap_forced, r.led_every_lap
         FROM {$wpdb->prefix}srl_results r
         JOIN {$wpdb->prefix}srl_drivers d ON r.driver_id = d.id
         JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
@@ -93,11 +93,15 @@ function srl_render_event_results_meta_box( $post ) {
                     <th style="width: 30px;"></th>
                     <th style="width: 50px;">Pos</th>
                     <th>Piloto</th>
+                    <th style="width: 100px;">Tiempo Qualy</th>
                     <th style="width: 60px;">Salida</th>
                     <th style="width: 60px;">Vueltas</th>
                     <th style="width: 100px;">Mejor Vuelta</th>
                     <th style="width: 110px;">Tiempo Total</th>
                     <th style="width: 80px;">Penalización</th>
+                    <th title="Pole Position" style="width: 35px;">P</th>
+                    <th title="Vuelta Rápida" style="width: 35px;">VR</th>
+                    <th title="Lideró todas las vueltas" style="width: 35px;">L</th>
                     <th style="width: 35px;">DNF</th>
                     <th style="width: 35px;">NC</th>
                     <th style="width: 35px;">DQ</th>
@@ -118,6 +122,10 @@ function srl_render_event_results_meta_box( $post ) {
                             else echo esc_html( $result->position );
                         ?></strong></td>
                         <td class="col-name"><?php echo esc_html( $result->full_name ); ?></td>
+                        <td class="col-qualy-time">
+                            <span class="view-value"><?php echo function_exists('srl_format_time') ? srl_format_time( $result->qualy_time ) : '-'; ?></span>
+                            <input type="text" class="edit-input qualy-time-input" value="<?php echo srl_format_time_for_edit($result->qualy_time); ?>" style="display:none; width: 90px;" placeholder="MM:SS.ms">
+                        </td>
                         <td class="col-grid">
                             <span class="view-value"><?php echo esc_html( $result->grid_position ); ?></span>
                             <input type="number" class="edit-input grid-input" value="<?php echo esc_attr($result->grid_position); ?>" style="display:none; width: 50px;">
@@ -137,6 +145,15 @@ function srl_render_event_results_meta_box( $post ) {
                         <td class="col-penalty">
                             <span class="view-value"><?php echo ($result->time_penalty / 1000); ?>s</span>
                             <input type="number" class="edit-input penalty-input" step="0.001" value="<?php echo ($result->time_penalty / 1000); ?>" style="display:none; width: 70px;">
+                        </td>
+                        <td class="col-pole">
+                            <input type="checkbox" class="pole-checkbox" <?php checked($result->has_pole, 1); ?> disabled>
+                        </td>
+                        <td class="col-vr">
+                            <input type="checkbox" class="vr-checkbox" <?php checked($result->has_fastest_lap, 1); ?> disabled>
+                        </td>
+                        <td class="col-led-all">
+                            <input type="checkbox" class="led-all-checkbox" <?php checked($result->led_every_lap, 1); ?> disabled>
                         </td>
                         <td class="col-dnf">
                             <input type="checkbox" class="dnf-checkbox" <?php checked($result->is_dnf, 1); ?> disabled>

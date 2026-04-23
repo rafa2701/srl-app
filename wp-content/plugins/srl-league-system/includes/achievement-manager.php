@@ -114,6 +114,18 @@ class SRL_Achievement_Manager {
     }
 
     /**
+     * Sincroniza los contadores acumulados de los pilotos con la tabla de hitos.
+     */
+    public static function calculate_counts( $driver_id ) {
+        global $wpdb;
+        $driver = $wpdb->get_row( $wpdb->prepare( "SELECT hat_tricks_count, grand_chelems_count FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $driver_id ) );
+        if ( $driver ) {
+            self::save_achievement( $driver_id, 'hat_trick_total', $driver->hat_tricks_count );
+            self::save_achievement( $driver_id, 'grand_slam', $driver->grand_chelems_count );
+        }
+    }
+
+    /**
      * Identifica hitos de parrilla y especiales para un evento.
      */
     public static function calculate_grid_heroics( $event_id ) {
@@ -142,10 +154,9 @@ class SRL_Achievement_Manager {
                 self::update_best_achievement( $res->driver_id, 'hard_charger', $gained, $event_id, 'max' );
             }
 
-            // Grand Slam Check
-            if ( $res->position == 1 && $res->has_pole && $res->has_fastest_lap && $res->led_every_lap ) {
-                self::save_achievement( $res->driver_id, 'grand_slam', 1, $event_id );
-            }
+            // Grand Slam Check (Now handled by calculate_counts to show total, but we keep the row update for individual event relevance if needed)
+            // But we want the leaderboard to show the TOTAL, so we use the cumulative count.
+            self::calculate_counts( $res->driver_id );
 
             // The Closer
             if ( $res->late_overtakes > 0 ) {
@@ -258,6 +269,7 @@ class SRL_Achievement_Manager {
         foreach ( $driver_ids as $driver_id ) {
             self::calculate_streaks( $driver_id );
             self::calculate_efficiency( $driver_id );
+            self::calculate_counts( $driver_id );
         }
 
         $event_ids = $wpdb->get_col( "SELECT DISTINCT event_id FROM {$wpdb->prefix}srl_sessions WHERE session_type = 'Race'" );
@@ -343,7 +355,8 @@ class SRL_Achievement_Manager {
             'pole_efficiency'            => 'Efectividad de Poles (%)',
             'iron_man'                   => 'Iron Man (Carreras sin DNF)',
             'swiss_watch'                => 'Reloj Suizo (Vueltas en el líder)',
-            'grand_slam'                 => 'Grand Slam (Pole, Win, FL, Led all)',
+            'hat_trick_total'            => 'Hat-tricks (Total)',
+            'grand_slam'                 => 'Grand Slam (Hattrick + Lideró todo) (2024 en adelante)',
             'qualifying_ace'             => 'As de la Clasificación (Parrilla Media)',
             'sunday_driver'              => 'Especialista en Carrera (Remontada Media)',
             'win_from_farthest_back'     => 'Victoria desde más atrás',

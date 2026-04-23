@@ -131,6 +131,27 @@ function srl_check_for_updates() {
             $wpdb->query( "ALTER TABLE $table_results ADD late_overtakes int(11) NOT NULL DEFAULT 0 AFTER led_every_lap" );
         }
 
+        $column_qualy_time = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'qualy_time' ) );
+        if ( empty( $column_qualy_time ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD qualy_time int(11) DEFAULT 0 AFTER grid_position" );
+        }
+
+        $column_pole_forced = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_pole_forced' ) );
+        if ( empty( $column_pole_forced ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_pole_forced tinyint(1) NOT NULL DEFAULT 0 AFTER has_pole" );
+        }
+
+        $column_vr_forced = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_results LIKE %s", 'is_fastest_lap_forced' ) );
+        if ( empty( $column_vr_forced ) ) {
+            $wpdb->query( "ALTER TABLE $table_results ADD is_fastest_lap_forced tinyint(1) NOT NULL DEFAULT 0 AFTER has_fastest_lap" );
+        }
+
+        $table_drivers = $wpdb->prefix . 'srl_drivers';
+        $column_gc_count = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_drivers LIKE %s", 'grand_chelems_count' ) );
+        if ( empty( $column_gc_count ) ) {
+            $wpdb->query( "ALTER TABLE $table_drivers ADD grand_chelems_count int(11) NOT NULL DEFAULT 0 AFTER hat_tricks_count" );
+        }
+
         // REPARACIÓN ADICIONAL: Actualizar tabla de logros (achievements)
         $table_achievements = $wpdb->prefix . 'srl_achievements';
         $column_ach_key = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'achievement_key' ) );
