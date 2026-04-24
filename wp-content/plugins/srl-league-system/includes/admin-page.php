@@ -77,6 +77,8 @@ function srl_render_admin_page() {
 
                     $site_logo = get_option( 'srl_site_logo' );
                     $footer_logo = get_option( 'srl_footer_logo' );
+                    $default_orderby = get_option( 'srl_championship_default_orderby', 'date' );
+                    $default_order = get_option( 'srl_championship_default_order', 'DESC' );
                     ?>
                     <table class="form-table">
                         <tr valign="top">
@@ -95,6 +97,20 @@ function srl_render_admin_page() {
                                 <input type="button" class="button srl-upload-button" value="Subir Imagen" data-target="srl_footer_logo" />
                                 <p class="description">URL de la imagen del logo para el footer.</p>
                                 <?php if ( $footer_logo ) : ?><img src="<?php echo esc_url( $footer_logo ); ?>" style="max-width: 150px; display: block; margin-top: 10px;"><?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Orden por defecto (Campeonatos)</th>
+                            <td>
+                                <select name="srl_championship_default_orderby">
+                                    <option value="date" <?php selected( $default_orderby, 'date' ); ?>>Fecha de Creación</option>
+                                    <option value="title" <?php selected( $default_orderby, 'title' ); ?>>Título</option>
+                                </select>
+                                <select name="srl_championship_default_order">
+                                    <option value="DESC" <?php selected( $default_order, 'DESC' ); ?>>Descendente (Nuevos primero / Z-A)</option>
+                                    <option value="ASC" <?php selected( $default_order, 'ASC' ); ?>>Ascendente (Viejos primero / A-Z)</option>
+                                </select>
+                                <p class="description">Establece cómo se ordenarán los campeonatos en las listas por defecto.</p>
                             </td>
                         </tr>
                     </table>

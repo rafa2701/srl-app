@@ -203,7 +203,7 @@
 }
 .srl-list-card .srl-card-status {
     position: absolute;
-    top: 0.625rem; /* 10px */
+    bottom: 0.625rem; /* 10px */
     right: 0.625rem; /* 10px */
     padding: 0.3125rem 0.625rem; /* 5px 10px */
     border-radius: 0.3125rem; /* 5px */
