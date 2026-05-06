@@ -221,6 +221,8 @@ add_action( 'admin_init', 'srl_register_settings' );
 function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_site_logo' );
     register_setting( 'srl_settings_group', 'srl_footer_logo' );
+    register_setting( 'srl_settings_group', 'srl_championship_default_orderby' );
+    register_setting( 'srl_settings_group', 'srl_championship_default_order' );
     register_setting( 'srl_settings_group', 'srl_achievement_labels' );
     register_setting( 'srl_settings_group', 'srl_achievement_settings' );
 }

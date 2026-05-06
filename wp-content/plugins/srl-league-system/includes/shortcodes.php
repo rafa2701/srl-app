@@ -273,13 +273,20 @@ function srl_render_driver_profile_shortcode( $atts ) {
     ", $driver->id) );
     
     $championship_history = [];
+    $default_orderby = get_option( 'srl_championship_default_orderby', 'date' );
+    if ($default_orderby === 'date') $default_orderby = 'post_date'; // post_date for get_posts
+    $default_order = get_option( 'srl_championship_default_order', 'DESC' );
+
+    $history_orderby = isset($_GET['h_orderby']) ? sanitize_text_field($_GET['h_orderby']) : $default_orderby;
+    $history_order = isset($_GET['h_order']) ? sanitize_text_field($_GET['h_order']) : $default_order;
+
     if (!empty($championship_ids_query)) {
         $championship_history = get_posts([
             'post_type' => 'srl_championship',
             'post__in' => $championship_ids_query,
             'posts_per_page' => -1,
-            'orderby' => 'post_date',
-            'order' => 'DESC'
+            'orderby' => $history_orderby,
+            'order' => $history_order
         ]);
     }
     
@@ -332,7 +339,18 @@ function srl_render_driver_profile_shortcode( $atts ) {
         </div>
 
         <?php if ( ! empty( $championship_history ) ) : ?>
-            <h2 style="margin-top: 40px;">Historial de Campeonatos</h2>
+            <div class="srl-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Historial de Campeonatos</h2>
+                <div class="srl-sort-controls" style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 0.9rem; color: #888;">Ordenar por:</span>
+                    <a href="<?php echo esc_url(add_query_arg(['h_orderby' => 'post_date', 'h_order' => ($history_orderby == 'post_date' && $history_order == 'DESC') ? 'ASC' : 'DESC'])); ?>" class="srl-button <?php echo $history_orderby == 'post_date' ? 'active' : ''; ?>" style="font-size: 0.8rem; padding: 5px 10px;">
+                        Fecha <?php if ($history_orderby == 'post_date') echo $history_order == 'DESC' ? '▼' : '▲'; ?>
+                    </a>
+                    <a href="<?php echo esc_url(add_query_arg(['h_orderby' => 'title', 'h_order' => ($history_orderby == 'title' && $history_order == 'ASC') ? 'DESC' : 'ASC'])); ?>" class="srl-button <?php echo $history_orderby == 'title' ? 'active' : ''; ?>" style="font-size: 0.8rem; padding: 5px 10px;">
+                        Nombre <?php if ($history_orderby == 'title') echo $history_order == 'ASC' ? '▲' : '▼'; ?>
+                    </a>
+                </div>
+            </div>
             <table class="srl-table">
                 <thead><tr><th>Campeonato</th><th class="numeric">Posición Final</th><th class="points numeric">Puntos</th></tr></thead>
                 <tbody>
@@ -377,11 +395,17 @@ function srl_render_driver_profile_shortcode( $atts ) {
  * Renderiza la lista de campeonatos.
  */
 function srl_render_championship_list_shortcode( $atts ) {
+    $default_orderby = get_option( 'srl_championship_default_orderby', 'date' );
+    $default_order = get_option( 'srl_championship_default_order', 'DESC' );
+
+    $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : $default_orderby;
+    $order = isset($_GET['order']) ? sanitize_text_field($_GET['order']) : $default_order;
+
     $championship_posts = get_posts([
         'post_type' => 'srl_championship',
         'posts_per_page' => -1,
-        'orderby' => 'title',
-        'order' => 'ASC',
+        'orderby' => $orderby,
+        'order' => $order,
     ]);
 
     if ( empty( $championship_posts ) ) {
@@ -391,13 +415,29 @@ function srl_render_championship_list_shortcode( $atts ) {
     ob_start();
     ?>
     <div class="srl-app-container">
-        <h2>Campeonatos</h2>
+        <div class="srl-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Campeonatos</h2>
+            <div class="srl-sort-controls" style="display: flex; gap: 10px; align-items: center;">
+                <span style="font-size: 0.9rem; color: #888;">Ordenar por:</span>
+                <a href="<?php echo esc_url(add_query_arg(['orderby' => 'date', 'order' => ($orderby == 'date' && $order == 'DESC') ? 'ASC' : 'DESC'])); ?>" class="srl-button <?php echo $orderby == 'date' ? 'active' : ''; ?>" style="font-size: 0.8rem; padding: 5px 10px;">
+                    Fecha <?php if ($orderby == 'date') echo $order == 'DESC' ? '▼' : '▲'; ?>
+                </a>
+                <a href="<?php echo esc_url(add_query_arg(['orderby' => 'title', 'order' => ($orderby == 'title' && $order == 'ASC') ? 'DESC' : 'ASC'])); ?>" class="srl-button <?php echo $orderby == 'title' ? 'active' : ''; ?>" style="font-size: 0.8rem; padding: 5px 10px;">
+                    Nombre <?php if ($orderby == 'title') echo $order == 'ASC' ? '▲' : '▼'; ?>
+                </a>
+            </div>
+        </div>
         <div class="srl-list-grid">
             <?php foreach ( $championship_posts as $champ ) : ?>
                 <?php
                 $game = get_post_meta( $champ->ID, '_srl_game', true );
                 $status = get_post_meta( $champ->ID, '_srl_status', true );
                 $link = get_permalink( $champ->ID );
+
+                $status_label = $status;
+                if ($status === 'active') $status_label = 'Activo';
+                elseif ($status === 'completed') $status_label = 'Completado';
+                elseif ($status === 'scheduled') $status_label = 'Programado';
                 ?>
                 <a href="<?php echo esc_url( $link ); ?>" class="srl-list-card">
                     <?php if ( has_post_thumbnail( $champ->ID ) ) : ?>
@@ -405,7 +445,7 @@ function srl_render_championship_list_shortcode( $atts ) {
                     <?php endif; ?>
                     <h3><?php echo esc_html( $champ->post_title ); ?></h3>
                     <span class="srl-card-meta"><?php echo esc_html( strtoupper( $game ) ); ?></span>
-                    <span class="srl-card-status srl-status-<?php echo esc_attr($status); ?>"><?php echo esc_html($status); ?></span>
+                    <span class="srl-card-status srl-status-<?php echo esc_attr($status); ?>"><?php echo esc_html($status_label); ?></span>
                 </a>
             <?php endforeach; ?>
         </div>
