@@ -51,6 +51,7 @@ function srl_create_database_tables() {
       hat_tricks_count int(11) NOT NULL DEFAULT 0,
       grand_chelems_count int(11) NOT NULL DEFAULT 0,
       championships_won_count int(11) NOT NULL DEFAULT 0,
+      races_count int(11) NOT NULL DEFAULT 0,
       dnfs_count int(11) NOT NULL DEFAULT 0,
       dq_count int(11) NOT NULL DEFAULT 0,
       nationality varchar(100),

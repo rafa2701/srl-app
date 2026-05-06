@@ -432,7 +432,7 @@ function srl_render_driver_list_shortcode( $atts ) {
 
     global $wpdb;
     $table = $wpdb->prefix . 'srl_drivers';
-    $drivers = $wpdb->get_results( "SELECT * FROM $table WHERE full_name != '' ORDER BY victories_count DESC, full_name ASC" );
+    $drivers = $wpdb->get_results( "SELECT * FROM $table WHERE full_name != '' ORDER BY championships_won_count DESC, victories_count DESC, poles_count DESC, full_name ASC" );
 
     if ( empty( $drivers ) ) {
         return '<p style="text-align: center; padding: 20px;">No se encontraron pilotos con estadísticas registradas.</p>';
@@ -450,6 +450,9 @@ function srl_render_driver_list_shortcode( $atts ) {
                     <th class="numeric" data-sort-method="number">Victorias</th>
                     <th class="numeric" data-sort-method="number">Podios</th>
                     <th class="numeric" data-sort-method="number">Poles</th>
+                    <th class="numeric" data-sort-method="number">V. Rápidas</th>
+                    <th class="numeric" data-sort-method="number">Hat-tricks</th>
+                    <th class="numeric" data-sort-method="number">Carreras</th>
                 </tr>
             </thead>
             <tbody>
@@ -472,6 +475,9 @@ function srl_render_driver_list_shortcode( $atts ) {
                         <td class="numeric"><?php echo esc_html( $driver->victories_count ); ?></td>
                         <td class="numeric"><?php echo esc_html( $driver->podiums_count ); ?></td>
                         <td class="numeric"><?php echo esc_html( $driver->poles_count ); ?></td>
+                        <td class="numeric"><?php echo esc_html( $driver->fastest_laps_count ); ?></td>
+                        <td class="numeric"><?php echo esc_html( $driver->hat_tricks_count ); ?></td>
+                        <td class="numeric"><?php echo esc_html( $driver->races_count ); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

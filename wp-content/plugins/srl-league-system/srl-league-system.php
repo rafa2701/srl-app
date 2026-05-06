@@ -152,6 +152,11 @@ function srl_check_for_updates() {
             $wpdb->query( "ALTER TABLE $table_drivers ADD grand_chelems_count int(11) NOT NULL DEFAULT 0 AFTER hat_tricks_count" );
         }
 
+        $column_races_count = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_drivers LIKE %s", 'races_count' ) );
+        if ( empty( $column_races_count ) ) {
+            $wpdb->query( "ALTER TABLE $table_drivers ADD races_count int(11) NOT NULL DEFAULT 0 AFTER championships_won_count" );
+        }
+
         // REPARACIÓN ADICIONAL: Actualizar tabla de logros (achievements)
         $table_achievements = $wpdb->prefix . 'srl_achievements';
         $column_ach_key = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM $table_achievements LIKE %s", 'achievement_key' ) );
