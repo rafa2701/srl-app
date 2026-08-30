@@ -215,6 +215,12 @@ require_once SRL_PLUGIN_PATH . 'includes/achievement-manager.php';
 require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
+// --- Comisariato Virtual (AI Assistant) ---
+require_once SRL_PLUGIN_PATH . 'includes/commissary/post-type-protest.php';
+require_once SRL_PLUGIN_PATH . 'includes/commissary/rest-api.php';
+require_once SRL_PLUGIN_PATH . 'includes/commissary/admin-meta-boxes.php';
+require_once SRL_PLUGIN_PATH . 'includes/commissary/shortcode-protest-form.php';
+
 // --- Hooks ---
 // Registro del menú de administración
 add_action( 'admin_init', 'srl_register_settings' );
@@ -260,7 +266,8 @@ function srl_admin_enqueue_scripts( $hook ) {
         'srl_championship',
         'srl_event',
         'driver',
-        'srl_session'
+        'srl_session',
+        'srl_protest'
     ];
 
     if ( ! in_array( $hook, $srl_pages ) && ! in_array( $screen->post_type, $srl_pages ) ) {
@@ -285,12 +292,13 @@ function srl_public_enqueue_assets() {
         if ( has_shortcode( $post->post_content, 'srl_driver_profile' ) ||
              has_shortcode( $post->post_content, 'srl_standings' ) ||
              has_shortcode( $post->post_content, 'srl_driver_list' ) ||
-             has_shortcode( $post->post_content, 'srl_event_results' ) ) {
+             has_shortcode( $post->post_content, 'srl_event_results' ) ||
+             has_shortcode( $post->post_content, 'srl_protest_form' ) ) {
             $should_load = true;
         }
         
         // También cargar en páginas de CPTs donde solemos usar shortcodes en plantillas
-        if ( is_singular(['srl_championship', 'srl_event', 'driver']) || is_post_type_archive('driver') ) {
+        if ( is_singular(['srl_championship', 'srl_event', 'driver', 'srl_protest']) || is_post_type_archive('driver') ) {
             $should_load = true;
         }
     }
