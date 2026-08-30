@@ -1,0 +1,261 @@
+{
+  "name": "SRL Virtual Commissary - Gemini AI Racing Steward",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "srl-virtual-commissary",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "webhook-trigger",
+      "name": "Webhook: SRL Protest"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.body.rulebook_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SRL-API-KEY",
+              "value": "={{ $json.body.api_key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "fetch-rulebook",
+      "name": "Fetch Rulebook from WP"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-pro-latest",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        480,
+        500
+      ],
+      "id": "gemini-model-strict",
+      "name": "Google Gemini (Strict)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as the STRICT RACING STEWARD (Persona A) for Sim Racing Latinoamérica (SRL).\nRulebook Guidelines:\n{{ $node['Fetch Rulebook from WP'].json.rulebook }}\n\nIncident Details:\n- Championship: {{ $('Webhook: SRL Protest').item.json.body.championship_name }}\n- Event: {{ $('Webhook: SRL Protest').item.json.body.event_name }}\n- Protesting Driver: {{ $('Webhook: SRL Protest').item.json.body.protesting_driver.name }}\n- Accused Driver: {{ $('Webhook: SRL Protest').item.json.body.accused_driver.name }}\n- Lap / Timecode: {{ $('Webhook: SRL Protest').item.json.body.lap_timecode }}\n- Incident Description: {{ $('Webhook: SRL Protest').item.json.body.description }}\n- Video Evidence Links: {{ $('Webhook: SRL Protest').item.json.body.evidence_urls.join(', ') }}\n\nEnforce the strict, zero-tolerance letter of the sporting code.\nReturn a strict JSON object with this exact schema:\n{\n  \"argument\": \"detailed reasoning from strict viewpoint\",\n  \"fault_protesting\": number (0-100),\n  \"fault_accused\": number (0-100),\n  \"recommended_penalty\": \"string description of sanction or 'Sin sanción'\"\n}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        480,
+        100
+      ],
+      "id": "chain-strict",
+      "name": "Analyze: Strict Persona"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as the LAX / TOURING CAR RACING STEWARD (Persona B) for Sim Racing Latinoamérica (SRL).\nRulebook Guidelines:\n{{ $node['Fetch Rulebook from WP'].json.rulebook }}\n\nIncident Details:\n- Championship: {{ $('Webhook: SRL Protest').item.json.body.championship_name }}\n- Event: {{ $('Webhook: SRL Protest').item.json.body.event_name }}\n- Protesting Driver: {{ $('Webhook: SRL Protest').item.json.body.protesting_driver.name }}\n- Accused Driver: {{ $('Webhook: SRL Protest').item.json.body.accused_driver.name }}\n- Lap / Timecode: {{ $('Webhook: SRL Protest').item.json.body.lap_timecode }}\n- Incident Description: {{ $('Webhook: SRL Protest').item.json.body.description }}\n- Video Evidence Links: {{ $('Webhook: SRL Protest').item.json.body.evidence_urls.join(', ') }}\n\nYou have a 'Turismo Carretera' / 'Rubbing is Racing' mindset. Highly tolerant of hard racing unless intentional wrecking occurred.\nReturn a strict JSON object with this exact schema:\n{\n  \"argument\": \"detailed reasoning from lax viewpoint\",\n  \"fault_protesting\": number (0-100),\n  \"fault_accused\": number (0-100),\n  \"recommended_penalty\": \"string description of sanction or 'Sin sanción'\"\n}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        480,
+        300
+      ],
+      "id": "chain-lax",
+      "name": "Analyze: Lax Persona"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as the BALANCED / OBJECTIVE RACING STEWARD (Persona C) for Sim Racing Latinoamérica (SRL).\nRulebook Guidelines:\n{{ $node['Fetch Rulebook from WP'].json.rulebook }}\n\nIncident Details:\n- Championship: {{ $('Webhook: SRL Protest').item.json.body.championship_name }}\n- Event: {{ $('Webhook: SRL Protest').item.json.body.event_name }}\n- Protesting Driver: {{ $('Webhook: SRL Protest').item.json.body.protesting_driver.name }}\n- Accused Driver: {{ $('Webhook: SRL Protest').item.json.body.accused_driver.name }}\n- Lap / Timecode: {{ $('Webhook: SRL Protest').item.json.body.lap_timecode }}\n- Incident Description: {{ $('Webhook: SRL Protest').item.json.body.description }}\n- Video Evidence Links: {{ $('Webhook: SRL Protest').item.json.body.evidence_urls.join(', ') }}\n\nAnalyze corner rights, overlap metrics (front axle vs B-pillar), braking points, and racing room.\nReturn a strict JSON object with this exact schema:\n{\n  \"argument\": \"detailed reasoning from balanced viewpoint\",\n  \"fault_protesting\": number (0-100),\n  \"fault_accused\": number (0-100),\n  \"recommended_penalty\": \"string description of sanction or 'Sin sanción'\"\n}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        480,
+        500
+      ],
+      "id": "chain-balanced",
+      "name": "Analyze: Balanced Persona"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the CHIEF RACING STEWARD (Comisario Jefe) for Sim Racing Latinoamérica (SRL).\nEvaluate the three separate steward analyses below, resolve disagreements, evaluate the burden of proof, and formulate the final binding verdict.\n\nStrict Persona Analysis:\n{{ $node['Analyze: Strict Persona'].json.text }}\n\nLax Persona Analysis:\n{{ $node['Analyze: Lax Persona'].json.text }}\n\nBalanced Persona Analysis:\n{{ $node['Analyze: Balanced Persona'].json.text }}\n\nIncident Details:\n- Protesting Driver: {{ $('Webhook: SRL Protest').item.json.body.protesting_driver.name }}\n- Accused Driver: {{ $('Webhook: SRL Protest').item.json.body.accused_driver.name }}\n- Description: {{ $('Webhook: SRL Protest').item.json.body.description }}\n\nBurden of proof: If evidence is insufficient or ambiguous, dismiss the protest.\nReturn a strict JSON object matching this schema:\n{\n  \"fault_protesting\": number (0-100),\n  \"fault_accused\": number (0-100),\n  \"penalty\": \"final recommended penalty or 'Sin sanción'\",\n  \"rationale\": \"clear explanation of consensus decision and sporting regulation references\",\n  \"insufficient_evidence\": boolean\n}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        780,
+        300
+      ],
+      "id": "chain-chief",
+      "name": "Consensus: Chief Steward"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook: SRL Protest').item.json.body.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-SRL-API-KEY",
+              "value": "={{ $('Webhook: SRL Protest').item.json.body.api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "={\n  \"protest_id\": {{ $('Webhook: SRL Protest').item.json.body.protest_id }},\n  \"status\": \"completed\",\n  \"verdict\": {\n    \"persona_strict\": {{ typeof $node['Analyze: Strict Persona'].json.text === 'string' ? $node['Analyze: Strict Persona'].json.text : JSON.stringify($node['Analyze: Strict Persona'].json.text) }},\n    \"persona_lax\": {{ typeof $node['Analyze: Lax Persona'].json.text === 'string' ? $node['Analyze: Lax Persona'].json.text : JSON.stringify($node['Analyze: Lax Persona'].json.text) }},\n    \"persona_balanced\": {{ typeof $node['Analyze: Balanced Persona'].json.text === 'string' ? $node['Analyze: Balanced Persona'].json.text : JSON.stringify($node['Analyze: Balanced Persona'].json.text) }},\n    \"chief_steward\": {{ typeof $node['Consensus: Chief Steward'].json.text === 'string' ? $node['Consensus: Chief Steward'].json.text : JSON.stringify($node['Consensus: Chief Steward'].json.text) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        300
+      ],
+      "id": "send-callback-to-wp",
+      "name": "Send Verdict Callback to WP"
+    }
+  ],
+  "connections": {
+    "Webhook: SRL Protest": {
+      "main": [
+        [
+          {
+            "node": "Fetch Rulebook from WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Rulebook from WP": {
+      "main": [
+        [
+          {
+            "node": "Analyze: Strict Persona",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Analyze: Lax Persona",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Analyze: Balanced Persona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini (Strict)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze: Strict Persona",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Analyze: Lax Persona",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Analyze: Balanced Persona",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Consensus: Chief Steward",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze: Strict Persona": {
+      "main": [
+        [
+          {
+            "node": "Consensus: Chief Steward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze: Lax Persona": {
+      "main": [
+        [
+          {
+            "node": "Consensus: Chief Steward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze: Balanced Persona": {
+      "main": [
+        [
+          {
+            "node": "Consensus: Chief Steward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consensus: Chief Steward": {
+      "main": [
+        [
+          {
+            "node": "Send Verdict Callback to WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
