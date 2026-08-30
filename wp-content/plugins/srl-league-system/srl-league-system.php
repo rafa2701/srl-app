@@ -226,6 +226,10 @@ function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_achievement_labels' );
     register_setting( 'srl_settings_group', 'srl_achievement_settings' );
     register_setting( 'srl_settings_group', 'srl_force_auto_update' );
+    register_setting( 'srl_settings_group', 'srl_rulebook_markdown' );
+    register_setting( 'srl_settings_group', 'srl_rulebook_updated_at' );
+    register_setting( 'srl_settings_group', 'srl_virtual_commissary_webhook_url' );
+    register_setting( 'srl_settings_group', 'srl_api_secret_key' );
 }
 
 add_action( 'admin_menu', 'srl_admin_menu' );

@@ -24,6 +24,7 @@ function srl_render_admin_page() {
             <a href="#history-import" class="nav-tab">Importar Historial (XLSX)</a>
             <a href="#settings" class="nav-tab">Ajustes del Sitio</a>
             <a href="#achievements" class="nav-tab">Hitos (Logros)</a>
+            <a href="#commissary" class="nav-tab">Comisariato Virtual AI</a>
             <a href="#tools" class="nav-tab">Herramientas</a>
         </h2>
 
@@ -168,6 +169,57 @@ function srl_render_admin_page() {
                         </tbody>
                     </table>
                     <?php submit_button(); ?>
+                </form>
+            </div>
+        </div>
+
+        <div id="commissary" class="srl-tab-content">
+            <div id="srl-commissary-settings-wrapper" style="max-width: 850px;">
+                <h2>Configuración del Comisariato Virtual (n8n + Gemini AI)</h2>
+                <p class="description">Configura la conexión con tu instancia homelab de n8n y el reglamento deportivo de la liga.</p>
+                
+                <form method="post" action="options.php">
+                    <?php
+                    settings_fields( 'srl_settings_group' );
+                    $webhook_url = get_option( 'srl_virtual_commissary_webhook_url', '' );
+                    $api_secret = get_option( 'srl_api_secret_key', '' );
+                    if ( empty( $api_secret ) ) {
+                        $api_secret = wp_generate_password( 32, false );
+                    }
+                    $rulebook = get_option( 'srl_rulebook_markdown', '' );
+                    ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">URL del Webhook de n8n</th>
+                            <td>
+                                <input type="url" name="srl_virtual_commissary_webhook_url" value="<?php echo esc_attr( $webhook_url ); ?>" class="large-text" placeholder="https://n8n.tu-servidor.com/webhook/srl-virtual-commissary" />
+                                <p class="description">URL del webhook de n8n que recibirá los incidentes a analizar.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">API Secret Key (Autenticación)</th>
+                            <td>
+                                <input type="text" name="srl_api_secret_key" id="srl_api_secret_key" value="<?php echo esc_attr( $api_secret ); ?>" class="regular-text" style="font-family: monospace;" />
+                                <button type="button" class="button" onclick="document.getElementById('srl_api_secret_key').value = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(b=>b.toString(16).padStart(2,'0')).join('');">Regenerar</button>
+                                <p class="description">Esta clave debe enviarse en la cabecera <code>X-SRL-API-KEY</code> desde n8n para acceder al reglamento y enviar los veredictos.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Endpoints REST API</th>
+                            <td>
+                                <p><strong>Obtener Reglamento:</strong> <code><?php echo esc_url( rest_url( 'srl/v1/rulebook' ) ); ?></code></p>
+                                <p><strong>Callback de Veredicto:</strong> <code><?php echo esc_url( rest_url( 'srl/v1/protest-update' ) ); ?></code></p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Reglamento Deportivo y Código de Conducta (Markdown)</th>
+                            <td>
+                                <textarea name="srl_rulebook_markdown" rows="18" class="large-text code" placeholder="# Reglamento de Competición SRL&#10;&#10;## 1. Derecho a la trazada&#10;..."><?php echo esc_textarea( $rulebook ); ?></textarea>
+                                <p class="description">Escribe o pega aquí el reglamento de la liga en formato Markdown. La IA consultará este texto para determinar la culpabilidad y sanciones.</p>
+                            </td>
+                        </tr>
+                    </table>
+                    <?php submit_button( 'Guardar Configuración del Comisariato' ); ?>
                 </form>
             </div>
         </div>
