@@ -555,5 +555,48 @@ jQuery(document).ready(function($) {
                 }
             }
         });
+    // --- Virtual Commissary AI Dispatch ---
+    $(document).on('click', '#srl-dispatch-ai-btn', function (e) {
+        e.preventDefault();
+        const btn = $(this);
+        const protestId = btn.data('post-id');
+        const spinner = $('#srl-dispatch-spinner');
+        const msgDiv = $('#srl-dispatch-msg');
+
+        if (!confirm('¿Deseas enviar este incidente para ser analizado por el Comisariato Virtual AI?')) {
+            return;
+        }
+
+        btn.prop('disabled', true);
+        spinner.addClass('is-active');
+        msgDiv.html('<p style="color: #666;">Enviando payload a n8n...</p>');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_dispatch_virtual_commissary',
+                nonce: srl_ajax_object.nonce,
+                protest_id: protestId,
+            },
+            success: function (response) {
+                spinner.removeClass('is-active');
+                btn.prop('disabled', false);
+                if (response.success) {
+                    msgDiv.html('<div class="notice notice-success inline" style="margin-top: 10px;"><p>' + response.data.message + '</p></div>');
+                    setTimeout(function () {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    msgDiv.html('<div class="notice notice-error inline" style="margin-top: 10px;"><p>' + response.data.message + '</p></div>');
+                }
+            },
+            error: function () {
+                spinner.removeClass('is-active');
+                btn.prop('disabled', false);
+                msgDiv.html('<div class="notice notice-error inline" style="margin-top: 10px;"><p>Error de conexión al enviar la petición AJAX.</p></div>');
+            }
+        });
     });
 });
+
