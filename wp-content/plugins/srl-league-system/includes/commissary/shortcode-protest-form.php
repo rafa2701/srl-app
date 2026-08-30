@@ -91,11 +91,22 @@ function srl_render_protest_form_shortcode( $atts ) {
                     </select>
                 </div>
 
-                <div class="srl-form-group">
+                <div class="srl-form-group" id="srl-event-selector-group">
                     <label for="srl_protest_event_select"><strong>2. Gran Premio / Evento *</strong></label>
-                    <select name="event_id" id="srl_protest_event_select" required class="srl-input" style="width: 100%;" disabled>
-                        <option value="">-- Primero selecciona campeonato --</option>
-                    </select>
+                    <?php $event_mode = get_option( 'srl_commissary_event_input_mode', 'hybrid' ); ?>
+                    
+                    <?php if ( $event_mode === 'always_free_text' ) : ?>
+                        <input type="text" name="custom_event_name" id="srl_custom_event_name" required class="srl-input" style="width: 100%;" placeholder="Ej: Fecha 2 - Spa-Francorchamps / GP de Monza" />
+                        <input type="hidden" name="event_id" value="custom" />
+                    <?php else : ?>
+                        <select name="event_id" id="srl_protest_event_select" required class="srl-input" style="width: 100%;" disabled>
+                            <option value="">-- Primero selecciona campeonato --</option>
+                        </select>
+                        <div id="srl-custom-event-wrapper" style="display: none; margin-top: 8px;">
+                            <input type="text" name="custom_event_name" id="srl_custom_event_name" class="srl-input" style="width: 100%;" placeholder="Ej: Fecha 2 - Spa-Francorchamps / GP de Monza" />
+                            <small style="color: #aaa; display: block; margin-top: 4px;">Escribe el nombre del Gran Premio si no figura en la lista.</small>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -250,14 +261,16 @@ add_action( 'wp_ajax_nopriv_srl_upload_evidence_file', 'srl_handle_upload_eviden
 function srl_handle_submit_protest_form() {
     check_ajax_referer( 'srl-public-nonce', 'nonce' );
 
-    $event_id = isset( $_POST['event_id'] ) ? intval( $_POST['event_id'] ) : 0;
+    $championship_id = isset( $_POST['championship_id'] ) ? intval( $_POST['championship_id'] ) : 0;
+    $raw_event_id = isset( $_POST['event_id'] ) ? sanitize_text_field( $_POST['event_id'] ) : '';
+    $custom_event_name = isset( $_POST['custom_event_name'] ) ? sanitize_text_field( $_POST['custom_event_name'] ) : '';
     $protesting_id = isset( $_POST['protesting_driver_id'] ) ? intval( $_POST['protesting_driver_id'] ) : 0;
     $accused_id = isset( $_POST['accused_driver_id'] ) ? intval( $_POST['accused_driver_id'] ) : 0;
     $lap_timecode = isset( $_POST['lap_timecode'] ) ? sanitize_text_field( $_POST['lap_timecode'] ) : '';
     $description = isset( $_POST['incident_description'] ) ? sanitize_textarea_field( $_POST['incident_description'] ) : '';
     $evidence_raw = isset( $_POST['evidence_urls'] ) ? sanitize_textarea_field( $_POST['evidence_urls'] ) : '';
 
-    if ( ! $event_id || ! $protesting_id || ! $accused_id || empty( $description ) || empty( $evidence_raw ) ) {
+    if ( ! $protesting_id || ! $accused_id || empty( $description ) || empty( $evidence_raw ) ) {
         wp_send_json_error( [ 'message' => 'Por favor completa todos los campos requeridos.' ] );
     }
 
@@ -265,16 +278,56 @@ function srl_handle_submit_protest_form() {
         wp_send_json_error( [ 'message' => 'El piloto demandante y el acusado no pueden ser la misma persona.' ] );
     }
 
+    $event_id = 0;
+    $event_title = '';
+
+    // Handle Event resolution (existing ID vs custom text)
+    if ( is_numeric( $raw_event_id ) && intval( $raw_event_id ) > 0 ) {
+        $event_id = intval( $raw_event_id );
+        $event_post = get_post( $event_id );
+        $event_title = $event_post ? $event_post->post_title : 'Evento #' . $event_id;
+    } elseif ( ! empty( $custom_event_name ) ) {
+        $event_title = $custom_event_name;
+        // Search if event with this exact title already exists for this championship
+        $existing_events = get_posts( [
+            'post_type'      => 'srl_event',
+            'title'          => $custom_event_name,
+            'posts_per_page' => 1,
+            'meta_query'     => [
+                [
+                    'key'     => '_srl_parent_championship',
+                    'value'   => $championship_id,
+                    'compare' => '=',
+                ],
+            ],
+        ] );
+
+        if ( ! empty( $existing_events ) ) {
+            $event_id = $existing_events[0]->ID;
+        } else {
+            // Automatically create event stub linked to the championship
+            $new_event_id = wp_insert_post( [
+                'post_title'   => $custom_event_name,
+                'post_type'    => 'srl_event',
+                'post_status'  => 'publish',
+            ] );
+            if ( $new_event_id && ! is_wp_error( $new_event_id ) ) {
+                update_post_meta( $new_event_id, '_srl_parent_championship', $championship_id );
+                $event_id = $new_event_id;
+            }
+        }
+    } else {
+        wp_send_json_error( [ 'message' => 'Por favor selecciona o escribe el Gran Premio / Evento.' ] );
+    }
+
     global $wpdb;
     $p_name = $wpdb->get_var( $wpdb->prepare( "SELECT full_name FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $protesting_id ) );
     $a_name = $wpdb->get_var( $wpdb->prepare( "SELECT full_name FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $accused_id ) );
-    $event_post = get_post( $event_id );
-    $event_title = $event_post ? $event_post->post_title : 'Evento #' . $event_id;
 
     $evidence_urls = array_values( array_filter( array_map( 'trim', explode( "\n", $evidence_raw ) ) ) );
 
     // Create srl_protest post
-    $post_title = sprintf( 'Reclamo: %s vs %s (%s)', $p_name ?: 'Piloto', $a_name ?: 'Piloto', $event_title );
+    $post_title = sprintf( 'Reclamo: %s vs %s (%s)', $p_name ?: 'Piloto', $a_name ?: 'Piloto', $event_title ?: 'Evento' );
     $post_id = wp_insert_post( [
         'post_title'   => $post_title,
         'post_type'    => 'srl_protest',
@@ -287,6 +340,9 @@ function srl_handle_submit_protest_form() {
 
     // Save post meta
     update_post_meta( $post_id, '_srl_event_id', $event_id );
+    if ( ! empty( $custom_event_name ) ) {
+        update_post_meta( $post_id, '_srl_custom_event_name', $custom_event_name );
+    }
     update_post_meta( $post_id, '_srl_protesting_driver_id', $protesting_id );
     update_post_meta( $post_id, '_srl_accused_driver_id', $accused_id );
     update_post_meta( $post_id, '_srl_lap_timecode', $lap_timecode );

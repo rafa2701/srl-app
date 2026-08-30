@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-08-30
+### Added
+- Smart Hybrid Event / Gran Premio selector allowing drivers to enter custom GP names if not yet created or uploaded by admins.
+- Automatic provisioning and linking of `srl_event` posts when custom GP names are submitted.
+- Configurable "Modo de Selección de Gran Premio / Evento" setting in "Gestión SRL" ➔ "Comisariato Virtual AI" (Hybrid, Free Text, Dropdown Only).
+### Fixed
+- Fixed 403 Forbidden AJAX error in `srl_get_events` for non-logged-in guest users by adding `wp_ajax_nopriv_srl_get_events` and verifying both public and admin nonces.
+
 ## [1.11.1] - 2026-08-30
 ### Changed
 - Standardized commissary terminology to "Reclamos" / "Reclamo" across all CPT labels, admin menus, shortcodes, and UI buttons.

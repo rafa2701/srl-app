@@ -15,6 +15,7 @@ require_once SRL_PLUGIN_PATH . 'includes/data-importers/assetto-parser.php';
 
 add_action( 'wp_ajax_srl_upload_results_file', 'srl_handle_results_upload' );
 add_action( 'wp_ajax_srl_get_events', 'srl_handle_get_events' );
+add_action( 'wp_ajax_nopriv_srl_get_events', 'srl_handle_get_events' );
 add_action( 'wp_ajax_srl_recalculate_all_stats', 'srl_handle_recalculate_all_stats' );
 add_action( 'wp_ajax_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
 add_action( 'wp_ajax_nopriv_srl_get_achievement_details', 'srl_handle_get_achievement_details' );
@@ -70,15 +71,37 @@ function srl_handle_results_upload() {
 }
 
 function srl_handle_get_events() {
-    check_ajax_referer( 'srl-ajax-nonce', 'nonce' );
-    if ( ! isset( $_POST['championship_id'] ) ) wp_send_json_error( ['message' => 'No se proporcionó ID de campeonato.'] );
+    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'srl-public-nonce' ) && ! wp_verify_nonce( $nonce, 'srl-ajax-nonce' ) ) {
+        wp_send_json_error( [ 'message' => 'Error de seguridad (nonce inválido).' ] );
+    }
+
+    if ( ! isset( $_POST['championship_id'] ) ) {
+        wp_send_json_error( [ 'message' => 'No se proporcionó ID de campeonato.' ] );
+    }
+
     $championship_id = intval( $_POST['championship_id'] );
-    $args = [ 'post_type' => 'srl_event', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC', 'meta_query' => [ [ 'key' => '_srl_parent_championship', 'value' => $championship_id, 'compare' => '=' ] ] ];
+    $args = [
+        'post_type'      => 'srl_event',
+        'posts_per_page' => -1,
+        'orderby'        => 'title',
+        'order'          => 'ASC',
+        'meta_query'     => [
+            [
+                'key'     => '_srl_parent_championship',
+                'value'   => $championship_id,
+                'compare' => '=',
+            ],
+        ],
+    ];
     $event_posts = get_posts( $args );
     $events = [];
     if ( ! empty( $event_posts ) ) {
         foreach ( $event_posts as $event_post ) {
-            $events[] = [ 'id' => $event_post->ID, 'name' => $event_post->post_title ];
+            $events[] = [
+                'id'   => $event_post->ID,
+                'name' => $event_post->post_title,
+            ];
         }
     }
     wp_send_json_success( $events );

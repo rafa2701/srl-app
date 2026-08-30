@@ -212,6 +212,18 @@ function srl_render_admin_page() {
                             </td>
                         </tr>
                         <tr valign="top">
+                            <th scope="row">Modo de Selección de Gran Premio / Evento</th>
+                            <td>
+                                <?php $event_mode = get_option( 'srl_commissary_event_input_mode', 'hybrid' ); ?>
+                                <select name="srl_commissary_event_input_mode">
+                                    <option value="hybrid" <?php selected( $event_mode, 'hybrid' ); ?>>Híbrido Inteligente (Desplegable + Texto Libre si no figura) [Recomendado]</option>
+                                    <option value="always_free_text" <?php selected( $event_mode, 'always_free_text' ); ?>>Siempre Texto Libre (Escribir GP manualmente)</option>
+                                    <option value="dropdown_only" <?php selected( $event_mode, 'dropdown_only' ); ?>>Solo Desplegable de Eventos Existentes</option>
+                                </select>
+                                <p class="description">Permite que los pilotos ingresen el nombre del GP incluso si los comisarios aún no han creado el evento o subido los resultados.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
                             <th scope="row">Reglamento Deportivo y Código de Conducta (Markdown)</th>
                             <td>
                                 <textarea name="srl_rulebook_markdown" rows="18" class="large-text code" placeholder="# Reglamento de Competición SRL&#10;&#10;## 1. Derecho a la trazada&#10;..."><?php echo esc_textarea( $rulebook ); ?></textarea>

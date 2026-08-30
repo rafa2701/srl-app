@@ -259,10 +259,18 @@ jQuery(document).ready(function($) {
     }
 
     // --- Reclamos Cascading Championship -> Event ---
+    const eventSelect = $('#srl_protest_event_select');
+    const customEventWrapper = $('#srl-custom-event-wrapper');
+    const customEventInput = $('#srl_custom_event_name');
+
     $('#srl_protest_champ_select').on('change', function () {
         const champId = $(this).val();
-        const eventSelect = $('#srl_protest_event_select');
         
+        if (!eventSelect.length) return; // If always_free_text mode, select isn't in DOM
+
+        customEventWrapper.hide();
+        customEventInput.val('').prop('required', false);
+
         if (!champId) {
             eventSelect.html('<option value="">-- Primero selecciona campeonato --</option>').prop('disabled', true);
             return;
@@ -279,20 +287,37 @@ jQuery(document).ready(function($) {
                 championship_id: champId,
             },
             success: function (response) {
-                if (response.success && response.data.length > 0) {
+                if (response.success && response.data && response.data.length > 0) {
                     let options = '<option value="">-- Selecciona el Evento --</option>';
                     response.data.forEach(function (ev) {
                         options += '<option value="' + ev.id + '">' + ev.name + '</option>';
                     });
+                    options += '<option value="custom">✏️ Escribir otro / No figura en la lista...</option>';
                     eventSelect.html(options).prop('disabled', false);
                 } else {
-                    eventSelect.html('<option value="">No hay eventos disponibles</option>').prop('disabled', true);
+                    // No pre-created events yet - auto reveal text input
+                    eventSelect.html('<option value="custom" selected>✏️ Escribe el nombre del Gran Premio abajo...</option>').prop('disabled', false);
+                    customEventWrapper.show();
+                    customEventInput.prop('required', true).focus();
                 }
             },
             error: function () {
-                eventSelect.html('<option value="">Error al cargar eventos</option>').prop('disabled', true);
+                // On error, fallback gracefully to custom text input so user is never blocked
+                eventSelect.html('<option value="custom" selected>✏️ Escribe el nombre del Gran Premio abajo...</option>').prop('disabled', false);
+                customEventWrapper.show();
+                customEventInput.prop('required', true).focus();
             }
         });
+    });
+
+    eventSelect.on('change', function () {
+        if ($(this).val() === 'custom') {
+            customEventWrapper.show();
+            customEventInput.prop('required', true).focus();
+        } else {
+            customEventWrapper.hide();
+            customEventInput.val('').prop('required', false);
+        }
     });
 
     // --- Reclamo Form Submit ---
@@ -334,6 +359,8 @@ jQuery(document).ready(function($) {
                     $('#protesting_driver_id').val('');
                     $('#accused_driver_id').val('');
                     $('#srl_protest_event_select').prop('disabled', true);
+                    customEventWrapper.hide();
+                    customEventInput.val('').prop('required', false);
                     if (progressContainer) progressContainer.hide();
                 } else {
                     responseDiv.html('<div class="srl-notice srl-notice-error" style="background: #721c24; color: #f8d7da; padding: 12px; border-radius: 4px; margin-top: 10px;">' + res.data.message + '</div>');
