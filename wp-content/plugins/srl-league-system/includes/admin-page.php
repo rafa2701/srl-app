@@ -138,7 +138,13 @@ function srl_render_admin_page() {
                     <?php
                     settings_fields( 'srl_settings_group' );
                     $labels = SRL_Achievement_Manager::get_achievement_keys();
+                    if ( ! is_array( $labels ) ) {
+                        $labels = [];
+                    }
                     $settings = get_option( 'srl_achievement_settings', [] );
+                    if ( ! is_array( $settings ) ) {
+                        $settings = [];
+                    }
                     ?>
                     <table class="wp-list-table widefat fixed striped">
                         <thead>

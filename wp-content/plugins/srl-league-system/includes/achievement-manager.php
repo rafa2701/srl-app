@@ -370,11 +370,17 @@ class SRL_Achievement_Manager {
             'closer'                     => 'The Closer (Adelantamientos al final)',
         ];
         $custom_labels = get_option( 'srl_achievement_labels', [] );
+        if ( ! is_array( $custom_labels ) ) {
+            $custom_labels = [];
+        }
         return array_merge( $defaults, $custom_labels );
     }
 
     public static function is_achievement_enabled( $key ) {
         $settings = get_option( 'srl_achievement_settings', [] );
+        if ( ! is_array( $settings ) ) {
+            $settings = [];
+        }
         return isset( $settings[$key]['enabled'] ) ? (bool) $settings[$key]['enabled'] : true;
     }
 }
