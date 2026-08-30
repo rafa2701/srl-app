@@ -8,3 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Project management setup with `AGENTS.md`, `.agents/rules/workflow.md`, `TODO.md`, and `CHANGELOG.md`
 - Spec-driven development structure with archiving support
+- GitHub Actions workflow (`release-plugin.yml`) for automated packaging and releases
+- Integrated `yahnis-elsts/plugin-update-checker` (PUC) for GitHub Release asset updates
+- Auto-update setting in "Gestión SRL" admin page allowing forced background updates
