@@ -79,6 +79,7 @@ function srl_render_admin_page() {
                     $footer_logo = get_option( 'srl_footer_logo' );
                     $default_orderby = get_option( 'srl_championship_default_orderby', 'date' );
                     $default_order = get_option( 'srl_championship_default_order', 'DESC' );
+                    $force_auto_update = get_option( 'srl_force_auto_update' );
                     ?>
                     <table class="form-table">
                         <tr valign="top">
@@ -111,6 +112,16 @@ function srl_render_admin_page() {
                                     <option value="ASC" <?php selected( $default_order, 'ASC' ); ?>>Ascendente (Viejos primero / A-Z)</option>
                                 </select>
                                 <p class="description">Establece cómo se ordenarán los campeonatos en las listas por defecto.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Actualizaciones Automáticas</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="srl_force_auto_update" value="1" <?php checked( 1, $force_auto_update ); ?> />
+                                    Forzar actualizaciones automáticas en segundo plano (Plugin SRL League System)
+                                </label>
+                                <p class="description">Si está activado, el plugin se actualizará automáticamente sin intervención manual tan pronto como haya una nueva versión en GitHub.</p>
                             </td>
                         </tr>
                     </table>
