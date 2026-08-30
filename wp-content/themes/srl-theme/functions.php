@@ -174,3 +174,22 @@ add_filter( 'the_title', function( $title, $id = null ) {
     }
     return $title;
 }, 10, 2 );
+
+/**
+ * Initialize Automatic Updates for SRL Theme via GitHub Releases
+ */
+function srl_init_theme_updater() {
+    if ( ! class_exists( 'YahnisElsts\PluginUpdateChecker\v5\PucFactory' ) ) {
+        return;
+    }
+
+    $theme_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+        'https://github.com/rafa2701/srl-app/',
+        get_template_directory() . '/style.css',
+        'srl-theme'
+    );
+
+    $theme_checker->getVcsApi()->enableReleaseAssets( '/^srl-theme.*\.zip$/' );
+}
+add_action( 'after_setup_theme', 'srl_init_theme_updater' );
+

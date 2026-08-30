@@ -1,4 +1,4 @@
-name: Build & Release SRL League System Plugin
+name: Build & Release SRL League System (Plugin & Theme)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-release:
-    name: Package Plugin & Create Release
+    name: Package Plugin & Theme & Create Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,21 +27,33 @@ jobs:
         working-directory: wp-content/plugins/srl-league-system
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
-      - name: Prepare Plugin Distribution Directory
+      - name: Prepare Distribution Archives
         run: |
           mkdir -p build/srl-league-system
+          mkdir -p build/srl-theme
+          
+          # Copy plugin files (excluding development tests)
           cp -r wp-content/plugins/srl-league-system/* build/srl-league-system/
           rm -rf build/srl-league-system/tests
+          
+          # Copy theme files
+          cp -r wp-content/themes/srl-theme/* build/srl-theme/
+          
+          # Create zip archives
           cd build
           zip -r ../srl-league-system.zip srl-league-system/
+          zip -r ../srl-theme.zip srl-theme/
           cd ..
 
-      - name: Create GitHub Release & Upload Asset
+      - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: srl-league-system.zip
+          files: |
+            srl-league-system.zip
+            srl-theme.zip
           generate_release_notes: true
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
