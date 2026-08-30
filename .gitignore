@@ -4,3 +4,4 @@
 /srl-league-system/*.xlsx
 *.xlsx
 .env
+n8n_cloudflarerun.bat
