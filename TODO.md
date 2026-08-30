@@ -4,6 +4,11 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Fix Admin Tabs Switching & JavaScript Syntax in Gestion SRL
+  - [x] Task 1: Systematic debugging and root cause investigation of admin.js syntax error
+  - [x] Task 2: Fix unclosed merge confirmation handler in `assets/js/admin.js`
+  - [x] Task 3: Enhance tab switching logic with URL hash support and options.php referer preservation
+  - [x] Task 4: Bump plugin version to 1.12.3 for browser cache busting
 - [x] Official Sporting Regulations & Virtual Racing Etiquette Documentation
   - [x] Task 1: Create `docs/reglamento-deportivo-srl.md` (1:1 Markdown conversion of 24 Chapters & 45 Articles from PDF)
   - [x] Task 2: Create `docs/codigo-etiqueta-carreras.md` (Virtual Racing Etiquette, Vortex of Danger, Corner Rights, AI Evaluation Framework)
