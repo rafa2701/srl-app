@@ -3,5 +3,10 @@
 /srl-league-system/composer.lock
 /srl-league-system/*.xlsx
 *.xlsx
+
+# Archivos del entorno local
 .env
+# Archivos de soporte local
 Reglamento Deportivo SIM RACING LATINOAMERICA (6).pdf
+n8n_cloudflarerun.bat  
+
