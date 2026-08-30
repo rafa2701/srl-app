@@ -39,6 +39,9 @@ function srl_activate_plugin() {
     // Crear la página de Hitos automáticamente
     srl_create_achievements_page();
 
+    // Crear la página de Comisariato automáticamente
+    srl_create_protest_page();
+
     flush_rewrite_rules();
 }
 
@@ -49,6 +52,31 @@ function srl_create_achievements_page() {
     $page_title = 'Hitos';
     $page_slug = 'hitos';
     $page_content = '[srl_achievements_leaderboard]';
+
+    $page_check = get_page_by_path( $page_slug );
+
+    if ( ! isset( $page_check->ID ) ) {
+        $new_page_id = wp_insert_post( [
+            'post_title'   => $page_title,
+            'post_name'    => $page_slug,
+            'post_content' => $page_content,
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+        ] );
+
+        if ( $new_page_id ) {
+            flush_rewrite_rules();
+        }
+    }
+}
+
+/**
+ * Crea la página de Comisariato (Protestas / Reclamos) si no existe.
+ */
+function srl_create_protest_page() {
+    $page_title = 'Comisariato';
+    $page_slug = 'comisariato';
+    $page_content = '[srl_protest_form]';
 
     $page_check = get_page_by_path( $page_slug );
 
@@ -198,6 +226,9 @@ function srl_check_for_updates() {
 
         // Asegurar que la página de Hitos existe
         srl_create_achievements_page();
+
+        // Asegurar que la página de Comisariato existe
+        srl_create_protest_page();
     }
 }
 add_action( 'admin_init', 'srl_check_for_updates' );

@@ -54,10 +54,36 @@ function srl_setup_default_menus() {
             'menu-item-status' => 'publish',
         ] );
 
+        // Add Commissary link
+        wp_update_nav_menu_item( $menu_id, 0, [
+            'menu-item-title'  =>  __( 'Comisariato', 'srl-theme' ),
+            'menu-item-url'    => home_url( '/comisariato/' ),
+            'menu-item-status' => 'publish',
+        ] );
+
         // Assign to location
         $locations = get_theme_mod( 'nav_menu_locations' );
         $locations['main-menu'] = $menu_id;
         set_theme_mod( 'nav_menu_locations', $locations );
+    } else {
+        // If menu exists, ensure Comisariato link is present
+        $menu_items = wp_get_nav_menu_items( $menu_exists->term_id );
+        $has_commissary = false;
+        if ( ! empty( $menu_items ) ) {
+            foreach ( $menu_items as $item ) {
+                if ( strpos( $item->url, 'comisariato' ) !== false || $item->title === 'Comisariato' ) {
+                    $has_commissary = true;
+                    break;
+                }
+            }
+        }
+        if ( ! $has_commissary ) {
+            wp_update_nav_menu_item( $menu_exists->term_id, 0, [
+                'menu-item-title'  =>  __( 'Comisariato', 'srl-theme' ),
+                'menu-item-url'    => home_url( '/comisariato/' ),
+                'menu-item-status' => 'publish',
+            ] );
+        }
     }
 }
 add_action( 'after_setup_theme', 'srl_setup_default_menus' );
