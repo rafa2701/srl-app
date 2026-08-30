@@ -100,5 +100,71 @@ jQuery(document).ready(function($) {
             container.find('.srl-val-points').hide();
             container.find('.srl-val-position').show();
         }
+    // --- Protest Form Cascading Dropdown & Submit ---
+    $('#srl_protest_champ_select').on('change', function () {
+        const champId = $(this).val();
+        const eventSelect = $('#srl_protest_event_select');
+        
+        if (!champId) {
+            eventSelect.html('<option value="">-- Primero selecciona campeonato --</option>').prop('disabled', true);
+            return;
+        }
+
+        eventSelect.html('<option value="">Cargando eventos...</option>').prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_get_events',
+                nonce: srl_ajax_object.nonce,
+                championship_id: champId,
+            },
+            success: function (response) {
+                if (response.success && response.data.length > 0) {
+                    let options = '<option value="">-- Selecciona el Evento --</option>';
+                    response.data.forEach(function (ev) {
+                        options += '<option value="' + ev.id + '">' + ev.name + '</option>';
+                    });
+                    eventSelect.html(options).prop('disabled', false);
+                } else {
+                    eventSelect.html('<option value="">No hay eventos disponibles</option>').prop('disabled', true);
+                }
+            },
+            error: function () {
+                eventSelect.html('<option value="">Error al cargar eventos</option>').prop('disabled', true);
+            }
+        });
+    });
+
+    $('#srl-public-protest-form').on('submit', function (e) {
+        e.preventDefault();
+        const form = $(this);
+        const submitBtn = $('#srl-submit-protest-btn');
+        const responseDiv = $('#srl-protest-response');
+
+        submitBtn.prop('disabled', true).text('Enviando protesta...');
+        responseDiv.html('');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: form.serialize() + '&action=srl_submit_protest_form&nonce=' + srl_ajax_object.nonce,
+            success: function (res) {
+                submitBtn.prop('disabled', false).text('Enviar Protesta al Comisariato');
+                if (res.success) {
+                    responseDiv.html('<div class="srl-notice srl-notice-success" style="background: #155724; color: #d4edda; padding: 12px; border-radius: 4px; margin-top: 10px;">' + res.data.message + '</div>');
+                    form[0].reset();
+                    $('#srl_protest_event_select').prop('disabled', true);
+                } else {
+                    responseDiv.html('<div class="srl-notice srl-notice-error" style="background: #721c24; color: #f8d7da; padding: 12px; border-radius: 4px; margin-top: 10px;">' + res.data.message + '</div>');
+                }
+            },
+            error: function () {
+                submitBtn.prop('disabled', false).text('Enviar Protesta al Comisariato');
+                responseDiv.html('<div class="srl-notice srl-notice-error" style="background: #721c24; color: #f8d7da; padding: 12px; border-radius: 4px; margin-top: 10px;">Error de comunicación con el servidor.</div>');
+            }
+        });
     });
 });
+
