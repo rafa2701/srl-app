@@ -73,8 +73,8 @@ function srl_render_protest_form_shortcode( $atts ) {
     ?>
     <div class="srl-app-container srl-protest-form-wrapper">
         <div class="srl-section-header">
-            <h2>🚨 Formulario de Denuncias</h2>
-            <p style="color: #aaa; margin-top: 5px;">Envía una denuncia de incidente en pista para revisión del Comisariato. Proporciona enlaces o sube videos de evidencia claros.</p>
+            <h2>🚨 Formulario de Reclamos</h2>
+            <p style="color: #aaa; margin-top: 5px;">Envía un reclamo de incidente en pista para revisión del Comisariato. Proporciona enlaces o sube videos de evidencia claros.</p>
         </div>
 
         <form id="srl-public-protest-form" class="srl-form" method="post">
@@ -181,7 +181,7 @@ function srl_render_protest_form_shortcode( $atts ) {
 
             <div class="srl-form-submit">
                 <button type="submit" id="srl-submit-protest-btn" class="srl-button" style="padding: 12px 24px; font-size: 1.1em; background: #e60000; color: #fff; border: none; cursor: pointer; border-radius: 4px; font-weight: bold;">
-                    Enviar Denuncia al Comisariato
+                    Enviar Reclamo al Comisariato
                 </button>
             </div>
             <div id="srl-protest-response" style="margin-top: 15px;"></div>
@@ -274,7 +274,7 @@ function srl_handle_submit_protest_form() {
     $evidence_urls = array_values( array_filter( array_map( 'trim', explode( "\n", $evidence_raw ) ) ) );
 
     // Create srl_protest post
-    $post_title = sprintf( 'Denuncia: %s vs %s (%s)', $p_name ?: 'Piloto', $a_name ?: 'Piloto', $event_title );
+    $post_title = sprintf( 'Reclamo: %s vs %s (%s)', $p_name ?: 'Piloto', $a_name ?: 'Piloto', $event_title );
     $post_id = wp_insert_post( [
         'post_title'   => $post_title,
         'post_type'    => 'srl_protest',
@@ -282,7 +282,7 @@ function srl_handle_submit_protest_form() {
     ] );
 
     if ( is_wp_error( $post_id ) || ! $post_id ) {
-        wp_send_json_error( [ 'message' => 'Error al guardar la denuncia en el sistema.' ] );
+        wp_send_json_error( [ 'message' => 'Error al guardar el reclamo en el sistema.' ] );
     }
 
     // Save post meta
@@ -296,7 +296,7 @@ function srl_handle_submit_protest_form() {
     update_post_meta( $post_id, '_srl_steward_action_status', 'under_review' );
 
     wp_send_json_success( [
-        'message'    => '¡Denuncia registrada con éxito (ID #' . $post_id . ')! Ha sido enviada a los comisarios para su revisión.',
+        'message'    => '¡Reclamo registrado con éxito (ID #' . $post_id . ')! Ha sido enviado a los comisarios para su revisión.',
         'protest_id' => $post_id,
     ] );
 }

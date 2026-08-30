@@ -258,7 +258,7 @@ jQuery(document).ready(function($) {
         }
     }
 
-    // --- Denuncias Cascading Championship -> Event ---
+    // --- Reclamos Cascading Championship -> Event ---
     $('#srl_protest_champ_select').on('change', function () {
         const champId = $(this).val();
         const eventSelect = $('#srl_protest_event_select');
@@ -295,7 +295,7 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // --- Denuncia Form Submit ---
+    // --- Reclamo Form Submit ---
     $('#srl-public-protest-form').on('submit', function (e) {
         e.preventDefault();
         const form = $(this);
@@ -316,7 +316,7 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        submitBtn.prop('disabled', true).text('Enviando denuncia...');
+        submitBtn.prop('disabled', true).text('Enviando reclamo...');
         responseDiv.html('');
 
         $.ajax({
@@ -324,7 +324,7 @@ jQuery(document).ready(function($) {
             type: 'POST',
             data: form.serialize() + '&action=srl_submit_protest_form&nonce=' + srl_ajax_object.nonce,
             success: function (res) {
-                submitBtn.prop('disabled', false).text('Enviar Denuncia al Comisariato');
+                submitBtn.prop('disabled', false).text('Enviar Reclamo al Comisariato');
                 if (res.success) {
                     responseDiv.html('<div class="srl-notice srl-notice-success" style="background: #155724; color: #d4edda; padding: 12px; border-radius: 4px; margin-top: 10px;">' + res.data.message + '</div>');
                     form[0].reset();
@@ -340,7 +340,7 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function () {
-                submitBtn.prop('disabled', false).text('Enviar Denuncia al Comisariato');
+                submitBtn.prop('disabled', false).text('Enviar Reclamo al Comisariato');
                 responseDiv.html('<div class="srl-notice srl-notice-error" style="background: #721c24; color: #f8d7da; padding: 12px; border-radius: 4px; margin-top: 10px;">Error de comunicación con el servidor.</div>');
             }
         });

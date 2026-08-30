@@ -6,9 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-08-30
+### Changed
+- Standardized commissary terminology to "Reclamos" / "Reclamo" across all CPT labels, admin menus, shortcodes, and UI buttons.
+
 ## [1.11.0] - 2026-08-30
 ### Added
-- Updated terminology from "Protestas" to "Denuncias" across admin CPT labels, meta boxes, submit buttons, and notifications
 - Dynamic active championship filtering in `[srl_protest_form]`, prioritizing current-year active championships
 - Instant searchable driver comboboxes with client-side typing filter and selection badges for Demandante and Acusado fields
 - Direct video/image evidence drag-and-drop uploader with real-time AJAX progress bar in `[srl_protest_form]`

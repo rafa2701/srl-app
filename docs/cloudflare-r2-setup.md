@@ -1,4 +1,4 @@
-# Guía de Configuración: Cloudflare R2 para Evidencias de Denuncias
+# Guía de Configuración: Cloudflare R2 para Evidencias de Reclamos
 
 Esta guía explica paso a paso cómo crear y configurar un bucket de **Cloudflare R2** para almacenar videos y capturas de incidentes subidos por los pilotos en el **Comisariato Virtual**.
 
