@@ -4,6 +4,11 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Official Sporting Regulations & Virtual Racing Etiquette Documentation
+  - [x] Task 1: Create `docs/reglamento-deportivo-srl.md` (1:1 Markdown conversion of 24 Chapters & 45 Articles from PDF)
+  - [x] Task 2: Create `docs/codigo-etiqueta-carreras.md` (Virtual Racing Etiquette, Vortex of Danger, Corner Rights, AI Evaluation Framework)
+  - [x] Task 3: Create `docs/reglamento-completo-srl.md` (Merged Master Rulebook for AI Stewards and website publication)
+  - [x] Task 4: Documentation, TODO, and CHANGELOG updates with spec archival
 - [x] Commissary "Denuncias" Wording, Active Championship Filtering, Searchable Drivers & Cloudflare R2 Uploads
   - [x] Task 1: Terminology Update ("Protestas" -> "Denuncias") across CPT, Meta Boxes, Shortcodes
   - [x] Task 2: Active & Current Year Championship Filtering

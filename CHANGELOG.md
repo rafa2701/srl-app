@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- Official SRL Sporting Regulations in Markdown (`docs/reglamento-deportivo-srl.md`) converted 1:1 from official PDF (24 Chapters, 45 Articles, and complete R/T/A/E/P/C/S Sanctions Tables).
+- Virtual Racing Etiquette & AI Stewarding Guidelines (`docs/codigo-etiqueta-carreras.md`) defining Vortex of Danger, Corner Rights / Overlap criteria, Moving under Braking, Safe Rejoins, and AI incident evaluation matrices.
+- Unified Master Rulebook (`docs/reglamento-completo-srl.md`) combining sporting regulations with technical etiquette rules for website publication and AI Commissary REST API ingestion (`GET /wp-json/srl/v1/rulebook`).
 
 ## [1.12.0] - 2026-08-30
 ### Added
