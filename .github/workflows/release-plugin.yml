@@ -19,8 +19,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, xml, ctype, iconv, intl, gd
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, gd, zip
           tools: composer:v2
 
       - name: Install Composer Dependencies

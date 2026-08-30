@@ -1,6 +1,6 @@
 {
     "require": {
-        "phpoffice/phpspreadsheet": "^4.5",
+        "phpoffice/phpspreadsheet": "*",
         "yahnis-elsts/plugin-update-checker": "^5.4"
     }
 }
