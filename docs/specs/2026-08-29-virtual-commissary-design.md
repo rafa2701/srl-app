@@ -17,7 +17,7 @@ The system features three distinct AI personas (Strict, Lax, Balanced) that anal
   - Protesting Driver (User ID)
   - Accused Driver (User ID)
   - Race / Event (Post ID)
-  - Lap / Corner / Timecode
+  - Lap / Timecode
   - Incident Description
   - Evidence URLs (Text array)
   - AI Status (`pending`, `processing`, `completed`, `failed`)

@@ -3,4 +3,4 @@
 /srl-league-system/composer.lock
 /srl-league-system/*.xlsx
 *.xlsx
-
+.env
