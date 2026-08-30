@@ -1,0 +1,47 @@
+name: Build & Release SRL League System Plugin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    name: Package Plugin & Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, gd
+          tools: composer:v2
+
+      - name: Install Composer Dependencies
+        working-directory: wp-content/plugins/srl-league-system
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+
+      - name: Prepare Plugin Distribution Directory
+        run: |
+          mkdir -p build/srl-league-system
+          cp -r wp-content/plugins/srl-league-system/* build/srl-league-system/
+          rm -rf build/srl-league-system/tests
+          cd build
+          zip -r ../srl-league-system.zip srl-league-system/
+          cd ..
+
+      - name: Create GitHub Release & Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: srl-league-system.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
