@@ -225,6 +225,7 @@ function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_championship_default_order' );
     register_setting( 'srl_settings_group', 'srl_achievement_labels' );
     register_setting( 'srl_settings_group', 'srl_achievement_settings' );
+    register_setting( 'srl_settings_group', 'srl_force_auto_update' );
 }
 
 add_action( 'admin_menu', 'srl_admin_menu' );
@@ -359,3 +360,20 @@ function srl_cleanup_on_event_delete( $post_id ) {
     }
 }
 add_action( 'before_delete_post', 'srl_cleanup_on_event_delete' );
+
+// --- Inicialización del Actualizador y Auto-Updates ---
+if ( file_exists( SRL_PLUGIN_PATH . 'includes/updater.php' ) ) {
+    require_once SRL_PLUGIN_PATH . 'includes/updater.php';
+    add_action( 'plugins_loaded', 'srl_init_plugin_updater' );
+}
+
+if ( get_option( 'srl_force_auto_update' ) ) {
+    add_filter( 'auto_update_plugin', 'srl_force_auto_update_filter', 10, 2 );
+}
+
+function srl_force_auto_update_filter( $update, $item ) {
+    if ( isset( $item->slug ) && 'srl-league-system' === $item->slug ) {
+        return true;
+    }
+    return $update;
+}
