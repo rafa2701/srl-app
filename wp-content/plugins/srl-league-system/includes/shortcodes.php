@@ -707,9 +707,9 @@ function srl_format_time( $ms, $is_total_time = false ) {
     if ( ! $ms || $ms <= 0 ) return '-';
     $seconds_total = $ms / 1000;
     $hours = floor($seconds_total / 3600);
-    $minutes = floor(($seconds_total % 3600) / 60);
-    $seconds = floor($seconds_total % 60);
-    $milliseconds = $ms % 1000;
+    $minutes = floor(fmod($seconds_total, 3600) / 60);
+    $seconds = floor(fmod($seconds_total, 60));
+    $milliseconds = (int)($ms % 1000);
     
     if ($is_total_time && $hours > 0) {
         return sprintf('%d:%02d:%02d.%03d', $hours, $minutes, $seconds, $milliseconds);

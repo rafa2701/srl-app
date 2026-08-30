@@ -312,6 +312,9 @@ function srl_render_admin_page() {
             </div>
         </div>
     </div>
-    <style>.srl-tab-content { display: none; } .srl-tab-content.active { display: block; }</style>
+    <style>
+        .srl-tab-content { display: none !important; }
+        .srl-tab-content.active { display: block !important; }
+    </style>
     <?php
 }
