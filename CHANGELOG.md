@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-08-30
+### Added
+- Updated terminology from "Protestas" to "Denuncias" across admin CPT labels, meta boxes, submit buttons, and notifications
+- Dynamic active championship filtering in `[srl_protest_form]`, prioritizing current-year active championships
+- Instant searchable driver comboboxes with client-side typing filter and selection badges for Demandante and Acusado fields
+- Direct video/image evidence drag-and-drop uploader with real-time AJAX progress bar in `[srl_protest_form]`
+- Cloudflare R2 direct storage integration via lightweight S3 SigV4 `SRL_R2_Uploader` class with graceful WordPress media fallback
+- Cloudflare R2 settings in "Gestión SRL" ➔ "Comisariato Virtual AI"
+- Comprehensive Cloudflare R2 setup guide (`docs/cloudflare-r2-setup.md`)
+
 ## [1.10.0] - 2026-08-30
 ### Added
 - Virtual Commissary System (Comisariato Virtual AI) for sim racing incident protests

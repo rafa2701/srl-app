@@ -4,6 +4,14 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Commissary "Denuncias" Wording, Active Championship Filtering, Searchable Drivers & Cloudflare R2 Uploads
+  - [x] Task 1: Terminology Update ("Protestas" -> "Denuncias") across CPT, Meta Boxes, Shortcodes
+  - [x] Task 2: Active & Current Year Championship Filtering
+  - [x] Task 3: Searchable Combobox Driver Selector in Form
+  - [x] Task 4: Cloudflare R2 Uploader Class & Admin Settings
+  - [x] Task 5: Evidence File Upload Handler & Frontend Dropzone
+  - [x] Task 6: Cloudflare R2 Setup Guide & Documentation
+  - [x] Task 7: End-to-End Verification, Version Bump to 1.11.0, Tag & Release
 - [x] Virtual Commissary System (Comisariato Virtual AI)
   - [x] Task 1: CPT `srl_protest` and Data Model Registration (includes/commissary/post-type-protest.php)
   - [x] Task 2: REST API Endpoints for Rulebook & n8n Callback (includes/commissary/rest-api.php)
