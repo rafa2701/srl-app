@@ -219,6 +219,62 @@ function srl_render_admin_page() {
                             </td>
                         </tr>
                     </table>
+
+                    <h3 style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">Almacenamiento Directo de Evidencias (Cloudflare R2)</h3>
+                    <p class="description">Permite que los pilotos suban videos y capturas directamente a un bucket S3 de Cloudflare R2 (gratuito hasta 10GB). Si no se configura o se desactiva, las subidas se guardarán en la biblioteca local de WordPress.</p>
+                    
+                    <?php
+                    $r2_enabled     = get_option( 'srl_r2_enabled', 0 );
+                    $r2_account_id  = get_option( 'srl_r2_account_id', '' );
+                    $r2_access_key  = get_option( 'srl_r2_access_key_id', '' );
+                    $r2_secret_key  = get_option( 'srl_r2_secret_access_key', '' );
+                    $r2_bucket_name = get_option( 'srl_r2_bucket_name', '' );
+                    $r2_public_url  = get_option( 'srl_r2_public_url', '' );
+                    ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">Habilitar Cloudflare R2</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="srl_r2_enabled" value="1" <?php checked( $r2_enabled, 1 ); ?> />
+                                    Subir archivos de evidencia directamente a Cloudflare R2
+                                </label>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Cloudflare Account ID</th>
+                            <td>
+                                <input type="text" name="srl_r2_account_id" value="<?php echo esc_attr( $r2_account_id ); ?>" class="regular-text code" placeholder="Ej: a1b2c3d4e5f6..." />
+                                <p class="description">Encuentra tu Account ID en el panel principal de Cloudflare o en la sección R2.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">R2 Bucket Name</th>
+                            <td>
+                                <input type="text" name="srl_r2_bucket_name" value="<?php echo esc_attr( $r2_bucket_name ); ?>" class="regular-text code" placeholder="srl-incident-videos" />
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">S3 Access Key ID</th>
+                            <td>
+                                <input type="text" name="srl_r2_access_key_id" value="<?php echo esc_attr( $r2_access_key ); ?>" class="regular-text code" />
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">S3 Secret Access Key</th>
+                            <td>
+                                <input type="password" name="srl_r2_secret_access_key" value="<?php echo esc_attr( $r2_secret_key ); ?>" class="regular-text code" />
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Dominio Público / URL Base de R2</th>
+                            <td>
+                                <input type="url" name="srl_r2_public_url" value="<?php echo esc_attr( $r2_public_url ); ?>" class="large-text" placeholder="https://pub-xxxxxxxxxxxx.r2.dev o https://media.simracinglatinoamerica.com" />
+                                <p class="description">Dominio público habilitado para el bucket (R2.dev o Dominio personalizado).</p>
+                            </td>
+                        </tr>
+                    </table>
+
                     <?php submit_button( 'Guardar Configuración del Comisariato' ); ?>
                 </form>
             </div>

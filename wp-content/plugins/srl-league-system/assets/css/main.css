@@ -438,3 +438,96 @@
     display: flex;
     gap: 5px;
 }
+
+/* ==========================================================================
+   Comisariato: Searchable Combobox & Evidence Uploader
+   ========================================================================== */
+.srl-driver-combobox {
+    position: relative;
+    width: 100%;
+}
+
+.srl-combobox-search-box {
+    position: relative;
+    width: 100%;
+}
+
+.srl-combobox-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #1f1f1f;
+    border: 1px solid #444;
+    border-radius: 4px;
+    z-index: 9999;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.srl-combobox-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #eee;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.15s, color 0.15s;
+}
+
+.srl-combobox-item:last-child {
+    border-bottom: none;
+}
+
+.srl-combobox-item:hover {
+    background: #e60000;
+    color: #ffffff;
+}
+
+.srl-combobox-selected-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #252525;
+    border: 1px solid #e60000;
+    border-radius: 4px;
+    padding: 9px 14px;
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.srl-combobox-clear-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s;
+}
+
+.srl-combobox-clear-btn:hover {
+    color: #ff3333;
+}
+
+.srl-evidence-uploader-zone {
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.srl-evidence-uploader-zone:hover {
+    border-color: #888 !important;
+}
+
+.srl-evidence-uploader-zone.dragover {
+    border-color: #e60000 !important;
+    background: rgba(230, 0, 0, 0.08) !important;
+}
+
+@media (max-width: 768px) {
+    .srl-form-row.srl-grid-2 {
+        grid-template-columns: 1fr !important;
+    }
+}
+

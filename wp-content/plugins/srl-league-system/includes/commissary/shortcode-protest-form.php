@@ -1,6 +1,6 @@
 <?php
 /**
- * Frontend Shortcode for Incident Protests Form
+ * Frontend Shortcode for Incident Denuncias Form with Searchable Drivers & R2 Direct Uploads
  * Location: wp-content/plugins/srl-league-system/includes/commissary/shortcode-protest-form.php
  *
  * @package SRL_League_System
@@ -16,12 +16,56 @@ add_shortcode( 'srl_protest_form', 'srl_render_protest_form_shortcode' );
 function srl_render_protest_form_shortcode( $atts ) {
     global $wpdb;
 
+    // 1. Filtrar campeonatos activos del año en curso
+    $current_year = date( 'Y' );
     $championships = get_posts( [
         'post_type'      => 'srl_championship',
         'posts_per_page' => -1,
+        'post_status'    => 'publish',
+        'date_query'     => [
+            [
+                'after'     => $current_year . '-01-01 00:00:00',
+                'inclusive' => true,
+            ],
+        ],
+        'meta_query'     => [
+            'relation' => 'OR',
+            [
+                'key'     => '_srl_status',
+                'value'   => 'completed',
+                'compare' => '!=',
+            ],
+            [
+                'key'     => '_srl_status',
+                'compare' => 'NOT EXISTS',
+            ],
+        ],
         'orderby'        => 'title',
         'order'          => 'ASC',
     ] );
+
+    // Fallback: Si no hay campeonatos creados este año, mostrar todos los no finalizados
+    if ( empty( $championships ) ) {
+        $championships = get_posts( [
+            'post_type'      => 'srl_championship',
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+            'meta_query'     => [
+                'relation' => 'OR',
+                [
+                    'key'     => '_srl_status',
+                    'value'   => 'completed',
+                    'compare' => '!=',
+                ],
+                [
+                    'key'     => '_srl_status',
+                    'compare' => 'NOT EXISTS',
+                ],
+            ],
+            'orderby'        => 'post_date',
+            'order'          => 'DESC',
+        ] );
+    }
 
     $drivers = $wpdb->get_results( "SELECT id, full_name FROM {$wpdb->prefix}srl_drivers ORDER BY full_name ASC" );
 
@@ -36,9 +80,9 @@ function srl_render_protest_form_shortcode( $atts ) {
         <form id="srl-public-protest-form" class="srl-form" method="post">
             <?php wp_nonce_field( 'srl-public-nonce', 'protest_nonce' ); ?>
 
-            <div class="srl-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div class="srl-form-row srl-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="srl-form-group">
-                    <label for="srl_protest_champ_select"><strong>1. Campeonato *</strong></label>
+                    <label for="srl_protest_champ_select"><strong>1. Campeonato Activo *</strong></label>
                     <select name="championship_id" id="srl_protest_champ_select" required class="srl-input" style="width: 100%;">
                         <option value="">-- Selecciona el Campeonato --</option>
                         <?php foreach ( $championships as $champ ) : ?>
@@ -55,25 +99,49 @@ function srl_render_protest_form_shortcode( $atts ) {
                 </div>
             </div>
 
-            <div class="srl-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div class="srl-form-row srl-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <!-- Demandante Combobox -->
                 <div class="srl-form-group">
-                    <label for="protesting_driver_id"><strong>3. Tu Nombre de Piloto (Demandante) *</strong></label>
-                    <select name="protesting_driver_id" id="protesting_driver_id" required class="srl-input" style="width: 100%;">
-                        <option value="">-- Selecciona tu piloto --</option>
-                        <?php foreach ( $drivers as $d ) : ?>
-                            <option value="<?php echo esc_attr( $d->id ); ?>"><?php echo esc_html( $d->full_name ); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label><strong>3. Tu Nombre de Piloto (Demandante) *</strong></label>
+                    <div class="srl-driver-combobox" id="combobox-protesting-driver" data-field-name="protesting_driver_id">
+                        <div class="srl-combobox-selected-badge" style="display: none;">
+                            <span class="srl-selected-name"></span>
+                            <button type="button" class="srl-combobox-clear-btn" title="Cambiar piloto">&times;</button>
+                        </div>
+                        <div class="srl-combobox-search-box">
+                            <input type="text" class="srl-input srl-combobox-input" placeholder="🔍 Escribe para buscar tu piloto..." autocomplete="off" />
+                            <div class="srl-combobox-dropdown" style="display: none;">
+                                <?php foreach ( $drivers as $d ) : ?>
+                                    <div class="srl-combobox-item" data-id="<?php echo esc_attr( $d->id ); ?>" data-name="<?php echo esc_attr( $d->full_name ); ?>">
+                                        <?php echo esc_html( $d->full_name ); ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <input type="hidden" name="protesting_driver_id" id="protesting_driver_id" required value="" />
+                    </div>
                 </div>
 
+                <!-- Acusado Combobox -->
                 <div class="srl-form-group">
-                    <label for="accused_driver_id"><strong>4. Piloto Involucrado / Acusado *</strong></label>
-                    <select name="accused_driver_id" id="accused_driver_id" required class="srl-input" style="width: 100%;">
-                        <option value="">-- Selecciona el piloto acusado --</option>
-                        <?php foreach ( $drivers as $d ) : ?>
-                            <option value="<?php echo esc_attr( $d->id ); ?>"><?php echo esc_html( $d->full_name ); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label><strong>4. Piloto Involucrado / Acusado *</strong></label>
+                    <div class="srl-driver-combobox" id="combobox-accused-driver" data-field-name="accused_driver_id">
+                        <div class="srl-combobox-selected-badge" style="display: none;">
+                            <span class="srl-selected-name"></span>
+                            <button type="button" class="srl-combobox-clear-btn" title="Cambiar piloto">&times;</button>
+                        </div>
+                        <div class="srl-combobox-search-box">
+                            <input type="text" class="srl-input srl-combobox-input" placeholder="🔍 Escribe para buscar piloto acusado..." autocomplete="off" />
+                            <div class="srl-combobox-dropdown" style="display: none;">
+                                <?php foreach ( $drivers as $d ) : ?>
+                                    <div class="srl-combobox-item" data-id="<?php echo esc_attr( $d->id ); ?>" data-name="<?php echo esc_attr( $d->full_name ); ?>">
+                                        <?php echo esc_html( $d->full_name ); ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <input type="hidden" name="accused_driver_id" id="accused_driver_id" required value="" />
+                    </div>
                 </div>
             </div>
 
@@ -88,9 +156,27 @@ function srl_render_protest_form_shortcode( $atts ) {
             </div>
 
             <div class="srl-form-group" style="margin-bottom: 20px;">
-                <label for="evidence_urls"><strong>7. Enlaces de Video de Evidencia (YouTube, Twitch, Discord, Cloudflare R2) *</strong></label>
-                <textarea name="evidence_urls" id="evidence_urls" rows="3" required class="srl-input" style="width: 100%; font-family: monospace;" placeholder="https://youtube.com/watch?v=...&#10;https://cdn.discordapp.com/attachments/..."></textarea>
-                <small style="color: #888;">Pega uno o más enlaces directos a videos de repetición (onboard, TV cam, vista aérea). Un enlace por línea.</small>
+                <label for="evidence_urls"><strong>7. Enlaces y Videos de Evidencia *</strong></label>
+                
+                <!-- Direct Upload Dropzone -->
+                <div class="srl-evidence-uploader-zone" id="srl-evidence-dropzone" style="margin-bottom: 10px; border: 2px dashed #444; border-radius: 6px; padding: 15px; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer;">
+                    <div class="srl-uploader-prompt">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e60000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <p style="margin: 0; font-size: 14px; color: #eee;"><strong>Arrastra un archivo de video/captura aquí</strong> o haz clic para seleccionarlo</p>
+                        <small style="color: #888;">Formatos permitidos: MP4, WebM, MOV, AVI, MKV, PNG, JPG (Hasta 100MB)</small>
+                    </div>
+                    <input type="file" id="srl-evidence-file-input" accept="video/*,image/*" style="display: none;" />
+                    
+                    <div class="srl-upload-progress-container" style="display: none; margin-top: 10px;">
+                        <div class="srl-upload-progress-bar" style="height: 6px; background: #222; border-radius: 3px; overflow: hidden;">
+                            <div class="srl-upload-progress-fill" style="width: 0%; height: 100%; background: #e60000; transition: width 0.2s;"></div>
+                        </div>
+                        <small class="srl-upload-status-text" style="color: #aaa; margin-top: 5px; display: block;">Subiendo evidencia...</small>
+                    </div>
+                </div>
+
+                <textarea name="evidence_urls" id="evidence_urls" rows="3" required class="srl-input" style="width: 100%; font-family: monospace;" placeholder="https://youtube.com/watch?v=...&#10;https://media.simracinglatinoamerica.com/..."></textarea>
+                <small style="color: #888;">Pega uno o más enlaces directos a videos de repetición (YouTube, Twitch, Discord) o usa el botón de subida superior. Un enlace por línea.</small>
             </div>
 
             <div class="srl-form-submit">
@@ -104,6 +190,59 @@ function srl_render_protest_form_shortcode( $atts ) {
     <?php
     return ob_get_clean();
 }
+
+/**
+ * AJAX Handler: Public evidence file direct upload (Cloudflare R2 or local WP).
+ */
+function srl_handle_upload_evidence_file() {
+    check_ajax_referer( 'srl-public-nonce', 'nonce' );
+
+    if ( empty( $_FILES['evidence_file'] ) ) {
+        wp_send_json_error( [ 'message' => 'No se ha recibido ningún archivo.' ] );
+    }
+
+    $file = $_FILES['evidence_file'];
+    $allowed_extensions = [ 'mp4', 'webm', 'mov', 'avi', 'mkv', 'png', 'jpg', 'jpeg' ];
+    $ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
+
+    if ( ! in_array( $ext, $allowed_extensions, true ) ) {
+        wp_send_json_error( [ 'message' => 'Formato de archivo no permitido. Sube un archivo de video o imagen.' ] );
+    }
+
+    // Check Cloudflare R2
+    if ( class_exists( 'SRL_R2_Uploader' ) && SRL_R2_Uploader::is_enabled() ) {
+        $mime_type = ! empty( $file['type'] ) ? $file['type'] : 'video/' . $ext;
+        $r2_result = SRL_R2_Uploader::upload_file( $file['tmp_name'], $file['name'], $mime_type );
+
+        if ( ! empty( $r2_result['success'] ) && ! empty( $r2_result['url'] ) ) {
+            wp_send_json_success( [
+                'url'      => $r2_result['url'],
+                'filename' => $file['name'],
+                'storage'  => 'r2',
+            ] );
+        }
+    }
+
+    // Fallback: WordPress Media Upload
+    if ( ! function_exists( 'wp_handle_upload' ) ) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+    }
+
+    $upload_overrides = [ 'test_form' => false ];
+    $movefile = wp_handle_upload( $file, $upload_overrides );
+
+    if ( $movefile && ! isset( $movefile['error'] ) ) {
+        wp_send_json_success( [
+            'url'      => $movefile['url'],
+            'filename' => $file['name'],
+            'storage'  => 'local',
+        ] );
+    } else {
+        wp_send_json_error( [ 'message' => $movefile['error'] ?? 'Error al guardar el archivo en el servidor.' ] );
+    }
+}
+add_action( 'wp_ajax_srl_upload_evidence_file', 'srl_handle_upload_evidence_file' );
+add_action( 'wp_ajax_nopriv_srl_upload_evidence_file', 'srl_handle_upload_evidence_file' );
 
 /**
  * AJAX Handler: Public protest submission.

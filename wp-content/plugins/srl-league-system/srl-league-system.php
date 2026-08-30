@@ -247,6 +247,7 @@ require_once SRL_PLUGIN_PATH . 'includes/ajax-handlers.php';
 require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 
 // --- Comisariato Virtual (AI Assistant) ---
+require_once SRL_PLUGIN_PATH . 'includes/commissary/class-srl-r2-uploader.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/post-type-protest.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/rest-api.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/admin-meta-boxes.php';
@@ -267,6 +268,12 @@ function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_rulebook_updated_at' );
     register_setting( 'srl_settings_group', 'srl_virtual_commissary_webhook_url' );
     register_setting( 'srl_settings_group', 'srl_api_secret_key' );
+    register_setting( 'srl_settings_group', 'srl_r2_enabled' );
+    register_setting( 'srl_settings_group', 'srl_r2_account_id' );
+    register_setting( 'srl_settings_group', 'srl_r2_access_key_id' );
+    register_setting( 'srl_settings_group', 'srl_r2_secret_access_key' );
+    register_setting( 'srl_settings_group', 'srl_r2_bucket_name' );
+    register_setting( 'srl_settings_group', 'srl_r2_public_url' );
 }
 
 add_action( 'admin_menu', 'srl_admin_menu' );
