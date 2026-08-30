@@ -372,7 +372,7 @@ function srl_handle_dispatch_virtual_commissary() {
     }
 
     wp_send_json_success( [
-        'message' => '¡Protesta enviada exitosamente al Comisariato Virtual! El análisis de Gemini IA se procesará en segundo plano.',
+        'message' => '¡Denuncia enviada exitosamente al Comisariato Virtual! El análisis de Gemini IA se procesará en segundo plano.',
         'status'  => 'processing',
     ] );
 }

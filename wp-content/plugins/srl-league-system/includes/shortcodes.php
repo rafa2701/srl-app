@@ -638,7 +638,7 @@ function srl_render_main_menu_shortcode( $atts ) {
                 </div>
                 <div class="srl-card-text">
                     <h3>Comisariato</h3>
-                    <p>Envía reclamos e incidentes analizados con IA.</p>
+                    <p>Envía y consulta denuncias e incidentes analizados con IA.</p>
                 </div>
             </a>
             <div class="srl-menu-card disabled">
