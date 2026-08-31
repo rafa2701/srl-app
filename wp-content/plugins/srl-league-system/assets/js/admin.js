@@ -33,12 +33,47 @@ jQuery(document).ready(function($) {
     }
 
     // --- Lógica de Pestañas ---
+    function srlActivateTab(targetHash) {
+        if (!targetHash) return;
+        // Strip any query strings if present in hash
+        const cleanHash = targetHash.split('?')[0];
+        const tabLink = $('.nav-tab-wrapper a[href="' + cleanHash + '"]');
+        const tabContent = $(cleanHash);
+        if (tabLink.length && tabContent.length) {
+            $('.nav-tab').removeClass('nav-tab-active');
+            $('.srl-tab-content').removeClass('active');
+            tabLink.addClass('nav-tab-active');
+            tabContent.addClass('active');
+        }
+    }
+
     $('.nav-tab-wrapper a').on('click', function(e) {
         e.preventDefault();
-        $('.nav-tab').removeClass('nav-tab-active');
-        $('.srl-tab-content').removeClass('active');
-        $(this).addClass('nav-tab-active');
-        $($(this).attr('href')).addClass('active');
+        const targetHash = $(this).attr('href');
+        srlActivateTab(targetHash);
+        if (history.replaceState) {
+            history.replaceState(null, null, targetHash);
+        } else {
+            window.location.hash = targetHash;
+        }
+    });
+
+    // Check if initial hash is present in URL on page load
+    if (window.location.hash) {
+        srlActivateTab(window.location.hash);
+    }
+
+    // Preserve tab hash on options.php submissions
+    $('form[action="options.php"]').each(function() {
+        const form = $(this);
+        const tabWrapper = form.closest('.srl-tab-content');
+        if (tabWrapper.length && tabWrapper.attr('id')) {
+            const refererInput = form.find('input[name="_wp_http_referer"]');
+            if (refererInput.length) {
+                const currentVal = refererInput.val().split('#')[0];
+                refererInput.val(currentVal + '#' + tabWrapper.attr('id'));
+            }
+        }
     });
 
     // --- Image Upload Logic for Settings ---
@@ -555,6 +590,8 @@ jQuery(document).ready(function($) {
                 }
             }
         });
+    });
+
     // --- Virtual Commissary AI Dispatch ---
     $(document).on('click', '#srl-dispatch-ai-btn', function (e) {
         e.preventDefault();
