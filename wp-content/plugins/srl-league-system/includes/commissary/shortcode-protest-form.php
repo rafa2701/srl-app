@@ -176,7 +176,6 @@ function srl_render_protest_form_shortcode( $atts ) {
                         <p style="margin: 0; font-size: 14px; color: #eee;"><strong>Arrastra un archivo de video/captura aquí</strong> o haz clic para seleccionarlo</p>
                         <small style="color: #888;">Formatos permitidos: MP4, WebM, MOV, AVI, MKV, PNG, JPG (Hasta 100MB)</small>
                     </div>
-                    <input type="file" id="srl-evidence-file-input" accept="video/*,image/*" style="display: none;" />
                     
                     <div class="srl-upload-progress-container" style="display: none; margin-top: 10px;">
                         <div class="srl-upload-progress-bar" style="height: 6px; background: #222; border-radius: 3px; overflow: hidden;">
@@ -185,6 +184,7 @@ function srl_render_protest_form_shortcode( $atts ) {
                         <small class="srl-upload-status-text" style="color: #aaa; margin-top: 5px; display: block;">Subiendo evidencia...</small>
                     </div>
                 </div>
+                <input type="file" id="srl-evidence-file-input" accept="video/*,image/*,.mkv,.avi,.mov,.mp4,.webm,.png,.jpg,.jpeg" style="display: none;" />
 
                 <textarea name="evidence_urls" id="evidence_urls" rows="3" required class="srl-input" style="width: 100%; font-family: monospace;" placeholder="https://youtube.com/watch?v=...&#10;https://media.simracinglatinoamerica.com/..."></textarea>
                 <small style="color: #888;">Pega uno o más enlaces directos a videos de repetición (YouTube, Twitch, Discord) o usa el botón de subida superior. Un enlace por línea.</small>
@@ -203,21 +203,59 @@ function srl_render_protest_form_shortcode( $atts ) {
 }
 
 /**
+ * Filter to allow common video and image evidence upload MIME types.
+ */
+function srl_allow_commissary_evidence_mimes( $mimes ) {
+    $mimes['mp4']  = 'video/mp4';
+    $mimes['webm'] = 'video/webm';
+    $mimes['mov']  = 'video/quicktime';
+    $mimes['avi']  = 'video/x-msvideo';
+    $mimes['mkv']  = 'video/x-matroska';
+    $mimes['png']  = 'image/png';
+    $mimes['jpg|jpeg|jpe'] = 'image/jpeg';
+    return $mimes;
+}
+
+/**
  * AJAX Handler: Public evidence file direct upload (Cloudflare R2 or local WP).
  */
 function srl_handle_upload_evidence_file() {
-    check_ajax_referer( 'srl-public-nonce', 'nonce' );
+    if ( ! check_ajax_referer( 'srl-public-nonce', 'nonce', false ) && ! check_ajax_referer( 'srl-ajax-nonce', 'nonce', false ) ) {
+        wp_send_json_error( [ 'message' => 'Sesión de seguridad expirada. Por favor recarga la página e intenta de nuevo.' ] );
+    }
 
     if ( empty( $_FILES['evidence_file'] ) ) {
-        wp_send_json_error( [ 'message' => 'No se ha recibido ningún archivo.' ] );
+        if ( isset( $_SERVER['CONTENT_LENGTH'] ) && (int) $_SERVER['CONTENT_LENGTH'] > 0 ) {
+            wp_send_json_error( [ 'message' => 'El archivo supera el tamaño máximo de subida configurado en el servidor web (post_max_size / upload_max_filesize).' ] );
+        }
+        wp_send_json_error( [ 'message' => 'No se ha recibido ningún archivo para subir.' ] );
     }
 
     $file = $_FILES['evidence_file'];
+
+    if ( ! empty( $file['error'] ) ) {
+        switch ( $file['error'] ) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                wp_send_json_error( [ 'message' => 'El archivo excede el tamaño máximo permitido por la configuración de PHP del servidor.' ] );
+                break;
+            case UPLOAD_ERR_PARTIAL:
+                wp_send_json_error( [ 'message' => 'La subida del archivo se interrumpió y quedó incompleta.' ] );
+                break;
+            case UPLOAD_ERR_NO_FILE:
+                wp_send_json_error( [ 'message' => 'No se seleccionó ningún archivo.' ] );
+                break;
+            default:
+                wp_send_json_error( [ 'message' => 'Error al subir el archivo (Código de error PHP: ' . intval( $file['error'] ) . ').' ] );
+                break;
+        }
+    }
+
     $allowed_extensions = [ 'mp4', 'webm', 'mov', 'avi', 'mkv', 'png', 'jpg', 'jpeg' ];
     $ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
 
     if ( ! in_array( $ext, $allowed_extensions, true ) ) {
-        wp_send_json_error( [ 'message' => 'Formato de archivo no permitido. Sube un archivo de video o imagen.' ] );
+        wp_send_json_error( [ 'message' => 'Formato de archivo no permitido (.' . $ext . '). Sube un archivo de video o imagen permitido (' . implode( ', ', $allowed_extensions ) . ').' ] );
     }
 
     // Check Cloudflare R2
@@ -231,6 +269,8 @@ function srl_handle_upload_evidence_file() {
                 'filename' => $file['name'],
                 'storage'  => 'r2',
             ] );
+        } else {
+            error_log( 'SRL R2 Upload Error: ' . ( $r2_result['error'] ?? 'Unknown R2 error' ) );
         }
     }
 
@@ -239,8 +279,10 @@ function srl_handle_upload_evidence_file() {
         require_once ABSPATH . 'wp-admin/includes/file.php';
     }
 
+    add_filter( 'upload_mimes', 'srl_allow_commissary_evidence_mimes' );
     $upload_overrides = [ 'test_form' => false ];
     $movefile = wp_handle_upload( $file, $upload_overrides );
+    remove_filter( 'upload_mimes', 'srl_allow_commissary_evidence_mimes' );
 
     if ( $movefile && ! isset( $movefile['error'] ) ) {
         wp_send_json_success( [
@@ -259,7 +301,9 @@ add_action( 'wp_ajax_nopriv_srl_upload_evidence_file', 'srl_handle_upload_eviden
  * AJAX Handler: Public protest submission.
  */
 function srl_handle_submit_protest_form() {
-    check_ajax_referer( 'srl-public-nonce', 'nonce' );
+    if ( ! check_ajax_referer( 'srl-public-nonce', 'nonce', false ) && ! check_ajax_referer( 'srl-ajax-nonce', 'nonce', false ) ) {
+        wp_send_json_error( [ 'message' => 'Sesión de seguridad expirada. Por favor recarga la página e intenta de nuevo.' ] );
+    }
 
     $championship_id = isset( $_POST['championship_id'] ) ? intval( $_POST['championship_id'] ) : 0;
     $raw_event_id = isset( $_POST['event_id'] ) ? sanitize_text_field( $_POST['event_id'] ) : '';

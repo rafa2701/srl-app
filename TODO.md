@@ -4,6 +4,12 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Fix Evidence File Upload & Dropzone Click Trigger in Protest Form
+  - [x] Task 1: Systematic debugging of `Maximum call stack size exceeded` and AJAX 400 Bad Request
+  - [x] Task 2: Fix dropzone click event bubbling loop on file input in `assets/js/public.js`
+  - [x] Task 3: Add client-side size (100MB) & extension validation and informative HTTP status error handling in `assets/js/public.js`
+  - [x] Task 4: Move hidden input outside dropzone container, add temporary allowed MIME types filter, and graceful JSON error reporting in `shortcode-protest-form.php`
+  - [x] Task 5: Bump plugin version to 1.12.4 for browser cache busting
 - [x] Add OpenRouter Alternative Model Support to n8n Workflow
   - [x] Modify virtual-commissary-workflow.json
   - [x] Update docs/n8n/README.md instructions

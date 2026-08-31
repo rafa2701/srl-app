@@ -176,10 +176,17 @@ jQuery(document).ready(function($) {
     const evidenceTextarea = $('#evidence_urls');
 
     if (dropzone.length) {
+        // Prevent click events on the hidden file input from bubbling back
+        fileInput.on('click', function(e) {
+            e.stopPropagation();
+        });
+
+        // Trigger file browser when clicking the dropzone (unless clicking inside progress bar)
         dropzone.on('click', function(e) {
-            if ($(e.target).closest('.srl-upload-progress-container').length === 0) {
-                fileInput.trigger('click');
+            if ($(e.target).is(fileInput) || $(e.target).closest('.srl-upload-progress-container').length > 0) {
+                return;
             }
+            fileInput[0].click();
         });
 
         dropzone.on('dragover dragenter', function(e) {
@@ -204,10 +211,31 @@ jQuery(document).ready(function($) {
         fileInput.on('change', function() {
             if (this.files && this.files.length > 0) {
                 uploadEvidenceFile(this.files[0]);
+                $(this).val('');
             }
         });
 
         function uploadEvidenceFile(file) {
+            if (!file) return;
+
+            // Maximum allowed size: 100MB
+            const maxSizeBytes = 100 * 1024 * 1024;
+            if (file.size > maxSizeBytes) {
+                progressContainer.show();
+                progressFill.css('width', '0%');
+                statusText.html('<span style="color: #dc3545;">✖ El archivo supera el tamaño máximo permitido de 100MB (' + (file.size / (1024 * 1024)).toFixed(1) + 'MB).</span>');
+                return;
+            }
+
+            const allowedExts = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'png', 'jpg', 'jpeg'];
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            if (allowedExts.indexOf(fileExt) === -1) {
+                progressContainer.show();
+                progressFill.css('width', '0%');
+                statusText.html('<span style="color: #dc3545;">✖ Formato no permitido (.' + fileExt + '). Formatos admitidos: ' + allowedExts.join(', ') + '</span>');
+                return;
+            }
+
             const formData = new FormData();
             formData.append('action', 'srl_upload_evidence_file');
             formData.append('nonce', srl_ajax_object.nonce);
@@ -218,7 +246,7 @@ jQuery(document).ready(function($) {
             statusText.text('Subiendo ' + file.name + '...');
 
             $.ajax({
-                url: srl_ajax_object.ajax_url,
+                url: srl_ajax_object.ajax_url + '?action=srl_upload_evidence_file',
                 type: 'POST',
                 data: formData,
                 processData: false,
@@ -235,7 +263,7 @@ jQuery(document).ready(function($) {
                     return xhr;
                 },
                 success: function(response) {
-                    if (response.success && response.data.url) {
+                    if (response && response.success && response.data && response.data.url) {
                         progressFill.css('width', '100%');
                         const storageLabel = response.data.storage === 'r2' ? 'Cloudflare R2' : 'Servidor';
                         statusText.html('<span style="color: #28a745;">✔ Subido correctamente (' + storageLabel + '): <strong>' + response.data.filename + '</strong></span>');
@@ -248,11 +276,22 @@ jQuery(document).ready(function($) {
                             evidenceTextarea.val(response.data.url);
                         }
                     } else {
-                        statusText.html('<span style="color: #dc3545;">✖ ' + (response.data.message || 'Error al subir archivo') + '</span>');
+                        const errMsg = (response && response.data && response.data.message) ? response.data.message : 'Error al procesar el archivo en el servidor.';
+                        statusText.html('<span style="color: #dc3545;">✖ ' + errMsg + '</span>');
                     }
                 },
-                error: function() {
-                    statusText.html('<span style="color: #dc3545;">✖ Error de red al subir el archivo</span>');
+                error: function(xhr) {
+                    let errMsg = 'Error de red al subir el archivo.';
+                    if (xhr.status === 400) {
+                        errMsg = 'El servidor rechazó la subida (400 Bad Request). El archivo excede el tamaño máximo permitido por PHP (post_max_size / upload_max_filesize).';
+                    } else if (xhr.status === 413) {
+                        errMsg = 'El archivo supera el tamaño máximo permitido por el servidor web (413 Payload Too Large).';
+                    } else if (xhr.status === 403) {
+                        errMsg = 'Sesión expirada (403 Forbidden). Por favor recarga la página.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                        errMsg = xhr.responseJSON.data.message;
+                    }
+                    statusText.html('<span style="color: #dc3545;">✖ ' + errMsg + '</span>');
                 }
             });
         }

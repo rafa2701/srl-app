@@ -5,9 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [1.12.4] - 2026-08-31
 ### Added
 - OpenRouter Alternative Model Support in n8n workflow (`docs/n8n/virtual-commissary-workflow.json`) to easily use models like Minimax, Qwen, etc.
 - OpenRouter configuration instructions in `docs/n8n/README.md`.
+### Fixed
+- Fixed browser file explorer dialog failing to open when clicking the dropzone upload area in `[srl_protest_form]` due to an infinite click event bubbling recursion (`RangeError: Maximum call stack size exceeded` in `public.js:181`).
+- Fixed 400 Bad Request error on AJAX file uploads by adding explicit action query parameters, client-side 100MB file size & extension filtering, and temporary MIME type filter support for MKV, WebM, MOV, and MP4 videos in WordPress.
+- Bumped plugin version to `1.12.4` for client-side asset cache busting.
 
 ## [1.12.3] - 2026-08-30
 ### Added
