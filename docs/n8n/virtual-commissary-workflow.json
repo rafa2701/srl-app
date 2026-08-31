@@ -149,6 +149,28 @@
       ],
       "id": "send-callback-to-wp",
       "name": "Send Verdict Callback to WP"
+    },
+    {
+      "parameters": {
+        "modelName": "minimax/minimax-01",
+        "options": {
+          "baseURL": "https://openrouter.ai/api/v1"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        480,
+        700
+      ],
+      "id": "openrouter-model-alternative",
+      "name": "OpenRouter Model (Alternative)",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenRouter API"
+        }
+      }
     }
   ],
   "connections": {
