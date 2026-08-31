@@ -71,8 +71,12 @@ function srl_handle_results_upload() {
 }
 
 function srl_handle_get_events() {
-    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
-    if ( ! wp_verify_nonce( $nonce, 'srl-public-nonce' ) && ! wp_verify_nonce( $nonce, 'srl-ajax-nonce' ) ) {
+    $nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( $_REQUEST['nonce'] ) : '';
+    if ( empty( $nonce ) && isset( $_REQUEST['protest_nonce'] ) ) {
+        $nonce = sanitize_text_field( $_REQUEST['protest_nonce'] );
+    }
+
+    if ( ! srl_verify_public_nonce( $nonce, 'srl-public-nonce' ) ) {
         wp_send_json_error( [ 'message' => 'Error de seguridad (nonce inválido).' ] );
     }
 

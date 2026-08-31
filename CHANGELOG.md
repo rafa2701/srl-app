@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.12.5] - 2026-08-31
+### Fixed
+- Fixed "Sesión de seguridad expirada" nonce validation failure during evidence upload and protest submissions by implementing `srl_verify_public_nonce()` to support logged-in user sessions, guest nonces, and cached page nonces.
+- Updated `assets/js/public.js` to read nonce dynamically from the form DOM element `#protest_nonce` with `srl_ajax_object.nonce` fallback.
+- Bumped plugin version to `1.12.5` for browser cache busting.
+
 ## [1.12.4] - 2026-08-31
 ### Added
 - OpenRouter Alternative Model Support in n8n workflow (`docs/n8n/virtual-commissary-workflow.json`) to easily use models like Minimax, Qwen, etc.

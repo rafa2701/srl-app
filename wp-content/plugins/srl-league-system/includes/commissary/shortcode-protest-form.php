@@ -220,7 +220,18 @@ function srl_allow_commissary_evidence_mimes( $mimes ) {
  * AJAX Handler: Public evidence file direct upload (Cloudflare R2 or local WP).
  */
 function srl_handle_upload_evidence_file() {
-    if ( ! check_ajax_referer( 'srl-public-nonce', 'nonce', false ) && ! check_ajax_referer( 'srl-ajax-nonce', 'nonce', false ) ) {
+    $nonce = '';
+    if ( ! empty( $_REQUEST['nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['protest_nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['protest_nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['_ajax_nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['_ajax_nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['_wpnonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
+    }
+
+    if ( ! srl_verify_public_nonce( $nonce, 'srl-public-nonce' ) ) {
         wp_send_json_error( [ 'message' => 'Sesión de seguridad expirada. Por favor recarga la página e intenta de nuevo.' ] );
     }
 
@@ -301,7 +312,18 @@ add_action( 'wp_ajax_nopriv_srl_upload_evidence_file', 'srl_handle_upload_eviden
  * AJAX Handler: Public protest submission.
  */
 function srl_handle_submit_protest_form() {
-    if ( ! check_ajax_referer( 'srl-public-nonce', 'nonce', false ) && ! check_ajax_referer( 'srl-ajax-nonce', 'nonce', false ) ) {
+    $nonce = '';
+    if ( ! empty( $_REQUEST['nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['protest_nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['protest_nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['_ajax_nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['_ajax_nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['_wpnonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
+    }
+
+    if ( ! srl_verify_public_nonce( $nonce, 'srl-public-nonce' ) ) {
         wp_send_json_error( [ 'message' => 'Sesión de seguridad expirada. Por favor recarga la página e intenta de nuevo.' ] );
     }
 

@@ -236,9 +236,12 @@ jQuery(document).ready(function($) {
                 return;
             }
 
+            const currentNonce = $('#protest_nonce').val() || (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.nonce ? srl_ajax_object.nonce : '');
+
             const formData = new FormData();
             formData.append('action', 'srl_upload_evidence_file');
-            formData.append('nonce', srl_ajax_object.nonce);
+            formData.append('nonce', currentNonce);
+            formData.append('protest_nonce', currentNonce);
             formData.append('evidence_file', file);
 
             progressContainer.show();
@@ -383,10 +386,12 @@ jQuery(document).ready(function($) {
         submitBtn.prop('disabled', true).text('Enviando reclamo...');
         responseDiv.html('');
 
+        const currentNonce = $('#protest_nonce').val() || (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.nonce ? srl_ajax_object.nonce : '');
+
         $.ajax({
             url: srl_ajax_object.ajax_url,
             type: 'POST',
-            data: form.serialize() + '&action=srl_submit_protest_form&nonce=' + srl_ajax_object.nonce,
+            data: form.serialize() + '&action=srl_submit_protest_form&nonce=' + encodeURIComponent(currentNonce),
             success: function (res) {
                 submitBtn.prop('disabled', false).text('Enviar Reclamo al Comisariato');
                 if (res.success) {

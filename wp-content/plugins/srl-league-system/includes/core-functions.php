@@ -303,3 +303,39 @@ function srl_register_query_vars( $vars ) {
     return $vars;
 }
 add_filter( 'query_vars', 'srl_register_query_vars' );
+
+/**
+ * Verifies a nonce for public AJAX actions, accommodating logged-in users,
+ * guests, cached page guest nonces, and admin nonces.
+ *
+ * @param string $nonce Nonce string received.
+ * @param string $action Expected action name (default 'srl-public-nonce').
+ * @return bool True if valid, false otherwise.
+ */
+function srl_verify_public_nonce( $nonce, $action = 'srl-public-nonce' ) {
+    if ( empty( $nonce ) || ! is_string( $nonce ) ) {
+        return false;
+    }
+
+    // 1. Check standard WP verification with current user session
+    if ( wp_verify_nonce( $nonce, $action ) ) {
+        return true;
+    }
+
+    // 2. Check admin nonce
+    if ( wp_verify_nonce( $nonce, 'srl-ajax-nonce' ) ) {
+        return true;
+    }
+
+    // 3. Fallback: Check if nonce was generated for guest (UID=0, empty session token)
+    // Useful when user is logged in but page HTML was rendered with guest context or cached
+    $uid = 0;
+    $i = wp_nonce_tick( $action );
+    $expected_1 = substr( wp_hash( $i . '|' . $action . '|' . $uid . '|', 'nonce' ), -12, 10 );
+    $expected_2 = substr( wp_hash( ( $i - 1 ) . '|' . $action . '|' . $uid . '|', 'nonce' ), -12, 10 );
+    if ( hash_equals( $expected_1, $nonce ) || hash_equals( $expected_2, $nonce ) ) {
+        return true;
+    }
+
+    return false;
+}
