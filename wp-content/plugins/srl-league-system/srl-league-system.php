@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- *      Version:           1.12.5
+ *      Version:           1.12.6
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.12.5' );
+define( 'SRL_PLUGIN_VERSION', '1.12.6' );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -347,7 +347,17 @@ function srl_public_enqueue_assets() {
         wp_enqueue_script( 'srl-tablesort-number', 'https://cdn.jsdelivr.net/npm/tablesort@5.2.1/src/sorts/tablesort.number.js', ['srl-tablesort'], null, true );
         wp_enqueue_script( 'srl-public-js', SRL_PLUGIN_URL . 'assets/js/public.js', ['jquery', 'srl-tablesort', 'srl-tablesort-number'], SRL_PLUGIN_VERSION, true );
         
-        wp_localize_script( 'srl-public-js', 'srl_ajax_object', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'srl-public-nonce' ) ]);
+        $r2_active = class_exists( 'SRL_R2_Uploader' ) && SRL_R2_Uploader::is_enabled();
+        $max_size_bytes = $r2_active ? ( 100 * 1024 * 1024 ) : wp_max_upload_size();
+        $max_size_label = $r2_active ? '100 MB' : size_format( wp_max_upload_size() );
+
+        wp_localize_script( 'srl-public-js', 'srl_ajax_object', [
+            'ajax_url'                   => admin_url( 'admin-ajax.php' ),
+            'nonce'                      => wp_create_nonce( 'srl-public-nonce' ),
+            'max_upload_size'            => $max_size_bytes,
+            'max_upload_size_formatted'  => $max_size_label,
+            'r2_enabled'                 => $r2_active,
+        ] );
     }
 }
 add_action( 'wp_enqueue_scripts', 'srl_public_enqueue_assets' );

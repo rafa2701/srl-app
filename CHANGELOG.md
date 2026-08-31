@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.12.6] - 2026-08-31
+### Fixed
+- Added dynamic server maximum upload limit detection (`wp_max_upload_size()`) in localized script and shortcode UI labels.
+- Added client-side pre-validation against host server upload limits before starting uploads.
+- Handled PHP `post_max_size` payload truncation to prevent empty POST body nonce failures when uploading files larger than the hosting limit.
+- Bumped plugin version to `1.12.6` for browser asset cache busting.
+
 ## [1.12.5] - 2026-08-31
 ### Fixed
 - Fixed "Sesión de seguridad expirada" nonce validation failure during evidence upload and protest submissions by implementing `srl_verify_public_nonce()` to support logged-in user sessions, guest nonces, and cached page nonces.

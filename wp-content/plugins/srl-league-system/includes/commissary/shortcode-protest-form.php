@@ -170,11 +170,15 @@ function srl_render_protest_form_shortcode( $atts ) {
                 <label for="evidence_urls"><strong>7. Enlaces y Videos de Evidencia *</strong></label>
                 
                 <!-- Direct Upload Dropzone -->
+                <?php
+                $r2_active = class_exists( 'SRL_R2_Uploader' ) && SRL_R2_Uploader::is_enabled();
+                $upload_limit_label = $r2_active ? 'Hasta 100MB (Cloudflare R2)' : 'Límite de este servidor: ' . size_format( wp_max_upload_size() );
+                ?>
                 <div class="srl-evidence-uploader-zone" id="srl-evidence-dropzone" style="margin-bottom: 10px; border: 2px dashed #444; border-radius: 6px; padding: 15px; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer;">
                     <div class="srl-uploader-prompt">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e60000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <p style="margin: 0; font-size: 14px; color: #eee;"><strong>Arrastra un archivo de video/captura aquí</strong> o haz clic para seleccionarlo</p>
-                        <small style="color: #888;">Formatos permitidos: MP4, WebM, MOV, AVI, MKV, PNG, JPG (Hasta 100MB)</small>
+                        <small style="color: #888;">Formatos permitidos: MP4, WebM, MOV, AVI, MKV, PNG, JPG (<?php echo esc_html( $upload_limit_label ); ?>)</small>
                     </div>
                     
                     <div class="srl-upload-progress-container" style="display: none; margin-top: 10px;">
@@ -220,6 +224,15 @@ function srl_allow_commissary_evidence_mimes( $mimes ) {
  * AJAX Handler: Public evidence file direct upload (Cloudflare R2 or local WP).
  */
 function srl_handle_upload_evidence_file() {
+    $max_formatted = size_format( wp_max_upload_size() );
+
+    // Check if POST was truncated by PHP due to post_max_size
+    if ( $_SERVER['REQUEST_METHOD'] === 'POST' && empty( $_POST ) && empty( $_FILES ) && isset( $_SERVER['CONTENT_LENGTH'] ) && (int) $_SERVER['CONTENT_LENGTH'] > 0 ) {
+        wp_send_json_error( [
+            'message' => sprintf( 'El archivo seleccionado supera el tamaño máximo permitido por el servidor (%s). Pega un enlace de video abajo (YouTube/Drive/Twitch) o sube un archivo más liviano.', $max_formatted )
+        ] );
+    }
+
     $nonce = '';
     if ( ! empty( $_REQUEST['nonce'] ) ) {
         $nonce = sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) );
@@ -236,10 +249,9 @@ function srl_handle_upload_evidence_file() {
     }
 
     if ( empty( $_FILES['evidence_file'] ) ) {
-        if ( isset( $_SERVER['CONTENT_LENGTH'] ) && (int) $_SERVER['CONTENT_LENGTH'] > 0 ) {
-            wp_send_json_error( [ 'message' => 'El archivo supera el tamaño máximo de subida configurado en el servidor web (post_max_size / upload_max_filesize).' ] );
-        }
-        wp_send_json_error( [ 'message' => 'No se ha recibido ningún archivo para subir.' ] );
+        wp_send_json_error( [
+            'message' => sprintf( 'No se recibió el archivo en el servidor. Puede haber superado el límite de subida permitido (%s).', $max_formatted )
+        ] );
     }
 
     $file = $_FILES['evidence_file'];
@@ -248,7 +260,7 @@ function srl_handle_upload_evidence_file() {
         switch ( $file['error'] ) {
             case UPLOAD_ERR_INI_SIZE:
             case UPLOAD_ERR_FORM_SIZE:
-                wp_send_json_error( [ 'message' => 'El archivo excede el tamaño máximo permitido por la configuración de PHP del servidor.' ] );
+                wp_send_json_error( [ 'message' => sprintf( 'El archivo excede el tamaño máximo permitido por el servidor (%s).', $max_formatted ) ] );
                 break;
             case UPLOAD_ERR_PARTIAL:
                 wp_send_json_error( [ 'message' => 'La subida del archivo se interrumpió y quedó incompleta.' ] );

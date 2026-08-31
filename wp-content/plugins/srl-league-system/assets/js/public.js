@@ -218,12 +218,13 @@ jQuery(document).ready(function($) {
         function uploadEvidenceFile(file) {
             if (!file) return;
 
-            // Maximum allowed size: 100MB
-            const maxSizeBytes = 100 * 1024 * 1024;
-            if (file.size > maxSizeBytes) {
+            const serverMaxBytes = (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.max_upload_size) ? parseInt(srl_ajax_object.max_upload_size, 10) : (20 * 1024 * 1024);
+            const serverMaxFormatted = (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.max_upload_size_formatted) ? srl_ajax_object.max_upload_size_formatted : '20 MB';
+
+            if (file.size > serverMaxBytes) {
                 progressContainer.show();
                 progressFill.css('width', '0%');
-                statusText.html('<span style="color: #dc3545;">✖ El archivo supera el tamaño máximo permitido de 100MB (' + (file.size / (1024 * 1024)).toFixed(1) + 'MB).</span>');
+                statusText.html('<span style="color: #dc3545;">✖ El archivo seleccionado (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB) supera el límite de subida del servidor (' + serverMaxFormatted + '). Pega un enlace de video (YouTube/Drive/Twitch) abajo o sube un archivo más liviano.</span>');
                 return;
             }
 
@@ -249,7 +250,7 @@ jQuery(document).ready(function($) {
             statusText.text('Subiendo ' + file.name + '...');
 
             $.ajax({
-                url: srl_ajax_object.ajax_url + '?action=srl_upload_evidence_file',
+                url: srl_ajax_object.ajax_url + '?action=srl_upload_evidence_file&nonce=' + encodeURIComponent(currentNonce),
                 type: 'POST',
                 data: formData,
                 processData: false,
