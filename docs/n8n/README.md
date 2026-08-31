@@ -74,3 +74,21 @@ This guide explains how to connect your self-hosted **n8n** instance with the **
    - The Chief Steward generates the consensus blame percentage and penalty.
    - It posts the verdict callback to `/wp-json/srl/v1/protest-update`.
 5. Refresh the WordPress protest page to see the interactive verdict cards, blame percentage bar, and Chief Steward sanction.
+
+---
+
+## 5. Using Alternative Models (OpenRouter)
+
+If you prefer to use other models (like Minimax, Qwen, Nemotron, etc.), the workflow includes a disconnected **OpenRouter Model (Alternative)** node.
+
+### Setup Instructions
+
+1. **Create an OpenRouter Account:**
+   Go to [openrouter.ai](https://openrouter.ai) and create an account. Generate an API Key in your account settings.
+2. **Add Credentials in n8n:**
+   In n8n, go to **Credentials > Add Credential** and search for **OpenAI Custom API**. Create one named "OpenRouter API" and paste your OpenRouter API key.
+3. **Configure the Node:**
+   Open the workflow and double-click the **OpenRouter Model (Alternative)** node. Ensure the **Credential to connect with** is set to your new "OpenRouter API".
+   Change the **Model Name** to your preferred model string (e.g., `minimax/minimax-01` or `qwen/qwen-2.5-72b-instruct`).
+4. **Switch Models:**
+   By default, the `Google Gemini (Strict)` node is connected to the 4 analysis chains. To use OpenRouter instead, delete the connection lines from the Gemini node and draw new lines from the **OpenRouter Model (Alternative)** node to the `ai_languageModel` input of the 4 chain nodes.
