@@ -4,6 +4,9 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Add OpenRouter Alternative Model Support to n8n Workflow
+  - [x] Modify virtual-commissary-workflow.json
+  - [x] Update docs/n8n/README.md instructions
 - [x] Fix Admin Tabs Switching & JavaScript Syntax in Gestion SRL
   - [x] Task 1: Systematic debugging and root cause investigation of admin.js syntax error
   - [x] Task 2: Fix unclosed merge confirmation handler in `assets/js/admin.js`

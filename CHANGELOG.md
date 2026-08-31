@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- OpenRouter Alternative Model Support in n8n workflow (`docs/n8n/virtual-commissary-workflow.json`) to easily use models like Minimax, Qwen, etc.
+- OpenRouter configuration instructions in `docs/n8n/README.md`.
 
 ## [1.12.3] - 2026-08-30
 ### Added
