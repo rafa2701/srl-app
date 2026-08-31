@@ -221,7 +221,51 @@ function srl_allow_commissary_evidence_mimes( $mimes ) {
 }
 
 /**
- * AJAX Handler: Public evidence file direct upload (Cloudflare R2 or local WP).
+ * AJAX Handler: Generate Cloudflare R2 Presigned Upload URL for direct client PUT.
+ */
+function srl_handle_get_r2_upload_url() {
+    $nonce = '';
+    if ( ! empty( $_REQUEST['nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) );
+    } elseif ( ! empty( $_REQUEST['protest_nonce'] ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_REQUEST['protest_nonce'] ) );
+    }
+
+    if ( ! srl_verify_public_nonce( $nonce, 'srl-public-nonce' ) ) {
+        wp_send_json_error( [ 'message' => 'Sesión de seguridad expirada. Por favor recarga la página e intenta de nuevo.' ] );
+    }
+
+    if ( ! class_exists( 'SRL_R2_Uploader' ) || ! SRL_R2_Uploader::is_enabled() ) {
+        wp_send_json_error( [ 'message' => 'Cloudflare R2 no está activo en el sistema.' ] );
+    }
+
+    $file_name = isset( $_POST['filename'] ) ? sanitize_file_name( $_POST['filename'] ) : '';
+    $file_type = isset( $_POST['filetype'] ) ? sanitize_text_field( $_POST['filetype'] ) : 'application/octet-stream';
+
+    if ( empty( $file_name ) ) {
+        wp_send_json_error( [ 'message' => 'Nombre de archivo no proporcionado.' ] );
+    }
+
+    $allowed_extensions = [ 'mp4', 'webm', 'mov', 'avi', 'mkv', 'png', 'jpg', 'jpeg' ];
+    $ext = strtolower( pathinfo( $file_name, PATHINFO_EXTENSION ) );
+
+    if ( ! in_array( $ext, $allowed_extensions, true ) ) {
+        wp_send_json_error( [ 'message' => 'Formato de archivo no permitido (.' . $ext . '). Sube un archivo de video o imagen permitido.' ] );
+    }
+
+    $result = SRL_R2_Uploader::get_presigned_put_url( $file_name, $file_type );
+
+    if ( ! empty( $result['success'] ) ) {
+        wp_send_json_success( $result );
+    } else {
+        wp_send_json_error( [ 'message' => $result['error'] ?? 'Error al generar URL de subida a R2.' ] );
+    }
+}
+add_action( 'wp_ajax_srl_get_r2_upload_url', 'srl_handle_get_r2_upload_url' );
+add_action( 'wp_ajax_nopriv_srl_get_r2_upload_url', 'srl_handle_get_r2_upload_url' );
+
+/**
+ * AJAX Handler: Public evidence file direct upload (Local WP fallback).
  */
 function srl_handle_upload_evidence_file() {
     $max_formatted = size_format( wp_max_upload_size() );

@@ -6,12 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [1.12.6] - 2026-08-31
+## [1.13.0] - 2026-08-31
+### Added
+- **Direct Presigned Cloudflare R2 Uploads**: Implemented S3 SigV4 presigned PUT URL generation (`SRL_R2_Uploader::get_presigned_put_url()`) and AJAX endpoint `srl_get_r2_upload_url`.
+- Client-side direct streaming to Cloudflare R2 global CDN with real-time progress bar in `[srl_protest_form]`, completely bypassing WordPress PHP `post_max_size` and hosting server limitations.
+- Updated Cloudflare R2 setup documentation with `srlatinoamerica.yzz.me` domain in CORS policy.
 ### Fixed
-- Added dynamic server maximum upload limit detection (`wp_max_upload_size()`) in localized script and shortcode UI labels.
-- Added client-side pre-validation against host server upload limits before starting uploads.
-- Handled PHP `post_max_size` payload truncation to prevent empty POST body nonce failures when uploading files larger than the hosting limit.
-- Bumped plugin version to `1.12.6` for browser asset cache busting.
+- Dynamic server upload limit fallback (`wp_max_upload_size()`) and early detection of payload truncation for local uploads.
+- Bumped plugin version to `1.13.0`.
 
 ## [1.12.5] - 2026-08-31
 ### Fixed

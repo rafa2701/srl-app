@@ -4,14 +4,13 @@
 - (Add upcoming tasks here)
 
 ## Completed
-- [x] Fix Evidence File Upload & Dropzone Click Trigger in Protest Form
-  - [x] Task 1: Systematic debugging of `Maximum call stack size exceeded` and AJAX 400 Bad Request
-  - [x] Task 2: Fix dropzone click event bubbling loop on file input in `assets/js/public.js`
-  - [x] Task 3: Add client-side size & extension validation and informative HTTP status error handling in `assets/js/public.js`
-  - [x] Task 4: Move hidden input outside dropzone container, add temporary allowed MIME types filter, and graceful JSON error reporting in `shortcode-protest-form.php`
-  - [x] Task 5: Add robust `srl_verify_public_nonce` supporting guest/cached/admin nonces across public AJAX handlers
-  - [x] Task 6: Add dynamic server max upload limit detection (`wp_max_upload_size()`) and early `post_max_size` overflow check
-  - [x] Task 7: Bump plugin version to 1.12.6 for browser cache busting
+- [x] Cloudflare R2 Direct Presigned Upload & Upload Limits Handling
+  - [x] Task 1: Add `SRL_R2_Uploader::get_presigned_put_url()` for direct S3 SigV4 client uploads bypassing WordPress PHP limits
+  - [x] Task 2: Add `srl_get_r2_upload_url` AJAX endpoint in `shortcode-protest-form.php`
+  - [x] Task 3: Implement client-side direct `PUT` streaming to Cloudflare R2 with progress bar in `assets/js/public.js`
+  - [x] Task 4: Dynamic server upload limit fallback & early `post_max_size` overflow detection
+  - [x] Task 5: Update CORS documentation for `https://srlatinoamerica.yzz.me` in `docs/cloudflare-r2-setup.md`
+  - [x] Task 6: Bump plugin version to 1.13.0 for browser cache busting
 - [x] Add OpenRouter Alternative Model Support to n8n Workflow
   - [x] Modify virtual-commissary-workflow.json
   - [x] Update docs/n8n/README.md instructions

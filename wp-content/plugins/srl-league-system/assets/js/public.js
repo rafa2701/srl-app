@@ -218,13 +218,14 @@ jQuery(document).ready(function($) {
         function uploadEvidenceFile(file) {
             if (!file) return;
 
-            const serverMaxBytes = (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.max_upload_size) ? parseInt(srl_ajax_object.max_upload_size, 10) : (20 * 1024 * 1024);
-            const serverMaxFormatted = (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.max_upload_size_formatted) ? srl_ajax_object.max_upload_size_formatted : '20 MB';
+            const isR2Enabled = (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.r2_enabled);
+            const maxAllowedBytes = isR2Enabled ? (100 * 1024 * 1024) : ((typeof srl_ajax_object !== 'undefined' && srl_ajax_object.max_upload_size) ? parseInt(srl_ajax_object.max_upload_size, 10) : (20 * 1024 * 1024));
+            const maxAllowedFormatted = isR2Enabled ? '100 MB' : ((typeof srl_ajax_object !== 'undefined' && srl_ajax_object.max_upload_size_formatted) ? srl_ajax_object.max_upload_size_formatted : '20 MB');
 
-            if (file.size > serverMaxBytes) {
+            if (file.size > maxAllowedBytes) {
                 progressContainer.show();
                 progressFill.css('width', '0%');
-                statusText.html('<span style="color: #dc3545;">✖ El archivo seleccionado (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB) supera el límite de subida del servidor (' + serverMaxFormatted + '). Pega un enlace de video (YouTube/Drive/Twitch) abajo o sube un archivo más liviano.</span>');
+                statusText.html('<span style="color: #dc3545;">✖ El archivo seleccionado (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB) supera el límite permitido (' + maxAllowedFormatted + '). Pega un enlace de video (YouTube/Drive/Twitch) abajo o sube un archivo más liviano.</span>');
                 return;
             }
 
@@ -239,65 +240,132 @@ jQuery(document).ready(function($) {
 
             const currentNonce = $('#protest_nonce').val() || (typeof srl_ajax_object !== 'undefined' && srl_ajax_object.nonce ? srl_ajax_object.nonce : '');
 
-            const formData = new FormData();
-            formData.append('action', 'srl_upload_evidence_file');
-            formData.append('nonce', currentNonce);
-            formData.append('protest_nonce', currentNonce);
-            formData.append('evidence_file', file);
-
             progressContainer.show();
             progressFill.css('width', '0%');
-            statusText.text('Subiendo ' + file.name + '...');
+            statusText.text('Preparando subida de ' + file.name + '...');
 
-            $.ajax({
-                url: srl_ajax_object.ajax_url + '?action=srl_upload_evidence_file&nonce=' + encodeURIComponent(currentNonce),
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                xhr: function() {
-                    const xhr = new window.XMLHttpRequest();
-                    xhr.upload.addEventListener('progress', function(evt) {
-                        if (evt.lengthComputable) {
-                            const percentComplete = Math.round((evt.loaded / evt.total) * 100);
-                            progressFill.css('width', percentComplete + '%');
-                            statusText.text('Subiendo ' + file.name + ' (' + percentComplete + '%)...');
-                        }
-                    }, false);
-                    return xhr;
-                },
-                success: function(response) {
-                    if (response && response.success && response.data && response.data.url) {
-                        progressFill.css('width', '100%');
-                        const storageLabel = response.data.storage === 'r2' ? 'Cloudflare R2' : 'Servidor';
-                        statusText.html('<span style="color: #28a745;">✔ Subido correctamente (' + storageLabel + '): <strong>' + response.data.filename + '</strong></span>');
+            // Direct Cloudflare R2 Upload Workflow (Bypasses WordPress PHP server limits completely)
+            if (isR2Enabled) {
+                $.ajax({
+                    url: srl_ajax_object.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'srl_get_r2_upload_url',
+                        nonce: currentNonce,
+                        filename: file.name,
+                        filetype: file.type || 'application/octet-stream'
+                    },
+                    success: function(presignedRes) {
+                        if (presignedRes && presignedRes.success && presignedRes.data && presignedRes.data.upload_url) {
+                            const uploadUrl = presignedRes.data.upload_url;
+                            const publicUrl = presignedRes.data.public_url;
+                            const filename = presignedRes.data.filename || file.name;
 
-                        // Append URL to evidence textarea
-                        const currentVal = evidenceTextarea.val().trim();
-                        if (currentVal) {
-                            evidenceTextarea.val(currentVal + '\n' + response.data.url);
+                            // Perform direct PUT to Cloudflare R2
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('PUT', uploadUrl, true);
+                            if (file.type) {
+                                xhr.setRequestHeader('Content-Type', file.type);
+                            }
+
+                            xhr.upload.addEventListener('progress', function(evt) {
+                                if (evt.lengthComputable) {
+                                    const percent = Math.round((evt.loaded / evt.total) * 100);
+                                    progressFill.css('width', percent + '%');
+                                    statusText.text('Subiendo a Cloudflare R2: ' + filename + ' (' + percent + '%)...');
+                                }
+                            }, false);
+
+                            xhr.onload = function() {
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    progressFill.css('width', '100%');
+                                    statusText.html('<span style="color: #28a745;">✔ Subido correctamente (Cloudflare R2): <strong>' + filename + '</strong></span>');
+
+                                    // Append URL to evidence textarea
+                                    const currentVal = evidenceTextarea.val().trim();
+                                    if (currentVal) {
+                                        evidenceTextarea.val(currentVal + '\n' + publicUrl);
+                                    } else {
+                                        evidenceTextarea.val(publicUrl);
+                                    }
+                                } else {
+                                    statusText.html('<span style="color: #dc3545;">✖ Error al guardar en Cloudflare R2 (HTTP ' + xhr.status + '). Verifica la configuración de CORS de tu bucket R2.</span>');
+                                }
+                            };
+
+                            xhr.onerror = function() {
+                                statusText.html('<span style="color: #dc3545;">✖ Error de conexión con Cloudflare R2. Verifica que tu bucket R2 tenga una regla de CORS que permita peticiones PUT desde tu dominio.</span>');
+                            };
+
+                            xhr.send(file);
                         } else {
-                            evidenceTextarea.val(response.data.url);
+                            const errMsg = (presignedRes && presignedRes.data && presignedRes.data.message) ? presignedRes.data.message : 'Error al obtener autorización de subida a R2.';
+                            statusText.html('<span style="color: #dc3545;">✖ ' + errMsg + '</span>');
                         }
-                    } else {
-                        const errMsg = (response && response.data && response.data.message) ? response.data.message : 'Error al procesar el archivo en el servidor.';
+                    },
+                    error: function(xhr) {
+                        statusText.html('<span style="color: #dc3545;">✖ Error de comunicación al solicitar subida a Cloudflare R2.</span>');
+                    }
+                });
+            } else {
+                // Fallback: Local WordPress Upload via admin-ajax.php
+                const formData = new FormData();
+                formData.append('action', 'srl_upload_evidence_file');
+                formData.append('nonce', currentNonce);
+                formData.append('protest_nonce', currentNonce);
+                formData.append('evidence_file', file);
+
+                statusText.text('Subiendo ' + file.name + '...');
+
+                $.ajax({
+                    url: srl_ajax_object.ajax_url + '?action=srl_upload_evidence_file&nonce=' + encodeURIComponent(currentNonce),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    xhr: function() {
+                        const xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (evt.lengthComputable) {
+                                const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                                progressFill.css('width', percentComplete + '%');
+                                statusText.text('Subiendo ' + file.name + ' (' + percentComplete + '%)...');
+                            }
+                        }, false);
+                        return xhr;
+                    },
+                    success: function(response) {
+                        if (response && response.success && response.data && response.data.url) {
+                            progressFill.css('width', '100%');
+                            statusText.html('<span style="color: #28a745;">✔ Subido correctamente (Servidor): <strong>' + response.data.filename + '</strong></span>');
+
+                            // Append URL to evidence textarea
+                            const currentVal = evidenceTextarea.val().trim();
+                            if (currentVal) {
+                                evidenceTextarea.val(currentVal + '\n' + response.data.url);
+                            } else {
+                                evidenceTextarea.val(response.data.url);
+                            }
+                        } else {
+                            const errMsg = (response && response.data && response.data.message) ? response.data.message : 'Error al procesar el archivo en el servidor.';
+                            statusText.html('<span style="color: #dc3545;">✖ ' + errMsg + '</span>');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errMsg = 'Error de red al subir el archivo.';
+                        if (xhr.status === 400) {
+                            errMsg = 'El servidor rechazó la subida (400 Bad Request). El archivo excede el tamaño máximo permitido por PHP (' + maxAllowedFormatted + ').';
+                        } else if (xhr.status === 413) {
+                            errMsg = 'El archivo supera el tamaño máximo permitido por el servidor web (413 Payload Too Large).';
+                        } else if (xhr.status === 403) {
+                            errMsg = 'Sesión expirada (403 Forbidden). Por favor recarga la página.';
+                        } else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                            errMsg = xhr.responseJSON.data.message;
+                        }
                         statusText.html('<span style="color: #dc3545;">✖ ' + errMsg + '</span>');
                     }
-                },
-                error: function(xhr) {
-                    let errMsg = 'Error de red al subir el archivo.';
-                    if (xhr.status === 400) {
-                        errMsg = 'El servidor rechazó la subida (400 Bad Request). El archivo excede el tamaño máximo permitido por PHP (post_max_size / upload_max_filesize).';
-                    } else if (xhr.status === 413) {
-                        errMsg = 'El archivo supera el tamaño máximo permitido por el servidor web (413 Payload Too Large).';
-                    } else if (xhr.status === 403) {
-                        errMsg = 'Sesión expirada (403 Forbidden). Por favor recarga la página.';
-                    } else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
-                        errMsg = xhr.responseJSON.data.message;
-                    }
-                    statusText.html('<span style="color: #dc3545;">✖ ' + errMsg + '</span>');
-                }
-            });
+                });
+            }
         }
     }
 

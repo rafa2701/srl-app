@@ -52,6 +52,7 @@ Para permitir que el navegador suba archivos directamente sin bloqueos de seguri
 [
   {
     "AllowedOrigins": [
+      "https://srlatinoamerica.yzz.me",
       "https://simracinglatinoamerica.com",
       "http://localhost",
       "http://localhost:*"
