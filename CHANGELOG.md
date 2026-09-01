@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-09-01
+### Added
+- Implemented native WP-Cron FTP synchronization (`ftp-sync.php`) to bypass web bot protection challenges (like `aes.js`) when receiving n8n verdict callbacks.
+### Fixed
+- Fixed race condition in Virtual Commissary n8n workflow (`docs/n8n/virtual-commissary-workflow.json`) by wiring the 3 Persona analysis nodes sequentially instead of in parallel to prevent execution errors on the Chief Steward consensus node.
+- Prevented AI Persona hallucination when video links are inaccessible by adding an `insufficient_evidence` property to the JSON schema and updating persona system prompts.
+
 ## [1.13.0] - 2026-08-31
 ### Added
 - **Direct Presigned Cloudflare R2 Uploads**: Implemented S3 SigV4 presigned PUT URL generation (`SRL_R2_Uploader::get_presigned_put_url()`) and AJAX endpoint `srl_get_r2_upload_url`.
