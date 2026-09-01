@@ -192,16 +192,6 @@
             "node": "Analyze: Strict Persona",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Analyze: Lax Persona",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Analyze: Balanced Persona",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -236,7 +226,7 @@
       "main": [
         [
           {
-            "node": "Consensus: Chief Steward",
+            "node": "Analyze: Lax Persona",
             "type": "main",
             "index": 0
           }
@@ -247,7 +237,7 @@
       "main": [
         [
           {
-            "node": "Consensus: Chief Steward",
+            "node": "Analyze: Balanced Persona",
             "type": "main",
             "index": 0
           }
