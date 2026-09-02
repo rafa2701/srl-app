@@ -1,7 +1,7 @@
 # SRL League System TODO
 
 ## Current Sprint
-- (Add upcoming tasks here)
+- [ ] Implement Commissary Visibility Controls (admin only/public)
 
 ## Completed
 - [x] Replace Virtual Commissary FTP Sync with Cloudflare R2 Sync
