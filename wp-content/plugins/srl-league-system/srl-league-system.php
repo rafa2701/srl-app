@@ -441,3 +441,19 @@ function srl_force_auto_update_filter( $update, $item ) {
     }
     return $update;
 }
+
+/**
+ * Restringe el acceso al Comisariato si está configurado como "Solo Administradores".
+ */
+add_action( 'template_redirect', 'srl_restrict_commissary_access' );
+function srl_restrict_commissary_access() {
+    $visibility = get_option( 'srl_commissary_visibility', 'admin_only' );
+    
+    if ( $visibility === 'admin_only' && ! current_user_can( 'manage_options' ) ) {
+        // Verificar si la página actual es el comisariato o un post type de protesta
+        if ( is_page( 'comisariato' ) || is_singular( 'srl_protest' ) || is_post_type_archive( 'srl_protest' ) ) {
+            wp_safe_redirect( home_url() );
+            exit;
+        }
+    }
+}
