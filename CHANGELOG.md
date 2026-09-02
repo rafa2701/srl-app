@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.9] - 2026-09-02
+### Changed
+- Release build bump to trigger GitHub Actions release packaging and update notification for live probe logs and resilient verdict sync.
+
 ## [1.13.8] - 2026-09-02
 ### Added
 - Real-time probe diagnostic logging system (`srl_commissary_probe_logs`) tracking every sync attempt with HTTP status codes, URL tested, and response messages.
