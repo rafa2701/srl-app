@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.5] - 2026-09-02
+### Added
+- Added an option in Virtual Commissary settings to fetch verdicts from a public URL (e.g. custom domain mapped to an R2 bucket) instead of relying solely on the S3 API for retrieval.
+
 ## [1.13.4] - 2026-09-02
 ### Fixed
 - Completely bypassed WP-Cron limitations and 403 Forbidden loopback requests on InfinityFree by replacing `wp_schedule_event` with a lightweight, transient-based `init` hook cron in `r2-sync.php`.

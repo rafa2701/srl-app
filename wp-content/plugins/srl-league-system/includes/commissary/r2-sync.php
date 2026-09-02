@@ -48,13 +48,32 @@ function srl_process_r2_verdicts_handler() {
         
         $object_key_folder = 'srl-verdicts/protest_' . $protest_id . '.json';
         $object_key_root = 'protest_' . $protest_id . '.json';
+        $public_verdicts_url = get_option( 'srl_virtual_commissary_verdicts_url', '' );
 
-        // Attempt to fetch the verdict file from folder
-        $response = SRL_R2_Uploader::get_object( $object_key_folder );
-        $object_key = $object_key_folder;
+        $response = array( 'success' => false );
+        $object_key = $object_key_root; // Default fallback for deletion
+
+        if ( ! empty( $public_verdicts_url ) ) {
+            // Fetch directly from the public URL
+            $url = trailingslashit( $public_verdicts_url ) . $object_key_root;
+            $http_response = wp_remote_get( $url, [ 'timeout' => 15 ] );
+            
+            if ( ! is_wp_error( $http_response ) && wp_remote_retrieve_response_code( $http_response ) === 200 ) {
+                $response = [
+                    'success' => true,
+                    'body'    => wp_remote_retrieve_body( $http_response ),
+                ];
+            }
+        }
 
         if ( ! $response['success'] ) {
-            // Try root path
+            // Attempt to fetch the verdict file from folder via R2 API
+            $response = SRL_R2_Uploader::get_object( $object_key_folder );
+            $object_key = $object_key_folder;
+        }
+
+        if ( ! $response['success'] ) {
+            // Try root path via R2 API
             $response = SRL_R2_Uploader::get_object( $object_key_root );
             $object_key = $object_key_root;
         }

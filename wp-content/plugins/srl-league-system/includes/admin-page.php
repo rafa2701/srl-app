@@ -203,6 +203,14 @@ function srl_render_admin_page() {
                             </td>
                         </tr>
                         <tr valign="top">
+                            <th scope="row">URL de Veredictos (Públicos)</th>
+                            <td>
+                                <?php $verdicts_url = get_option( 'srl_virtual_commissary_verdicts_url', 'https://srl-veredicts.imevca.qzz.io' ); ?>
+                                <input type="url" name="srl_virtual_commissary_verdicts_url" value="<?php echo esc_attr( $verdicts_url ); ?>" class="large-text" placeholder="https://srl-veredicts.imevca.qzz.io" />
+                                <p class="description">Si los veredictos JSON se suben a un bucket público (ej. R2 con dominio personalizado), ingresa la URL base aquí. El plugin buscará <code>/protest_ID.json</code> en esta URL. Déjalo en blanco para usar la API SigV4 nativa de S3/R2.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
                             <th scope="row">API Secret Key (Autenticación)</th>
                             <td>
                                 <input type="text" name="srl_api_secret_key" id="srl_api_secret_key" value="<?php echo esc_attr( $api_secret ); ?>" class="regular-text" style="font-family: monospace;" />
