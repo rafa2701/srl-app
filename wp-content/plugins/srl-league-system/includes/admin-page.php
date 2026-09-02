@@ -196,6 +196,17 @@ function srl_render_admin_page() {
                     ?>
                     <table class="form-table">
                         <tr valign="top">
+                            <th scope="row">Visibilidad del Comisariato</th>
+                            <td>
+                                <?php $commissary_visibility = get_option( 'srl_commissary_visibility', 'admin_only' ); ?>
+                                <select name="srl_commissary_visibility">
+                                    <option value="public" <?php selected( $commissary_visibility, 'public' ); ?>>Público (Cualquier usuario puede ver y enviar reclamos)</option>
+                                    <option value="admin_only" <?php selected( $commissary_visibility, 'admin_only' ); ?>>Solo Administradores (Oculto y bloqueado para pilotos/invitados)</option>
+                                </select>
+                                <p class="description">Controla quién puede acceder a la página del comisariato y sus registros.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
                             <th scope="row">URL del Webhook de n8n</th>
                             <td>
                                 <input type="url" name="srl_virtual_commissary_webhook_url" value="<?php echo esc_attr( $webhook_url ); ?>" class="large-text" placeholder="https://n8n.tu-servidor.com/webhook/srl-virtual-commissary" />
