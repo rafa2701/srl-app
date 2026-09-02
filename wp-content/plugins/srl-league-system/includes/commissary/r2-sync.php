@@ -56,10 +56,19 @@ function srl_process_r2_verdicts_handler() {
 
     foreach ( $query->posts as $post ) {
         $protest_id = $post->ID;
-        $object_key = 'srl-verdicts/protest_' . $protest_id . '.json';
+        
+        $object_key_folder = 'srl-verdicts/protest_' . $protest_id . '.json';
+        $object_key_root = 'protest_' . $protest_id . '.json';
 
-        // Attempt to fetch the verdict file
-        $response = SRL_R2_Uploader::get_object( $object_key );
+        // Attempt to fetch the verdict file from folder
+        $response = SRL_R2_Uploader::get_object( $object_key_folder );
+        $object_key = $object_key_folder;
+
+        if ( ! $response['success'] ) {
+            // Try root path
+            $response = SRL_R2_Uploader::get_object( $object_key_root );
+            $object_key = $object_key_root;
+        }
 
         if ( ! $response['success'] ) {
             // File might not be ready yet (404) or another error occurred. Skip for now.

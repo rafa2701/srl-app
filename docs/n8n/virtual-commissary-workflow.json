@@ -266,7 +266,7 @@
       "main": [
         [
           {
-            "node": "Upload Verdict via FTP",
+            "node": "Upload Verdict to Cloudflare R2",
             "type": "main",
             "index": 0
           }

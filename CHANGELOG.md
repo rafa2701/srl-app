@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.3] - 2026-09-01
+### Fixed
+- Fixed R2 sync failing to find verdicts uploaded to the root of the Cloudflare R2 bucket instead of the `srl-verdicts` folder by making `r2-sync.php` check both locations.
+
 ## [1.13.2] - 2026-09-01
 ### Changed
 - Replaced FTP synchronization with Cloudflare R2 object polling (`r2-sync.php`) to bypass InfinityFree FTP server blocks on automated connections.
