@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.2] - 2026-09-01
+### Changed
+- Replaced FTP synchronization with Cloudflare R2 object polling (`r2-sync.php`) to bypass InfinityFree FTP server blocks on automated connections.
+- Refactored `SRL_R2_Uploader` to include S3 SigV4 `get_object` and `delete_object` methods.
+
 ## [1.13.1] - 2026-09-01
 ### Added
 - Implemented native WP-Cron FTP synchronization (`ftp-sync.php`) to bypass web bot protection challenges (like `aes.js`) when receiving n8n verdict callbacks.

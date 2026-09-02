@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- *      Version:           1.13.1
+ * Version:           1.13.2
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,8 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.13.1' );
+define( 'SRL_PLUGIN_VERSION', '1.13.2' );
+define( 'SRL_LEAGUE_SYSTEM_PLUGIN_DIR', SRL_PLUGIN_PATH );
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -250,7 +251,7 @@ require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/class-srl-r2-uploader.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/post-type-protest.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/rest-api.php';
-require_once SRL_PLUGIN_PATH . 'includes/commissary/ftp-sync.php';
+require_once SRL_LEAGUE_SYSTEM_PLUGIN_DIR . 'includes/commissary/r2-sync.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/admin-meta-boxes.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/shortcode-protest-form.php';
 

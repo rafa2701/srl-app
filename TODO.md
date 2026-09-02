@@ -4,6 +4,10 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Replace Virtual Commissary FTP Sync with Cloudflare R2 Sync
+  - [x] Task 1: Refactor `SRL_R2_Uploader` to include S3 SigV4 `get_object` and `delete_object`
+  - [x] Task 2: Create `r2-sync.php` background task to poll Cloudflare R2
+  - [x] Task 3: Replace n8n FTP node with AWS S3 node in `virtual-commissary-workflow.json`
 <<<<<<< HEAD
 - [x] Cloudflare R2 Direct Presigned Upload & Upload Limits Handling
   - [x] Task 1: Add `SRL_R2_Uploader::get_presigned_put_url()` for direct S3 SigV4 client uploads bypassing WordPress PHP limits

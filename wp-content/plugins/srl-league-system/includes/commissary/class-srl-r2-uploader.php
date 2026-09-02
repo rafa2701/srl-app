@@ -26,35 +26,22 @@ class SRL_R2_Uploader {
     }
 
     /**
-     * Upload a file to Cloudflare R2.
+     * Send a signed AWS SigV4 request to R2.
      *
-     * @param string $file_path Local path to file.
-     * @param string $file_name Target filename/object key.
-     * @param string $mime_type Content MIME type.
-     * @return array Array with success status, url, and error message if failed.
+     * @param string $method HTTP method (GET, PUT, DELETE)
+     * @param string $object_key Target object key
+     * @param string $file_content Body content (for PUT)
+     * @param string $mime_type MIME type (for PUT)
+     * @return array|WP_Error Response from wp_remote_request
      */
-    public static function upload_file( $file_path, $file_name, $mime_type = 'application/octet-stream' ) {
-        if ( ! file_exists( $file_path ) ) {
-            return [ 'success' => false, 'error' => 'El archivo temporal no existe.' ];
-        }
-
+    private static function send_signed_request( $method, $object_key, $file_content = '', $mime_type = '' ) {
         $account_id  = trim( get_option( 'srl_r2_account_id', '' ) );
         $access_key  = trim( get_option( 'srl_r2_access_key_id', '' ) );
         $secret_key  = trim( get_option( 'srl_r2_secret_access_key', '' ) );
         $bucket_name = trim( get_option( 'srl_r2_bucket_name', '' ) );
-        $public_url  = untrailingslashit( trim( get_option( 'srl_r2_public_url', '' ) ) );
-
-        $file_content = file_get_contents( $file_path );
-        if ( $file_content === false ) {
-            return [ 'success' => false, 'error' => 'No se pudo leer el archivo para subir a R2.' ];
-        }
-
-        // Clean object key
-        $clean_name = sanitize_file_name( $file_name );
-        $object_key = 'evidence/' . date( 'Y/m/' ) . wp_generate_password( 8, false ) . '-' . $clean_name;
 
         $host     = $account_id . '.r2.cloudflarestorage.com';
-        $endpoint = 'https://' . $host . '/' . $bucket_name . '/' . $object_key;
+        $endpoint = 'https://' . $host . '/' . $bucket_name . '/' . ltrim( $object_key, '/' );
         $region   = 'auto';
         $service  = 's3';
 
@@ -65,12 +52,13 @@ class SRL_R2_Uploader {
 
         $payload_hash = hash( 'sha256', $file_content );
 
-        $canonical_uri = '/' . $bucket_name . '/' . $object_key;
+        $canonical_uri = '/' . $bucket_name . '/' . ltrim( $object_key, '/' );
         $canonical_querystring = '';
+        
         $canonical_headers = "host:" . $host . "\n" . "x-amz-content-sha256:" . $payload_hash . "\n" . "x-amz-date:" . $amz_date . "\n";
         $signed_headers = 'host;x-amz-content-sha256;x-amz-date';
 
-        $canonical_request = "PUT\n" . $canonical_uri . "\n" . $canonical_querystring . "\n" . $canonical_headers . "\n" . $signed_headers . "\n" . $payload_hash;
+        $canonical_request = $method . "\n" . $canonical_uri . "\n" . $canonical_querystring . "\n" . $canonical_headers . "\n" . $signed_headers . "\n" . $payload_hash;
 
         $algorithm = 'AWS4-HMAC-SHA256';
         $credential_scope = $date_stamp . '/' . $region . '/' . $service . '/aws4_request';
@@ -87,18 +75,100 @@ class SRL_R2_Uploader {
 
         $headers = [
             'Host'                 => $host,
-            'Content-Type'         => $mime_type,
             'x-amz-date'           => $amz_date,
             'x-amz-content-sha256' => $payload_hash,
             'Authorization'        => $authorization_header,
         ];
+        
+        if ( ! empty( $mime_type ) ) {
+            $headers['Content-Type'] = $mime_type;
+        }
 
-        $response = wp_remote_request( $endpoint, [
-            'method'    => 'PUT',
+        $args = [
+            'method'    => $method,
             'headers'   => $headers,
-            'body'      => $file_content,
             'timeout'   => 60,
-        ] );
+        ];
+        
+        if ( $method === 'PUT' || $method === 'POST' ) {
+            $args['body'] = $file_content;
+        }
+
+        return wp_remote_request( $endpoint, $args );
+    }
+
+    /**
+     * Get an object from R2.
+     *
+     * @param string $object_key Target object key.
+     * @return array Array with success status and body/error message.
+     */
+    public static function get_object( $object_key ) {
+        if ( ! self::is_enabled() ) {
+            return [ 'success' => false, 'error' => 'R2 not enabled' ];
+        }
+
+        $response = self::send_signed_request( 'GET', $object_key );
+
+        if ( is_wp_error( $response ) ) {
+            return [ 'success' => false, 'error' => $response->get_error_message() ];
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        if ( $code !== 200 ) {
+            return [ 'success' => false, 'error' => 'HTTP ' . $code, 'code' => $code ];
+        }
+
+        return [ 'success' => true, 'body' => wp_remote_retrieve_body( $response ) ];
+    }
+
+    /**
+     * Delete an object from R2.
+     *
+     * @param string $object_key Target object key.
+     * @return array Array with success status and error message.
+     */
+    public static function delete_object( $object_key ) {
+        if ( ! self::is_enabled() ) {
+            return [ 'success' => false, 'error' => 'R2 not enabled' ];
+        }
+
+        $response = self::send_signed_request( 'DELETE', $object_key );
+
+        if ( is_wp_error( $response ) ) {
+            return [ 'success' => false, 'error' => $response->get_error_message() ];
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        if ( $code !== 204 && $code !== 200 ) {
+            return [ 'success' => false, 'error' => 'HTTP ' . $code, 'code' => $code ];
+        }
+
+        return [ 'success' => true ];
+    }
+
+    /**
+     * Upload a file to Cloudflare R2.
+     *
+     * @param string $file_path Local path to file.
+     * @param string $file_name Target filename/object key.
+     * @param string $mime_type Content MIME type.
+     * @return array Array with success status, url, and error message if failed.
+     */
+    public static function upload_file( $file_path, $file_name, $mime_type = 'application/octet-stream' ) {
+        if ( ! file_exists( $file_path ) ) {
+            return [ 'success' => false, 'error' => 'El archivo temporal no existe.' ];
+        }
+
+        $file_content = file_get_contents( $file_path );
+        if ( $file_content === false ) {
+            return [ 'success' => false, 'error' => 'No se pudo leer el archivo para subir a R2.' ];
+        }
+
+        $clean_name = sanitize_file_name( $file_name );
+        $object_key = 'evidence/' . date( 'Y/m/' ) . wp_generate_password( 8, false ) . '-' . $clean_name;
+
+        $response = self::send_signed_request( 'PUT', $object_key, $file_content, $mime_type );
 
         if ( is_wp_error( $response ) ) {
             return [ 'success' => false, 'error' => $response->get_error_message() ];
@@ -110,8 +180,13 @@ class SRL_R2_Uploader {
             return [ 'success' => false, 'error' => 'Error R2 HTTP ' . $code . ': ' . wp_strip_all_tags( $body ) ];
         }
 
-        // Generate public file URL
-        $final_url = ! empty( $public_url ) ? $public_url . '/' . $object_key : $endpoint;
+        $public_url  = untrailingslashit( trim( get_option( 'srl_r2_public_url', '' ) ) );
+        $account_id  = trim( get_option( 'srl_r2_account_id', '' ) );
+        $bucket_name = trim( get_option( 'srl_r2_bucket_name', '' ) );
+        $host     = $account_id . '.r2.cloudflarestorage.com';
+        $endpoint = 'https://' . $host . '/' . $bucket_name . '/' . ltrim( $object_key, '/' );
+
+        $final_url = ! empty( $public_url ) ? $public_url . '/' . ltrim( $object_key, '/' ) : $endpoint;
 
         return [
             'success' => true,
