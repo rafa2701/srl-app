@@ -635,5 +635,111 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // --- Manual Check Verdict Now ---
+    $(document).on('click', '#srl-check-verdict-now-btn', function (e) {
+        e.preventDefault();
+        const btn = $(this);
+        const protestId = btn.data('post-id');
+        const originalText = btn.html();
+
+        btn.prop('disabled', true).html('<span class="dashicons dashicons-update spin" style="vertical-align: middle;"></span> Comprobando...');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_manual_check_verdict',
+                nonce: srl_ajax_object.nonce,
+                protest_id: protestId,
+            },
+            success: function (response) {
+                btn.prop('disabled', false).html(originalText);
+                if (response.success) {
+                    if (response.data.status === 'completed') {
+                        alert('¡Veredicto encontrado y procesado con éxito!');
+                        location.reload();
+                    } else {
+                        const probe = response.data.last_probe;
+                        let msg = response.data.message;
+                        if (probe) {
+                            msg += '\n\nDetalle: HTTP ' + probe.http_code + ' (' + probe.status + ')\nURL: ' + probe.target_url + '\n' + probe.message;
+                        }
+                        alert(msg);
+                        location.reload();
+                    }
+                } else {
+                    alert('Error: ' + response.data.message);
+                }
+            },
+            error: function () {
+                btn.prop('disabled', false).html(originalText);
+                alert('Error de conexión al comprobar el veredicto.');
+            }
+        });
+    });
+
+    // --- Trigger Global Sync in Settings ---
+    $(document).on('click', '#srl-trigger-global-sync-btn', function (e) {
+        e.preventDefault();
+        const btn = $(this);
+        const originalText = btn.html();
+
+        btn.prop('disabled', true).html('<span class="dashicons dashicons-update spin" style="vertical-align: middle;"></span> Sondeando...');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_trigger_global_sync',
+                nonce: srl_ajax_object.nonce,
+            },
+            success: function (response) {
+                btn.prop('disabled', false).html(originalText);
+                if (response.success) {
+                    alert(response.data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data.message);
+                }
+            },
+            error: function () {
+                btn.prop('disabled', false).html(originalText);
+                alert('Error de conexión al ejecutar el sondeo.');
+            }
+        });
+    });
+
+    // --- Clear Probe Logs in Settings ---
+    $(document).on('click', '#srl-clear-probe-logs-btn', function (e) {
+        e.preventDefault();
+        if (!confirm('¿Estás seguro de que deseas eliminar el historial de logs de sondeo?')) {
+            return;
+        }
+
+        const btn = $(this);
+        btn.prop('disabled', true);
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_clear_probe_logs',
+                nonce: srl_ajax_object.nonce,
+            },
+            success: function (response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data.message);
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function () {
+                alert('Error de conexión.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
 });
 

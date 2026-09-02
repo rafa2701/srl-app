@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.8] - 2026-09-02
+### Added
+- Real-time probe diagnostic logging system (`srl_commissary_probe_logs`) tracking every sync attempt with HTTP status codes, URL tested, and response messages.
+- Live probe logs table in the WordPress admin under Settings > Virtual Commissary.
+- Manual sync triggers: "Comprobar Veredicto Ahora" button on protest edit screens and "Forzar Sondeo Global Ahora" in settings to bypass the 5-minute cron delay on demand.
+### Fixed
+- Fixed critical blocker in `r2-sync.php` where probes aborted early if S3 API direct upload was not fully configured, preventing public verdict URL checks.
+- Fixed verdict rendering in `admin-meta-boxes.php` to seamlessly handle verdicts without a `chief_steward` wrapper key.
+
 ## [1.13.7] - 2026-09-02
 ### Added
 - Added an option in Virtual Commissary settings to toggle visibility between "Public" and "Admin Only" (`admin_only` by default).

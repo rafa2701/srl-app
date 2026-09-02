@@ -314,6 +314,84 @@ function srl_render_admin_page() {
 
                     <?php submit_button( 'Guardar Configuración del Comisariato' ); ?>
                 </form>
+
+                <div style="margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.2em;">🔍 Registro de Sondeos de Veredictos (Logs en Vivo)</h3>
+                            <p class="description" style="margin: 4px 0 0;">Historial en tiempo real de las peticiones automáticas y manuales que WordPress hace a Cloudflare R2 / Dominio Público para recuperar dictámenes.</p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="srl-trigger-global-sync-btn" class="button button-primary">
+                                <span class="dashicons dashicons-update" style="vertical-align: middle;"></span> Forzar Sondeo Global Ahora
+                            </button>
+                            <button type="button" id="srl-clear-probe-logs-btn" class="button">
+                                <span class="dashicons dashicons-trash" style="vertical-align: middle;"></span> Limpiar Logs
+                            </button>
+                        </div>
+                    </div>
+
+                    <?php
+                    $probe_logs = get_option( 'srl_commissary_probe_logs', [] );
+                    ?>
+                    <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Fecha / Hora</th>
+                                <th style="width: 90px;">Reclamo</th>
+                                <th style="width: 80px;">HTTP</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th>URL / Destino Consultado</th>
+                                <th>Detalle / Mensaje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ( empty( $probe_logs ) ) : ?>
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: #888; padding: 20px;">
+                                        <em>No hay registros de sondeos aún. Haz clic en "Forzar Sondeo Global Ahora" para ejecutar una verificación inmediata.</em>
+                                    </td>
+                                </tr>
+                            <?php else : ?>
+                                <?php foreach ( $probe_logs as $log ) :
+                                    $badge_color = '#555';
+                                    if ( $log['status'] === 'success' || $log['http_code'] == 200 ) {
+                                        $badge_color = '#27ae60';
+                                    } elseif ( $log['status'] === 'pending' || $log['http_code'] == 404 ) {
+                                        $badge_color = '#e67e22';
+                                    } elseif ( $log['status'] === 'http_error' || $log['status'] === 'config_error' || $log['status'] === 'json_invalid' ) {
+                                        $badge_color = '#c0392b';
+                                    }
+                                ?>
+                                    <tr>
+                                        <td><small><?php echo esc_html( $log['time'] ); ?></small></td>
+                                        <td>
+                                            <?php if ( ! empty( $log['protest_id'] ) ) : ?>
+                                                <a href="<?php echo esc_url( get_edit_post_link( $log['protest_id'] ) ); ?>" target="_blank"><strong>#<?php echo esc_html( $log['protest_id'] ); ?></strong></a>
+                                            <?php else : ?>
+                                                <span style="color: #888;">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <code><?php echo esc_html( $log['http_code'] ); ?></code>
+                                        </td>
+                                        <td>
+                                            <span style="background: <?php echo esc_attr( $badge_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase;">
+                                                <?php echo esc_html( $log['status'] ); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <code style="word-break: break-all; font-size: 11px;"><?php echo esc_html( $log['target_url'] ); ?></code>
+                                        </td>
+                                        <td>
+                                            <?php echo esc_html( $log['message'] ); ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

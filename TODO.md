@@ -8,7 +8,6 @@
   - [x] Task 1: Refactor `SRL_R2_Uploader` to include S3 SigV4 `get_object` and `delete_object`
   - [x] Task 2: Create `r2-sync.php` background task to poll Cloudflare R2
   - [x] Task 3: Replace n8n FTP node with AWS S3 node in `virtual-commissary-workflow.json`
-<<<<<<< HEAD
 - [x] Cloudflare R2 Direct Presigned Upload & Upload Limits Handling
   - [x] Task 1: Add `SRL_R2_Uploader::get_presigned_put_url()` for direct S3 SigV4 client uploads bypassing WordPress PHP limits
   - [x] Task 2: Add `srl_get_r2_upload_url` AJAX endpoint in `shortcode-protest-form.php`
@@ -30,7 +29,6 @@
   - [x] Task 5: Add robust `srl_verify_public_nonce` supporting guest/cached/admin nonces across public AJAX handlers
   - [x] Task 6: Add dynamic server max upload limit detection (`wp_max_upload_size()`) and early `post_max_size` overflow check
   - [x] Task 7: Bump plugin version to 1.12.6 for browser cache busting
->>>>>>> e7da1f2 (feat: implement FTP sync for Virtual Commissary verdicts)
 - [x] Add OpenRouter Alternative Model Support to n8n Workflow
   - [x] Modify virtual-commissary-workflow.json
   - [x] Update docs/n8n/README.md instructions
