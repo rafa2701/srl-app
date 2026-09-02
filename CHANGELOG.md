@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- Added an option in Virtual Commissary settings to toggle visibility between "Public" and "Admin Only" (`admin_only` by default).
+- Implemented redirection logic to prevent guest access to the commissary pages and hid the homepage card for non-admin users when visibility is restricted.
 
 ## [1.13.6] - 2026-09-02
 ### Fixed
