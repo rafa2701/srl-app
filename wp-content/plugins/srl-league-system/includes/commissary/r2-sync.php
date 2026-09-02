@@ -84,14 +84,32 @@ function srl_process_r2_verdicts_handler() {
         }
 
         $json_data = $response['body'];
-        $verdict = json_decode( $json_data, true );
+        $raw_verdict = json_decode( $json_data, true );
 
-        if ( ! is_array( $verdict ) ) {
-            // Invalid JSON, mark as failed
+        $verdict = null;
+
+        // Extract JSON if it's wrapped in n8n's [{"text": "```json...```"}] array format
+        if ( is_array( $raw_verdict ) && isset( $raw_verdict[0]['text'] ) ) {
+            $text = $raw_verdict[0]['text'];
+            // Try to extract JSON from markdown block
+            if ( preg_match( '/```(?:json)?\s*(\{.*?\})\s*```/is', $text, $matches ) ) {
+                $verdict = json_decode( $matches[1], true );
+            } else {
+                // Try to decode the whole text just in case it's pure JSON
+                $verdict = json_decode( $text, true );
+            }
+        } else {
+            $verdict = $raw_verdict;
+        }
+
+        if ( ! is_array( $verdict ) || ! isset( $verdict['fault_protesting'] ) ) {
+            // Invalid JSON or missing required fields, mark as failed
             update_post_meta( $protest_id, '_srl_ai_status', 'failed' );
-            update_post_meta( $protest_id, '_srl_ai_error', 'Respuesta JSON inválida de la IA.' );
+            update_post_meta( $protest_id, '_srl_ai_error', 'El formato de respuesta de la IA es inválido o no se pudo extraer el JSON. Raw: ' . substr( $json_data, 0, 150 ) );
             // Clean up the corrupt file from R2
-            SRL_R2_Uploader::delete_object( $object_key );
+            if ( empty( $public_verdicts_url ) ) {
+                SRL_R2_Uploader::delete_object( $object_key );
+            }
             continue;
         }
 
