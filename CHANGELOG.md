@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.4] - 2026-09-02
+### Fixed
+- Completely bypassed WP-Cron limitations and 403 Forbidden loopback requests on InfinityFree by replacing `wp_schedule_event` with a lightweight, transient-based `init` hook cron in `r2-sync.php`.
+
 ## [1.13.3] - 2026-09-01
 ### Fixed
 - Fixed R2 sync failing to find verdicts uploaded to the root of the Cloudflare R2 bucket instead of the `srl-verdicts` folder by making `r2-sync.php` check both locations.
