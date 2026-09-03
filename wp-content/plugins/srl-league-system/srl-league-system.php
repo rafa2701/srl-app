@@ -18,6 +18,8 @@ if ( ! defined( 'WPINC' ) ) die;
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SRL_PLUGIN_VERSION', '1.14.0' );
+define( 'SRL_LEAGUE_SYSTEM_PLUGIN_DIR', SRL_PLUGIN_PATH );
+
 
 // Cargar la librería PhpSpreadsheet
 if ( file_exists( SRL_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
@@ -251,6 +253,7 @@ require_once SRL_PLUGIN_PATH . 'includes/commissary/class-srl-r2-uploader.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/post-type-protest.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/class-srl-protest-voting.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/rest-api.php';
+require_once SRL_LEAGUE_SYSTEM_PLUGIN_DIR . 'includes/commissary/r2-sync.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/admin-meta-boxes.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/shortcode-protest-form.php';
 
@@ -269,6 +272,7 @@ function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_rulebook_updated_at' );
     register_setting( 'srl_settings_group', 'srl_virtual_commissary_webhook_url' );
     register_setting( 'srl_settings_group', 'srl_api_secret_key' );
+    register_setting( 'srl_settings_group', 'srl_virtual_commissary_verdicts_url' );
     register_setting( 'srl_settings_group', 'srl_r2_enabled' );
     register_setting( 'srl_settings_group', 'srl_r2_account_id' );
     register_setting( 'srl_settings_group', 'srl_r2_access_key_id' );
@@ -445,4 +449,46 @@ function srl_force_auto_update_filter( $update, $item ) {
         return true;
     }
     return $update;
+}
+
+/**
+ * Restringe el acceso al Comisariato si está configurado como "Solo Administradores".
+ */
+add_action( 'template_redirect', 'srl_restrict_commissary_access' );
+function srl_restrict_commissary_access() {
+    $visibility = get_option( 'srl_commissary_visibility', 'admin_only' );
+    
+    if ( $visibility === 'admin_only' && ! current_user_can( 'manage_options' ) ) {
+        // Verificar si la página actual es el comisariato o un post type de protesta
+        if ( is_page( 'comisariato' ) || is_singular( 'srl_protest' ) || is_post_type_archive( 'srl_protest' ) ) {
+            wp_safe_redirect( home_url() );
+            exit;
+        }
+    }
+}
+
+/**
+ * Recursively cleans and restores stripped UTF-8 unicode escape sequences in verdict data.
+ * Fixes WordPress unslashed unicode like "u00f3" -> "ó", "u00e1" -> "á", "u202f" -> space.
+ *
+ * @param mixed $data Array or string.
+ * @return mixed Cleaned UTF-8 data.
+ */
+function srl_clean_verdict_utf8( $data ) {
+    if ( is_array( $data ) ) {
+        return array_map( 'srl_clean_verdict_utf8', $data );
+    }
+    if ( is_string( $data ) ) {
+        return preg_replace_callback( '/u([0-9a-fA-F]{4})/', function( $matches ) {
+            $code = hexdec( $matches[1] );
+            if ( $code > 127 ) {
+                if ( function_exists( 'mb_chr' ) ) {
+                    return mb_chr( $code, 'UTF-8' );
+                }
+                return html_entity_decode( '&#' . $code . ';', ENT_NOQUOTES, 'UTF-8' );
+            }
+            return $matches[0];
+        }, $data );
+    }
+    return $data;
 }

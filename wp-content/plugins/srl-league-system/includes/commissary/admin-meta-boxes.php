@@ -112,11 +112,15 @@ function srl_render_protest_ai_verdict_meta_box( $post ) {
     $error = get_post_meta( $post->ID, '_srl_ai_error', true );
     $verdict_raw = get_post_meta( $post->ID, '_srl_ai_verdict', true );
     $verdict = is_string( $verdict_raw ) ? json_decode( $verdict_raw, true ) : $verdict_raw;
+    if ( function_exists( 'srl_clean_verdict_utf8' ) && is_array( $verdict ) ) {
+        $verdict = srl_clean_verdict_utf8( $verdict );
+    }
     $processed_at = get_post_meta( $post->ID, '_srl_ai_processed_at', true );
+    $last_probe = get_post_meta( $post->ID, '_srl_last_probe_log', true );
 
     wp_nonce_field( 'srl_commissary_dispatch_nonce', 'srl_commissary_nonce' );
     ?>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #eee; flex-wrap: wrap; gap: 10px;">
         <div>
             <strong>Estado IA: </strong>
             <?php
@@ -127,8 +131,22 @@ function srl_render_protest_ai_verdict_meta_box( $post ) {
                 default: echo '<strong style="color: #856404;">Pendiente de envío</strong>'; break;
             }
             ?>
+            <?php if ( ! empty( $last_probe ) ) : ?>
+                <div id="srl-last-probe-info" style="font-size: 11px; color: #555; margin-top: 5px;">
+                    <strong>Último sondeo:</strong> <?php echo esc_html( $last_probe['time'] ); ?> &mdash;
+                    <code>HTTP <?php echo esc_html( $last_probe['http_code'] ); ?></code> &mdash;
+                    <em><?php echo esc_html( $last_probe['message'] ); ?></em>
+                </div>
+            <?php endif; ?>
         </div>
-        <div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <?php if ( $status === 'processing' || $status === 'failed' ) : ?>
+                <button type="button" id="srl-check-verdict-now-btn" class="button" data-post-id="<?php echo esc_attr( $post->ID ); ?>">
+                    <span class="dashicons dashicons-search" style="vertical-align: middle; font-size: 15px;"></span>
+                    Comprobar Veredicto Ahora
+                </button>
+            <?php endif; ?>
+
             <button type="button" id="srl-dispatch-ai-btn" class="button button-primary" data-post-id="<?php echo esc_attr( $post->ID ); ?>">
                 <span class="dashicons dashicons-update" style="vertical-align: middle; font-size: 16px;"></span>
                 <?php echo ( $status === 'completed' ) ? 'Re-analizar con Comisariato Virtual' : 'Enviar a Comisariato Virtual (n8n)'; ?>
@@ -142,12 +160,13 @@ function srl_render_protest_ai_verdict_meta_box( $post ) {
         <div class="notice notice-error inline"><p><strong>Error retornado:</strong> <?php echo esc_html( $error ); ?></p></div>
     <?php endif; ?>
 
-    <?php if ( ! empty( $verdict ) ) : ?>
+    <?php if ( ! empty( $verdict ) && is_array( $verdict ) ) : ?>
         <?php
+        $chief = ! empty( $verdict['chief_steward'] ) ? $verdict['chief_steward'] : $verdict;
         $strict = $verdict['persona_strict'] ?? [];
         $lax = $verdict['persona_lax'] ?? [];
         $balanced = $verdict['persona_balanced'] ?? [];
-        $chief = $verdict['chief_steward'] ?? [];
+        $has_personas = ! empty( $strict ) || ! empty( $lax ) || ! empty( $balanced );
         ?>
         <!-- Chief Steward Final Consensus Card -->
         <div style="background: linear-gradient(135deg, #1e1e2f 0%, #2a2a40 100%); color: #fff; padding: 18px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
@@ -184,6 +203,7 @@ function srl_render_protest_ai_verdict_meta_box( $post ) {
             </div>
         </div>
 
+        <?php if ( $has_personas ) : ?>
         <!-- 3 Persona Cards Grid -->
         <h4 style="margin: 15px 0 10px; font-size: 1.1em;">🎭 Evaluaciones Individuales por Persona</h4>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">
@@ -235,6 +255,7 @@ function srl_render_protest_ai_verdict_meta_box( $post ) {
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     <?php endif; ?>
     <?php
 }

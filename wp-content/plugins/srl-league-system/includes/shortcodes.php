@@ -632,6 +632,10 @@ function srl_render_main_menu_shortcode( $atts ) {
                     <p>Récords históricos, rachas y logros destacados.</p>
                 </div>
             </a>
+            <?php
+            $visibility = get_option( 'srl_commissary_visibility', 'admin_only' );
+            if ( $visibility === 'public' || current_user_can( 'manage_options' ) ) :
+            ?>
             <a href="<?php echo esc_url( home_url( $atts['commissary_url'] ) ); ?>" class="srl-menu-card">
                 <div class="srl-card-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -641,6 +645,7 @@ function srl_render_main_menu_shortcode( $atts ) {
                     <p>Envía y consulta denuncias e incidentes analizados con IA.</p>
                 </div>
             </a>
+            <?php endif; ?>
             <div class="srl-menu-card disabled">
                 <div class="srl-card-badge">Próximamente</div>
                 <div class="srl-card-icon">

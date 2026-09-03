@@ -246,6 +246,9 @@ function srl_render_protest_columns( $column, $post_id ) {
             $human_status = get_post_meta( $post_id, '_srl_steward_action_status', true ) ?: 'under_review';
             $verdict_json = get_post_meta( $post_id, '_srl_ai_verdict', true );
             $verdict = is_string( $verdict_json ) ? json_decode( $verdict_json, true ) : $verdict_json;
+            if ( function_exists( 'srl_clean_verdict_utf8' ) && is_array( $verdict ) ) {
+                $verdict = srl_clean_verdict_utf8( $verdict );
+            }
 
             if ( $human_status === 'resolved' ) {
                 echo '<span style="color: #28a745; font-weight: bold;">[Dictamen Aplicado]</span><br>';
@@ -253,8 +256,8 @@ function srl_render_protest_columns( $column, $post_id ) {
                 echo '<span style="color: #dc3545; font-weight: bold;">[Desestimado]</span><br>';
             }
 
-            if ( ! empty( $verdict['chief_steward'] ) ) {
-                $cs = $verdict['chief_steward'];
+            $cs = ! empty( $verdict['chief_steward'] ) ? $verdict['chief_steward'] : ( ( ! empty( $verdict['fault_protesting'] ) || ! empty( $verdict['penalty'] ) ) ? $verdict : [] );
+            if ( ! empty( $cs ) ) {
                 $blame_p = isset( $cs['fault_protesting'] ) ? $cs['fault_protesting'] : 0;
                 $blame_a = isset( $cs['fault_accused'] ) ? $cs['fault_accused'] : 0;
                 $penalty = isset( $cs['penalty'] ) ? $cs['penalty'] : ( $cs['recommended_penalty'] ?? 'Sin sanción' );

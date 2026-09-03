@@ -202,10 +202,29 @@ function srl_render_admin_page() {
                     ?>
                     <table class="form-table">
                         <tr valign="top">
+                            <th scope="row">Visibilidad del Comisariato</th>
+                            <td>
+                                <?php $commissary_visibility = get_option( 'srl_commissary_visibility', 'admin_only' ); ?>
+                                <select name="srl_commissary_visibility">
+                                    <option value="public" <?php selected( $commissary_visibility, 'public' ); ?>>Público (Cualquier usuario puede ver y enviar reclamos)</option>
+                                    <option value="admin_only" <?php selected( $commissary_visibility, 'admin_only' ); ?>>Solo Administradores (Oculto y bloqueado para pilotos/invitados)</option>
+                                </select>
+                                <p class="description">Controla quién puede acceder a la página del comisariato y sus registros.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
                             <th scope="row">URL del Webhook de n8n</th>
                             <td>
                                 <input type="url" name="srl_virtual_commissary_webhook_url" value="<?php echo esc_attr( $webhook_url ); ?>" class="large-text" placeholder="https://n8n.tu-servidor.com/webhook/srl-virtual-commissary" />
                                 <p class="description">URL del webhook de n8n que recibirá los incidentes a analizar.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">URL de Veredictos (Públicos)</th>
+                            <td>
+                                <?php $verdicts_url = get_option( 'srl_virtual_commissary_verdicts_url', 'https://srl-veredicts.imevca.qzz.io' ); ?>
+                                <input type="url" name="srl_virtual_commissary_verdicts_url" value="<?php echo esc_attr( $verdicts_url ); ?>" class="large-text" placeholder="https://srl-veredicts.imevca.qzz.io" />
+                                <p class="description">Si los veredictos JSON se suben a un bucket público (ej. R2 con dominio personalizado), ingresa la URL base aquí. El plugin buscará <code>/protest_ID.json</code> en esta URL. Déjalo en blanco para usar la API SigV4 nativa de S3/R2.</p>
                             </td>
                         </tr>
                         <tr valign="top">
@@ -355,6 +374,84 @@ function srl_render_admin_page() {
 
                     <?php submit_button( 'Guardar Configuración del Comisariato' ); ?>
                 </form>
+
+                <div style="margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.2em;">🔍 Registro de Sondeos de Veredictos (Logs en Vivo)</h3>
+                            <p class="description" style="margin: 4px 0 0;">Historial en tiempo real de las peticiones automáticas y manuales que WordPress hace a Cloudflare R2 / Dominio Público para recuperar dictámenes.</p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="srl-trigger-global-sync-btn" class="button button-primary">
+                                <span class="dashicons dashicons-update" style="vertical-align: middle;"></span> Forzar Sondeo Global Ahora
+                            </button>
+                            <button type="button" id="srl-clear-probe-logs-btn" class="button">
+                                <span class="dashicons dashicons-trash" style="vertical-align: middle;"></span> Limpiar Logs
+                            </button>
+                        </div>
+                    </div>
+
+                    <?php
+                    $probe_logs = get_option( 'srl_commissary_probe_logs', [] );
+                    ?>
+                    <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Fecha / Hora</th>
+                                <th style="width: 90px;">Reclamo</th>
+                                <th style="width: 80px;">HTTP</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th>URL / Destino Consultado</th>
+                                <th>Detalle / Mensaje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ( empty( $probe_logs ) ) : ?>
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: #888; padding: 20px;">
+                                        <em>No hay registros de sondeos aún. Haz clic en "Forzar Sondeo Global Ahora" para ejecutar una verificación inmediata.</em>
+                                    </td>
+                                </tr>
+                            <?php else : ?>
+                                <?php foreach ( $probe_logs as $log ) :
+                                    $badge_color = '#555';
+                                    if ( $log['status'] === 'success' || $log['http_code'] == 200 ) {
+                                        $badge_color = '#27ae60';
+                                    } elseif ( $log['status'] === 'pending' || $log['http_code'] == 404 ) {
+                                        $badge_color = '#e67e22';
+                                    } elseif ( $log['status'] === 'http_error' || $log['status'] === 'config_error' || $log['status'] === 'json_invalid' ) {
+                                        $badge_color = '#c0392b';
+                                    }
+                                ?>
+                                    <tr>
+                                        <td><small><?php echo esc_html( $log['time'] ); ?></small></td>
+                                        <td>
+                                            <?php if ( ! empty( $log['protest_id'] ) ) : ?>
+                                                <a href="<?php echo esc_url( get_edit_post_link( $log['protest_id'] ) ); ?>" target="_blank"><strong>#<?php echo esc_html( $log['protest_id'] ); ?></strong></a>
+                                            <?php else : ?>
+                                                <span style="color: #888;">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <code><?php echo esc_html( $log['http_code'] ); ?></code>
+                                        </td>
+                                        <td>
+                                            <span style="background: <?php echo esc_attr( $badge_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase;">
+                                                <?php echo esc_html( $log['status'] ); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <code style="word-break: break-all; font-size: 11px;"><?php echo esc_html( $log['target_url'] ); ?></code>
+                                        </td>
+                                        <td>
+                                            <?php echo esc_html( $log['message'] ); ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
