@@ -39,7 +39,7 @@ function srl_register_protest_post_type() {
         'labels'                => $labels,
         'supports'              => [ 'title', 'custom-fields' ],
         'hierarchical'          => false,
-        'public'                => false,
+        'public'                => true,
         'show_ui'               => true,
         'show_in_menu'          => true,
         'menu_position'         => 23,
@@ -49,13 +49,115 @@ function srl_register_protest_post_type() {
         'can_export'            => true,
         'has_archive'           => false,
         'exclude_from_search'   => true,
-        'publicly_queryable'    => false,
+        'publicly_queryable'    => true,
+        'rewrite'               => [ 'slug' => 'reclamo', 'with_front' => false ],
         'capability_type'       => 'post',
     ];
 
     register_post_type( 'srl_protest', $args );
 }
 add_action( 'init', 'srl_register_protest_post_type', 1 );
+
+/**
+ * Format protest title and slug automatically:
+ * "[Evento] - [Apellido Demandante] vs [Apellido Acusado] #[N]"
+ * Slug: "[evento]-[apellido-demandante]-[apellido-acusado]-[n]"
+ */
+function srl_format_protest_title_and_slug( $post_id ) {
+    if ( get_post_type( $post_id ) !== 'srl_protest' ) {
+        return;
+    }
+
+    global $wpdb;
+    $event_id     = get_post_meta( $post_id, '_srl_event_id', true );
+    $protester_id = get_post_meta( $post_id, '_srl_protesting_driver_id', true );
+    $accused_id   = get_post_meta( $post_id, '_srl_accused_driver_id', true );
+
+    $event_title = 'Evento';
+    if ( $event_id ) {
+        $event = get_post( $event_id );
+        if ( $event && ! empty( $event->post_title ) ) {
+            $event_title = trim( $event->post_title );
+        }
+    } else {
+        $custom_event = get_post_meta( $post_id, '_srl_custom_event_name', true );
+        if ( ! empty( $custom_event ) ) {
+            $event_title = trim( $custom_event );
+        }
+    }
+
+    $extract_last_name = function( $driver_id ) use ( $wpdb ) {
+        if ( ! $driver_id ) return 'Piloto';
+        $full_name = $wpdb->get_var( $wpdb->prepare( "SELECT full_name FROM {$wpdb->prefix}srl_drivers WHERE id = %d", $driver_id ) );
+        if ( empty( $full_name ) ) return 'Piloto';
+        $parts = preg_split( '/\s+/', trim( $full_name ) );
+        return count( $parts ) > 1 ? end( $parts ) : $parts[0];
+    };
+
+    $protester_last = $extract_last_name( $protester_id );
+    $accused_last   = $extract_last_name( $accused_id );
+
+    // Count existing protests between this pair for this event (excluding current post)
+    $meta_query = [
+        'relation' => 'AND',
+        [
+            'key'   => '_srl_protesting_driver_id',
+            'value' => $protester_id,
+        ],
+        [
+            'key'   => '_srl_accused_driver_id',
+            'value' => $accused_id,
+        ],
+    ];
+    if ( $event_id ) {
+        $meta_query[] = [
+            'key'   => '_srl_event_id',
+            'value' => $event_id,
+        ];
+    }
+
+    $existing = new WP_Query( [
+        'post_type'      => 'srl_protest',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'post__not_in'   => [ $post_id ],
+        'meta_query'     => $meta_query,
+        'fields'         => 'ids',
+    ] );
+
+    $index = ( $existing->post_count ) + 1;
+
+    $formatted_title = sprintf( '%s - %s vs %s #%d', $event_title, $protester_last, $accused_last, $index );
+    $formatted_slug  = sanitize_title( sprintf( '%s-%s-%s-%d', $event_title, $protester_last, $accused_last, $index ) );
+
+    // Temporarily unhook save_post to prevent recursion
+    remove_action( 'save_post_srl_protest', 'srl_format_protest_title_and_slug_hook', 30 );
+
+    wp_update_post( [
+        'ID'         => $post_id,
+        'post_title' => $formatted_title,
+        'post_name'  => $formatted_slug,
+    ] );
+
+    add_action( 'save_post_srl_protest', 'srl_format_protest_title_and_slug_hook', 30, 2 );
+}
+
+/**
+ * Hook for save_post_srl_protest to keep title and slug synchronized.
+ */
+function srl_format_protest_title_and_slug_hook( $post_id, $post = null ) {
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+    if ( wp_is_post_revision( $post_id ) ) return;
+    if ( get_post_type( $post_id ) !== 'srl_protest' ) return;
+
+    // Only auto-format if driver metadata is present
+    $protester_id = get_post_meta( $post_id, '_srl_protesting_driver_id', true );
+    $accused_id   = get_post_meta( $post_id, '_srl_accused_driver_id', true );
+    if ( $protester_id && $accused_id ) {
+        srl_format_protest_title_and_slug( $post_id );
+    }
+}
+add_action( 'save_post_srl_protest', 'srl_format_protest_title_and_slug_hook', 30, 2 );
 
 /**
  * Customize columns in admin protest list.

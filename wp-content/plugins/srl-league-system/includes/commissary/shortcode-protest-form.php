@@ -473,9 +473,15 @@ function srl_handle_submit_protest_form() {
     update_post_meta( $post_id, '_srl_ai_status', 'pending' );
     update_post_meta( $post_id, '_srl_steward_action_status', 'under_review' );
 
+    // Format title and permalink slug automatically
+    if ( function_exists( 'srl_format_protest_title_and_slug' ) ) {
+        srl_format_protest_title_and_slug( $post_id );
+    }
+
     wp_send_json_success( [
         'message'    => '¡Reclamo registrado con éxito (ID #' . $post_id . ')! Ha sido enviado a los comisarios para su revisión.',
         'protest_id' => $post_id,
+        'permalink'  => get_permalink( $post_id ),
     ] );
 }
 add_action( 'wp_ajax_srl_submit_protest_form', 'srl_handle_submit_protest_form' );
