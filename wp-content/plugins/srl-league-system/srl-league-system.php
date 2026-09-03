@@ -249,6 +249,7 @@ require_once SRL_PLUGIN_PATH . 'includes/shortcodes.php';
 // --- Comisariato Virtual (AI Assistant) ---
 require_once SRL_PLUGIN_PATH . 'includes/commissary/class-srl-r2-uploader.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/post-type-protest.php';
+require_once SRL_PLUGIN_PATH . 'includes/commissary/class-srl-protest-voting.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/rest-api.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/admin-meta-boxes.php';
 require_once SRL_PLUGIN_PATH . 'includes/commissary/shortcode-protest-form.php';

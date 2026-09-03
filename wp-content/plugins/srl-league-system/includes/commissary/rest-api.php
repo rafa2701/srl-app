@@ -94,6 +94,12 @@ function srl_rest_update_protest_verdict( WP_REST_Request $request ) {
         update_post_meta( $protest_id, '_srl_ai_verdict', is_array( $verdict ) ? wp_json_encode( $verdict ) : $verdict );
         update_post_meta( $protest_id, '_srl_ai_error', '' );
         update_post_meta( $protest_id, '_srl_ai_processed_at', current_time( 'mysql' ) );
+
+        // Evaluate and record AI steward vote if enabled
+        if ( class_exists( 'SRL_Protest_Voting' ) ) {
+            $verdict_data = is_string( $verdict ) ? json_decode( $verdict, true ) : $verdict;
+            SRL_Protest_Voting::evaluate_ai_verdict_vote( $protest_id, $verdict_data );
+        }
     } elseif ( $status === 'failed' ) {
         update_post_meta( $protest_id, '_srl_ai_status', 'failed' );
         update_post_meta( $protest_id, '_srl_ai_error', $error );
