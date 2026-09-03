@@ -41,37 +41,39 @@ function srl_init_plugin_updater() {
     srl_init_theme_updater();
 }
 
-/**
- * Initialize theme updater for srl-theme from GitHub releases
- */
-function srl_init_theme_updater() {
-    if ( ! class_exists( 'YahnisElsts\PluginUpdateChecker\v5\PucFactory' ) ) {
-        return;
-    }
+if ( ! function_exists( 'srl_init_theme_updater' ) ) {
+    /**
+     * Initialize theme updater for srl-theme from GitHub releases
+     */
+    function srl_init_theme_updater() {
+        if ( ! class_exists( 'YahnisElsts\PluginUpdateChecker\v5\PucFactory' ) ) {
+            return;
+        }
 
-    $theme_dir = get_theme_root() . '/srl-theme';
-    $theme_style = $theme_dir . '/style.css';
+        $theme_dir = get_theme_root() . '/srl-theme';
+        $theme_style = $theme_dir . '/style.css';
 
-    if ( ! file_exists( $theme_style ) ) {
-        return;
-    }
+        if ( ! file_exists( $theme_style ) ) {
+            return;
+        }
 
-    $theme_checker = PucFactory::buildUpdateChecker(
-        'https://github.com/rafa2701/srl-app/',
-        $theme_style,
-        'srl-theme'
-    );
+        $theme_checker = PucFactory::buildUpdateChecker(
+            'https://github.com/rafa2701/srl-app/',
+            $theme_style,
+            'srl-theme'
+        );
 
-    // Look for srl-theme.zip in GitHub release assets
-    $theme_checker->getVcsApi()->enableReleaseAssets( '/^srl-theme.*\.zip$/' );
+        // Look for srl-theme.zip in GitHub release assets
+        $theme_checker->getVcsApi()->enableReleaseAssets( '/^srl-theme.*\.zip$/' );
 
-    // Enable background auto-update if option is checked
-    if ( get_option( 'srl_theme_auto_update', 1 ) ) {
-        add_filter( 'auto_update_theme', function ( $update, $item ) {
-            if ( isset( $item->theme ) && $item->theme === 'srl-theme' ) {
-                return true;
-            }
-            return $update;
-        }, 10, 2 );
+        // Enable background auto-update if option is checked
+        if ( get_option( 'srl_theme_auto_update', 1 ) ) {
+            add_filter( 'auto_update_theme', function ( $update, $item ) {
+                if ( isset( $item->theme ) && $item->theme === 'srl-theme' ) {
+                    return true;
+                }
+                return $update;
+            }, 10, 2 );
+        }
     }
 }
