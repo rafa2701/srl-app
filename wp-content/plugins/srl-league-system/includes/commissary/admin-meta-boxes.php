@@ -112,6 +112,9 @@ function srl_render_protest_ai_verdict_meta_box( $post ) {
     $error = get_post_meta( $post->ID, '_srl_ai_error', true );
     $verdict_raw = get_post_meta( $post->ID, '_srl_ai_verdict', true );
     $verdict = is_string( $verdict_raw ) ? json_decode( $verdict_raw, true ) : $verdict_raw;
+    if ( function_exists( 'srl_clean_verdict_utf8' ) && is_array( $verdict ) ) {
+        $verdict = srl_clean_verdict_utf8( $verdict );
+    }
     $processed_at = get_post_meta( $post->ID, '_srl_ai_processed_at', true );
     $last_probe = get_post_meta( $post->ID, '_srl_last_probe_log', true );
 

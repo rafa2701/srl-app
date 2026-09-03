@@ -90,8 +90,11 @@ function srl_rest_update_protest_verdict( WP_REST_Request $request ) {
     $verdict = isset( $params['verdict'] ) ? $params['verdict'] : null;
 
     if ( $status === 'completed' && ! empty( $verdict ) ) {
+        if ( function_exists( 'srl_clean_verdict_utf8' ) ) {
+            $verdict = srl_clean_verdict_utf8( $verdict );
+        }
         update_post_meta( $protest_id, '_srl_ai_status', 'completed' );
-        update_post_meta( $protest_id, '_srl_ai_verdict', is_array( $verdict ) ? wp_json_encode( $verdict ) : $verdict );
+        update_post_meta( $protest_id, '_srl_ai_verdict', is_array( $verdict ) ? wp_slash( wp_json_encode( $verdict, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ) : wp_slash( $verdict ) );
         update_post_meta( $protest_id, '_srl_ai_error', '' );
         update_post_meta( $protest_id, '_srl_ai_processed_at', current_time( 'mysql' ) );
     } elseif ( $status === 'failed' ) {

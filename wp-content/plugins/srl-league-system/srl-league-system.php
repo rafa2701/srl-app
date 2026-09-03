@@ -3,7 +3,7 @@
  * Plugin Name:       SRL League System
  * Plugin URI:        https://simracinglatinoamerica.com/
  * Description:       Sistema de gestión de campeonatos, resultados y estadísticas para ligas de SimRacing.
- * Version:           1.13.9
+ * Version:           1.13.10
  * Author:            Rafael Leon / Gemini AI
  * Author URI:        https://simracinglatinoamerica.com/
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) die;
 // Definir constantes
 define( 'SRL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SRL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'SRL_PLUGIN_VERSION', '1.13.9' );
+define( 'SRL_PLUGIN_VERSION', '1.13.10' );
 define( 'SRL_LEAGUE_SYSTEM_PLUGIN_DIR', SRL_PLUGIN_PATH );
 
 // Cargar la librería PhpSpreadsheet
@@ -456,4 +456,30 @@ function srl_restrict_commissary_access() {
             exit;
         }
     }
+}
+
+/**
+ * Recursively cleans and restores stripped UTF-8 unicode escape sequences in verdict data.
+ * Fixes WordPress unslashed unicode like "u00f3" -> "ó", "u00e1" -> "á", "u202f" -> space.
+ *
+ * @param mixed $data Array or string.
+ * @return mixed Cleaned UTF-8 data.
+ */
+function srl_clean_verdict_utf8( $data ) {
+    if ( is_array( $data ) ) {
+        return array_map( 'srl_clean_verdict_utf8', $data );
+    }
+    if ( is_string( $data ) ) {
+        return preg_replace_callback( '/u([0-9a-fA-F]{4})/', function( $matches ) {
+            $code = hexdec( $matches[1] );
+            if ( $code > 127 ) {
+                if ( function_exists( 'mb_chr' ) ) {
+                    return mb_chr( $code, 'UTF-8' );
+                }
+                return html_entity_decode( '&#' . $code . ';', ENT_NOQUOTES, 'UTF-8' );
+            }
+            return $matches[0];
+        }, $data );
+    }
+    return $data;
 }

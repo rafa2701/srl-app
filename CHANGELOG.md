@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.13.10] - 2026-09-02
+### Fixed
+- Fixed corrupted Spanish accents and special characters (e.g. `u00f3` instead of `ó`, `u00e1` instead of `á`) caused by WordPress stripping slashes on `update_post_meta`.
+- Added `srl_clean_verdict_utf8` helper to automatically restore and clean stripped unicode characters for both existing and newly imported verdicts.
+- Switched verdict serialization to `wp_slash( wp_json_encode( ..., JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) )` to preserve native UTF-8 strings in MySQL.
+
 ## [1.13.9] - 2026-09-02
 ### Changed
 - Release build bump to trigger GitHub Actions release packaging and update notification for live probe logs and resilient verdict sync.
