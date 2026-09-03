@@ -273,8 +273,11 @@ function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_r2_access_key_id' );
     register_setting( 'srl_settings_group', 'srl_r2_secret_access_key' );
     register_setting( 'srl_settings_group', 'srl_r2_bucket_name' );
-    register_setting( 'srl_settings_group', 'srl_r2_public_url' );
     register_setting( 'srl_settings_group', 'srl_commissary_event_input_mode' );
+    register_setting( 'srl_settings_group', 'srl_protest_frontend_visibility' );
+    register_setting( 'srl_settings_group', 'srl_protest_min_quorum' );
+    register_setting( 'srl_settings_group', 'srl_protest_ai_vote_mode' );
+    register_setting( 'srl_settings_group', 'srl_theme_auto_update' );
 }
 
 add_action( 'admin_menu', 'srl_admin_menu' );

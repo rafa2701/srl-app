@@ -238,6 +238,60 @@ function srl_render_admin_page() {
                         </tr>
                     </table>
 
+                    <h3 style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">Deliberación y Votación de Reclamos en Frontend</h3>
+                    <p class="description">Configura la visibilidad pública de los reclamos, el quórum mínimo necesario para dictámenes colegiados y la participación del Comisario Virtual AI en las votaciones.</p>
+                    <?php
+                    $visibility = get_option( 'srl_protest_frontend_visibility', 'public_sanitized' );
+                    $min_quorum = intval( get_option( 'srl_protest_min_quorum', 3 ) );
+                    if ( $min_quorum < 1 ) $min_quorum = 3;
+                    $ai_mode = get_option( 'srl_protest_ai_vote_mode', 'always' );
+                    $ai_user_id = function_exists( 'srl_ensure_ai_steward_user' ) ? srl_ensure_ai_steward_user() : 0;
+                    ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">Visibilidad de Reclamos en Frontend</th>
+                            <td>
+                                <select name="srl_protest_frontend_visibility" style="min-width: 320px;">
+                                    <option value="public_sanitized" <?php selected( $visibility, 'public_sanitized' ); ?>>Público Sanitizado (Datos del incidente, video y veredicto público) [Recomendado]</option>
+                                    <option value="admins_only" <?php selected( $visibility, 'admins_only' ); ?>>Solo Administradores y Comisarios (Restringido con login)</option>
+                                </select>
+                                <p class="description">En modo <em>Público Sanitizado</em>, cualquier usuario o piloto puede ver los hechos y el dictamen final una vez publicado. Las deliberaciones internas y votos individuales solo son visibles para administradores.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Quórum Mínimo para Dictamen</th>
+                            <td>
+                                <input type="number" name="srl_protest_min_quorum" value="<?php echo esc_attr( $min_quorum ); ?>" min="1" max="20" class="small-text" />
+                                <span class="description">votos mínimos para validar una mayoría y declarar un resultado por mayoría simple (por defecto: 3).</span>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Voto del Comisario Virtual AI</th>
+                            <td>
+                                <select name="srl_protest_ai_vote_mode" style="min-width: 320px;">
+                                    <option value="always" <?php selected( $ai_mode, 'always' ); ?>>Siempre Activo (La IA emite 1 voto automáticamente) [Por defecto]</option>
+                                    <option value="tiebreaker" <?php selected( $ai_mode, 'tiebreaker' ); ?>>Solo en Caso de Empate (El voto de la IA solo desempata si hay 50/50)</option>
+                                    <option value="disabled" <?php selected( $ai_mode, 'disabled' ); ?>>Desactivado (La IA no vota, solo ofrece análisis consultivo)</option>
+                                </select>
+                                <p class="description">Define si el Comisario Jefe Virtual emite un voto ("Procede" / "No Procede") al completar su análisis.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Usuario Comisario Virtual AI</th>
+                            <td>
+                                <?php if ( $ai_user_id ) : ?>
+                                    <span style="display: inline-block; padding: 4px 10px; background: #d4edda; color: #155724; border-radius: 4px; font-weight: bold;">
+                                        ✔ Provisionado: Comisario Virtual AI (Usuario: <code>comisario-ai</code>, ID #<?php echo intval( $ai_user_id ); ?>)
+                                    </span>
+                                <?php else : ?>
+                                    <span style="display: inline-block; padding: 4px 10px; background: #fff3cd; color: #856404; border-radius: 4px;">
+                                        ⏳ Se provisionará automáticamente en la primera ejecución
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </table>
+
                     <h3 style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">Almacenamiento Directo de Evidencias (Cloudflare R2)</h3>
                     <p class="description">Permite que los pilotos suban videos y capturas directamente a un bucket S3 de Cloudflare R2 (gratuito hasta 10GB). Si no se configura o se desactiva, las subidas se guardarán en la biblioteca local de WordPress.</p>
                     

@@ -311,3 +311,52 @@ function srl_filter_protests_query( $query ) {
     }
 }
 add_filter( 'parse_query', 'srl_filter_protests_query' );
+
+/**
+ * Ensure the comisario-ai user is provisioned.
+ *
+ * @return int User ID of comisario-ai
+ */
+function srl_ensure_ai_steward_user() {
+    $user = get_user_by( 'login', 'comisario-ai' );
+    if ( $user ) {
+        if ( $user->display_name !== 'Comisario Virtual AI' ) {
+            wp_update_user( [
+                'ID'           => $user->ID,
+                'display_name' => 'Comisario Virtual AI',
+            ] );
+        }
+        return $user->ID;
+    }
+
+    $admin_email = get_option( 'admin_email', 'admin@simracinglatinoamerica.com' );
+    $domain = 'simracinglatinoamerica.com';
+    if ( strpos( $admin_email, '@' ) !== false ) {
+        $parts = explode( '@', $admin_email );
+        $domain = $parts[1];
+    }
+    $ai_email = 'comisario-ai@' . $domain;
+
+    if ( email_exists( $ai_email ) ) {
+        $ai_email = 'comisario-ai-' . wp_generate_password( 4, false ) . '@' . $domain;
+    }
+
+    $user_id = wp_insert_user( [
+        'user_login'   => 'comisario-ai',
+        'user_pass'    => wp_generate_password( 24, true, true ),
+        'user_email'   => $ai_email,
+        'display_name' => 'Comisario Virtual AI',
+        'nickname'     => 'comisario-ai',
+        'first_name'   => 'Comisario Virtual',
+        'last_name'    => 'AI',
+        'role'         => 'subscriber',
+    ] );
+
+    if ( ! is_wp_error( $user_id ) && $user_id ) {
+        update_user_meta( $user_id, '_srl_is_ai_steward', 1 );
+        return $user_id;
+    }
+
+    return 0;
+}
+
