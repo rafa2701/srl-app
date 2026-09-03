@@ -71,6 +71,14 @@ $resolved_at    = get_post_meta( $post_id, '_srl_resolved_at', true );
 $ai_status   = get_post_meta( $post_id, '_srl_ai_status', true ) ?: 'pending';
 $verdict_raw = get_post_meta( $post_id, '_srl_ai_verdict', true );
 $verdict     = is_string( $verdict_raw ) ? json_decode( $verdict_raw, true ) : $verdict_raw;
+if ( function_exists( 'srl_clean_verdict_utf8' ) && is_array( $verdict ) ) {
+    $verdict = srl_clean_verdict_utf8( $verdict );
+}
+$chief        = ( is_array( $verdict ) && ! empty( $verdict['chief_steward'] ) ) ? $verdict['chief_steward'] : ( is_array( $verdict ) ? $verdict : [] );
+$strict       = is_array( $verdict ) ? ( $verdict['persona_strict'] ?? [] ) : [];
+$lax          = is_array( $verdict ) ? ( $verdict['persona_lax'] ?? [] ) : [];
+$balanced     = is_array( $verdict ) ? ( $verdict['persona_balanced'] ?? [] ) : [];
+$has_personas = ! empty( $strict ) || ! empty( $lax ) || ! empty( $balanced );
 
 // Voting tally
 $tally = class_exists( 'SRL_Protest_Voting' ) ? SRL_Protest_Voting::calculate_tally( $post_id ) : [];
@@ -415,13 +423,7 @@ $my_current_note = ( $is_admin && isset( $tally['votes'][ $user_vote_key ] ) ) ?
                 </div>
 
                 <!-- AI Analysis Accordion -->
-                <?php if ( ! empty( $verdict ) ) : ?>
-                    <?php
-                    $strict   = $verdict['persona_strict'] ?? [];
-                    $lax      = $verdict['persona_lax'] ?? [];
-                    $balanced = $verdict['persona_balanced'] ?? [];
-                    $chief    = $verdict['chief_steward'] ?? [];
-                    ?>
+                <?php if ( ! empty( $verdict ) && is_array( $verdict ) ) : ?>
                     <details style="background: #14141f; border: 1px solid #2d2d42; border-radius: 8px; padding: 12px 16px; margin-bottom: 25px;">
                         <summary style="cursor: pointer; font-weight: bold; color: #ffd32a; font-size: 15px;">
                             🤖 Ver Análisis del Comisariato Virtual AI (Gemini) ▼
@@ -438,18 +440,20 @@ $my_current_note = ( $is_admin && isset( $tally['votes'][ $user_vote_key ] ) ) ?
                                     <span style="color: #2ed573;">🟢 Demandante: <?php echo $blame_p; ?>%</span>
                                     <span style="color: #ff6b81;">🔴 Acusado: <?php echo $blame_a; ?>%</span>
                                 </div>
-                                <div style="width: 100%; height: 10px; background: #ff4757; border-radius: 5px; overflow: hidden; display: flex; margin-bottom: 10px;">
+                                <div style="width: 100%; height: 12px; background: #262638; border-radius: 6px; overflow: hidden; display: flex; margin-bottom: 10px;">
                                     <div style="width: <?php echo $blame_p; ?>%; background: #2ed573; height: 100%;"></div>
+                                    <div style="width: <?php echo $blame_a; ?>%; background: #ff4757; height: 100%;"></div>
                                 </div>
                                 <div style="font-size: 13px; margin-bottom: 6px;">
                                     <strong style="color: #ffd32a;">Sanción Recomendada:</strong>
                                     <span id="srl-ai-recommended-penalty-text"><?php echo esc_html( $chief['penalty'] ?? $chief['recommended_penalty'] ?? 'Sin sanción' ); ?></span>
                                 </div>
-                                <div style="font-size: 12px; color: #bbb; line-height: 1.5;">
+                                <div style="font-size: 12px; color: #bbb; line-height: 1.5; white-space: pre-wrap;">
                                     <?php echo esc_html( $chief['rationale'] ?? $chief['argument'] ?? '' ); ?>
                                 </div>
                             </div>
 
+                            <?php if ( $has_personas ) : ?>
                             <!-- 3 Personas -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; font-size: 12px;">
                                 <div style="background: #1a1a26; padding: 10px; border-radius: 6px; border-top: 3px solid #e74c3c;">
@@ -468,6 +472,7 @@ $my_current_note = ( $is_admin && isset( $tally['votes'][ $user_vote_key ] ) ) ?
                                     <p style="color: #888; margin: 4px 0 0;"><?php echo esc_html( wp_trim_words( $balanced['argument'] ?? '', 18 ) ); ?></p>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </details>
                 <?php endif; ?>
