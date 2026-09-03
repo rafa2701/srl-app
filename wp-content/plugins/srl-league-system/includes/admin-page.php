@@ -118,11 +118,17 @@ function srl_render_admin_page() {
                         <tr valign="top">
                             <th scope="row">Actualizaciones Automáticas</th>
                             <td>
-                                <label>
+                                <label style="display: block; margin-bottom: 8px;">
                                     <input type="checkbox" name="srl_force_auto_update" value="1" <?php checked( 1, $force_auto_update ); ?> />
                                     Forzar actualizaciones automáticas en segundo plano (Plugin SRL League System)
                                 </label>
-                                <p class="description">Si está activado, el plugin se actualizará automáticamente sin intervención manual tan pronto como haya una nueva versión en GitHub.</p>
+                                <p class="description" style="margin-top: 0; margin-bottom: 12px;">Si está activado, el plugin se actualizará automáticamente sin intervención manual tan pronto como haya una nueva versión en GitHub.</p>
+
+                                <label style="display: block; margin-bottom: 8px;">
+                                    <input type="checkbox" name="srl_theme_auto_update" value="1" <?php checked( 1, get_option( 'srl_theme_auto_update', 1 ) ); ?> />
+                                    Habilitar actualizaciones automáticas para el Tema (SRL Theme)
+                                </label>
+                                <p class="description" style="margin-top: 0;">Verifica y descarga automáticamente las nuevas versiones del tema <code>srl-theme.zip</code> desde los releases de GitHub.</p>
                             </td>
                         </tr>
                     </table>
