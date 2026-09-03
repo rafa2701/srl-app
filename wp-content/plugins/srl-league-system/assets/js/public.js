@@ -464,7 +464,12 @@ jQuery(document).ready(function($) {
             success: function (res) {
                 submitBtn.prop('disabled', false).text('Enviar Reclamo al Comisariato');
                 if (res.success) {
-                    responseDiv.html('<div class="srl-notice srl-notice-success" style="background: #155724; color: #d4edda; padding: 12px; border-radius: 4px; margin-top: 10px;">' + res.data.message + '</div>');
+                    var successMsg = '<div class="srl-notice srl-notice-success" style="background: #155724; color: #d4edda; padding: 12px; border-radius: 4px; margin-top: 10px;">' + res.data.message;
+                    if (res.data.permalink) {
+                        successMsg += '<br><a href="' + res.data.permalink + '" style="display: inline-block; margin-top: 8px; color: #00d2d3; font-weight: bold; text-decoration: underline;">Ver Reclamo en Vivo ↗</a>';
+                    }
+                    successMsg += '</div>';
+                    responseDiv.html(successMsg);
                     form[0].reset();
                     $('.srl-combobox-selected-badge').hide();
                     $('.srl-combobox-search-box').show();
@@ -485,4 +490,228 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // ==========================================
+    // Incident Protest Single Template Logic
+    // ==========================================
+
+    // 1. Slow-motion Video Speed Controls
+    $(document).on('click', '.srl-speed-btn', function() {
+        var videoId = $(this).data('video-id');
+        var speed = parseFloat($(this).data('speed'));
+        var video = document.getElementById(videoId);
+        if (video) {
+            video.playbackRate = speed;
+            $(this).siblings('.srl-speed-btn').css({
+                'background': '#222',
+                'border-color': '#444',
+                'color': '#ddd',
+                'font-weight': 'normal'
+            });
+            $(this).css({
+                'background': '#00d2d3',
+                'border-color': '#00d2d3',
+                'color': '#000',
+                'font-weight': 'bold'
+            });
+        }
+    });
+
+    // 2. Admin Decision Choice Selection
+    var currentSelectedDecision = 'proceeds';
+    $(document).on('click', '.srl-decision-choice-btn', function() {
+        var decision = $(this).data('decision');
+        currentSelectedDecision = decision;
+        if (decision === 'proceeds') {
+            $('#srl-vote-btn-proceeds').css({'background': '#2ed573', 'color': '#000'});
+            $('#srl-vote-btn-dismissed').css({'background': 'transparent', 'color': '#ff4757'});
+        } else {
+            $('#srl-vote-btn-proceeds').css({'background': 'transparent', 'color': '#2ed573'});
+            $('#srl-vote-btn-dismissed').css({'background': '#ff4757', 'color': '#fff'});
+        }
+    });
+
+    // 3. Submit / Update Admin Vote
+    $(document).on('click', '#srl-submit-my-vote-btn', function() {
+        var btn = $(this);
+        var postId = btn.data('post-id');
+        var notes = $('#srl_my_vote_notes').val();
+        var feedback = $('#srl-my-vote-feedback');
+
+        btn.prop('disabled', true).text('Registrando voto...');
+        feedback.html('');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_cast_protest_vote',
+                nonce: srl_ajax_object.nonce,
+                protest_id: postId,
+                decision: currentSelectedDecision,
+                notes: notes
+            },
+            success: function(res) {
+                btn.prop('disabled', false).text('Confirmar / Actualizar Mi Voto');
+                if (res.success) {
+                    feedback.html('<span style="color: #2ed573; font-weight: bold;">✔ ' + res.data.message + '</span>');
+                    setTimeout(function() { location.reload(); }, 600);
+                } else {
+                    feedback.html('<span style="color: #ff4757;">✖ ' + res.data.message + '</span>');
+                }
+            },
+            error: function() {
+                btn.prop('disabled', false).text('Confirmar / Actualizar Mi Voto');
+                feedback.html('<span style="color: #ff4757;">✖ Error de red al registrar el voto.</span>');
+            }
+        });
+    });
+
+    // 4. Toggle External Steward Modal & Save
+    $(document).on('click', '#srl-toggle-external-modal-btn', function() {
+        $('#srl-external-vote-modal').slideToggle(200);
+    });
+
+    $(document).on('click', '#srl-save-external-vote-btn', function() {
+        var btn = $(this);
+        var postId = btn.data('post-id');
+        var name = $('#srl_external_steward_name').val();
+        var decision = $('#srl_external_decision').val();
+        var notes = $('#srl_external_notes').val();
+
+        if (!name) {
+            alert('Por favor escribe el nombre del comisario externo.');
+            return;
+        }
+
+        btn.prop('disabled', true).text('Guardando...');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_add_external_steward_vote',
+                nonce: srl_ajax_object.nonce,
+                protest_id: postId,
+                steward_name: name,
+                decision: decision,
+                notes: notes
+            },
+            success: function(res) {
+                btn.prop('disabled', false).text('Guardar Voto Externo');
+                if (res.success) {
+                    alert(res.data.message);
+                    location.reload();
+                } else {
+                    alert(res.data.message);
+                }
+            },
+            error: function() {
+                btn.prop('disabled', false).text('Guardar Voto Externo');
+                alert('Error de red al guardar el voto.');
+            }
+        });
+    });
+
+    // 5. Delete Vote
+    $(document).on('click', '.srl-delete-vote-btn', function() {
+        if (!confirm('¿Estás seguro de que deseas eliminar este voto?')) return;
+        var btn = $(this);
+        var postId = btn.data('post-id');
+        var voteKey = btn.data('vote-key');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_delete_steward_vote',
+                nonce: srl_ajax_object.nonce,
+                protest_id: postId,
+                vote_key: voteKey
+            },
+            success: function(res) {
+                if (res.success) {
+                    $('#srl-vote-row-' + voteKey).fadeOut(300, function() {
+                        $(this).remove();
+                        location.reload();
+                    });
+                } else {
+                    alert(res.data.message);
+                }
+            }
+        });
+    });
+
+    // 6. Copy AI Suggested Penalty to Ruling Input
+    $(document).on('click', '#srl-copy-ai-penalty-btn', function() {
+        var aiPenalty = $('#srl-ai-recommended-penalty-text').text().trim();
+        if (aiPenalty) {
+            $('#srl_final_sanction_input').val(aiPenalty);
+        }
+    });
+
+    // 7. Save Final Ruling
+    $(document).on('click', '#srl-save-final-ruling-btn', function() {
+        var btn = $(this);
+        var postId = btn.data('post-id');
+        var status = $('#srl_final_action_status').val();
+        var sanction = $('#srl_final_sanction_input').val();
+        var notes = $('#srl_final_steward_notes').val();
+        var feedback = $('#srl-final-ruling-feedback');
+
+        btn.prop('disabled', true).text('Guardando dictamen...');
+        feedback.html('');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_finalize_protest_ruling',
+                nonce: srl_ajax_object.nonce,
+                protest_id: postId,
+                action_status: status,
+                final_sanction: sanction,
+                steward_notes: notes
+            },
+            success: function(res) {
+                btn.prop('disabled', false).text('💾 Guardar Dictamen Oficial');
+                if (res.success) {
+                    feedback.html('<span style="color: #2ed573; font-weight: bold;">✔ ' + res.data.message + '</span>');
+                    setTimeout(function() { location.reload(); }, 600);
+                } else {
+                    feedback.html('<span style="color: #ff4757;">✖ ' + res.data.message + '</span>');
+                }
+            },
+            error: function() {
+                btn.prop('disabled', false).text('💾 Guardar Dictamen Oficial');
+                feedback.html('<span style="color: #ff4757;">✖ Error de red al guardar el dictamen oficial.</span>');
+            }
+        });
+    });
+
+    // 8. Reopen Protest
+    $(document).on('click', '#srl-reopen-protest-btn', function() {
+        if (!confirm('¿Reabrir este caso para nueva deliberación? El estado volverá a estar En Revisión.')) return;
+        var btn = $(this);
+        var postId = btn.data('post-id');
+
+        $.ajax({
+            url: srl_ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'srl_reopen_protest',
+                nonce: srl_ajax_object.nonce,
+                protest_id: postId
+            },
+            success: function(res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.data.message);
+                }
+            }
+        });
+    });
+
 });
+

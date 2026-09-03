@@ -379,6 +379,10 @@ function srl_include_template_function( $template ) {
         $theme_template = locate_template( [ 'single-srl_event.php', 'templates/single-srl_event.php' ] );
         if ( $theme_template ) return $theme_template;
         return SRL_PLUGIN_PATH . 'templates/single-srl_event.php';
+    } elseif ( is_singular( 'srl_protest' ) ) {
+        $theme_template = locate_template( [ 'single-srl_protest.php', 'templates/single-srl_protest.php' ] );
+        if ( $theme_template ) return $theme_template;
+        return SRL_PLUGIN_PATH . 'templates/single-srl_protest.php';
     } elseif ( is_singular( 'driver' ) ) {
         $theme_template = locate_template( [ 'single-driver.php' ] );
         if ( $theme_template ) return $theme_template;
