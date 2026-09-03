@@ -23,6 +23,7 @@ This specification defines:
 6. **Configurable Quorum & Simple Majority**: Admin setting for minimum quorum (default: 3 votes). Simple majority determines whether the protest proceeds.
 7. **Frontend Ruling & Sanction Console**: Allows administrators to finalize official sanctions, adopt AI recommendations with one click, or reopen cases directly on the frontend.
 8. **Configurable Visibility**: Toggle between *Public Sanitized* (basic info, evidence, and final ruling for all visitors) and *Admins Only* (restricted to authenticated stewards).
+9. **Automated Theme Update & Deployment Pipeline**: Configure Plugin Update Checker (PUC) for `srl-theme` matching `srl-theme.zip` from GitHub Releases alongside the plugin updater, and ensure GitHub Actions workflow handles theme packaging and version tracking.
 
 ---
 
@@ -96,6 +97,14 @@ A helper function `srl_ensure_ai_steward_user()` guarantees the existence of the
 * **Email:** `comisario-ai@simracinglatinoamerica.com` (or admin domain)
 * **Role:** `subscriber` (with custom capability `srl_ai_steward`)
 * **User Meta:** `_srl_is_ai_steward => true`
+
+### 2.5 Theme Update & Deployment Pipeline (`srl-theme`)
+* **Update Engine:** Hook `srl_init_theme_updater()` in `includes/updater.php` leveraging PUC (`PucFactory::buildUpdateChecker`).
+  * Target: `srl-theme/style.css`.
+  * Repository: `https://github.com/rafa2701/srl-app/`.
+  * Release Asset Pattern: `/^srl-theme.*\.zip$/`.
+* **Admin Controls:** Extend the update toggle in Gestión SRL &rarr; Ajustes Generales to enable/disable automated theme checks alongside plugin updates.
+* **CI/CD:** `.github/workflows/release-plugin.yml` verifies valid theme headers in `srl-theme/style.css` and packages `srl-theme.zip` on every release tag.
 
 ---
 
