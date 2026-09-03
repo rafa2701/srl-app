@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-09-02
+### Added
+- **Dedicated Frontend Protest Single Template (`single-srl_protest.php`)**:
+  - Clean frontend single page view for `srl_protest` CPT (`reclamo` permalink rewrite slug) featuring SRL dark motorsport aesthetics.
+  - Automatic title and slug formatting: `[Evento] - [Apellido Demandante] vs [Apellido Acusado] #[N]` (e.g. `GP Monza - Pérez vs González #1` -> `gp-monza-perez-gonzalez-1`).
+  - Embedded HTML5 video player with slow-motion speed controls (0.25x, 0.5x, 1.0x) for precise steward incident analysis + responsive embeds for YouTube and Twitch clips.
+  - Role-based visibility and public sanitized view: Guests and drivers see incident facts, evidence player, and official public resolution/sanctions, while internal deliberations and votes remain hidden.
+- **Concurrent Multi-Admin Collaborative Voting Engine (`SRL_Protest_Voting`)**:
+  - Atomic post meta array storage (`_srl_protest_votes`) eliminating WordPress classic editor `_edit_lock` conflicts and allowing multiple stewards to vote simultaneously.
+  - One-click voting ("🟢 Procede" vs "🔴 No Procede") with optional justification notes.
+  - Quorum counter and live simple majority progress bar.
+  - Delegated external steward voting modal enabling admins to record votes from guest stewards.
+- **AI Virtual Commissary User Provisioning & Configurable Voting**:
+  - Automatic provisioning of user `comisario-ai` with Display Name **`Comisario Virtual AI`**.
+  - Configurable AI participation modes in admin settings: *Always Active* (casts 1 vote automatically once analysis completes), *Tie-Breaker Only* (activates vote only to break a 50/50 tie when quorum is met), or *Disabled* (consultative only).
+  - Admin settings for Frontend Visibility (`public_sanitized` / `admins_only`) and Minimum Quorum (default: 3 votes).
+- **Frontend Ruling and Case Management**:
+  - Steward resolution console allowing admins to apply official status, adopt AI recommended penalties with one click, and submit final sanction text.
+  - Case reopening mechanism (`🔓 Reabrir Reclamo`) to return resolved protests to review.
+- **Theme Update & Deployment Pipeline**:
+  - Configured Plugin Update Checker (PUC) for `srl-theme` matching `srl-theme.zip` from GitHub Releases in `includes/updater.php`.
+  - Added theme auto-update toggle in General Settings and bumped `srl-theme` to version `1.1.0`.
+
 ## [1.13.0] - 2026-08-31
 ### Added
 - **Direct Presigned Cloudflare R2 Uploads**: Implemented S3 SigV4 presigned PUT URL generation (`SRL_R2_Uploader::get_presigned_put_url()`) and AJAX endpoint `srl_get_r2_upload_url`.

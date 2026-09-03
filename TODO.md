@@ -4,6 +4,13 @@
 - (Add upcoming tasks here)
 
 ## Completed
+- [x] Incident Protest Frontend Template & Multi-Admin Collaborative Voting System
+  - [x] Task 1: CPT `srl_protest` Public Queryable Routing & Automatic Naming Scheme
+  - [x] Task 2: AI Steward User Provisioning & Voting/Quorum Administration Settings
+  - [x] Task 3: Multi-Admin & External Steward Voting Engine with Quorum & Tie-Breaker Logic
+  - [x] Task 4: Frontend Single Template `single-srl_protest.php` & Media Player
+  - [x] Task 5: Theme Deployment & Update Pipeline (`srl-theme`)
+  - [x] Task 6: Verification, Version Bump, Documentation, TODO & Changelog Updates
 - [x] Cloudflare R2 Direct Presigned Upload & Upload Limits Handling
   - [x] Task 1: Add `SRL_R2_Uploader::get_presigned_put_url()` for direct S3 SigV4 client uploads bypassing WordPress PHP limits
   - [x] Task 2: Add `srl_get_r2_upload_url` AJAX endpoint in `shortcode-protest-form.php`
