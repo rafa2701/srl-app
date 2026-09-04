@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [1.15.0] - 2026-09-03
 ### Added
 - **Expansión de Hitos Históricos & Salón de la Fama**:
   - `runaway_victory`: *Paseo Triunfal* (mayor gap de victoria en carrera en ms, orden DESC).
