@@ -199,6 +199,7 @@ class SRL_Achievement_Manager {
             $margin = abs( $top_two[0]->total_time - $top_two[1]->total_time );
             if ( $margin > 0 ) {
                 self::update_best_achievement( $top_two[0]->driver_id, 'nerves_of_steel', $margin, $event_id, 'min', $top_two[1]->driver_id );
+                self::update_best_achievement( $top_two[0]->driver_id, 'runaway_victory', $margin, $event_id, 'max', $top_two[1]->driver_id );
             }
         }
 
@@ -239,7 +240,50 @@ class SRL_Achievement_Manager {
         " );
 
         if ( !empty($speed_demons) && $speed_demons[0]->fl_count > 0 ) {
-            self::save_achievement( $speed_demons[0]->driver_id, 'speed_demon', $speed_demons[0]->fl_count, null, $championship_id );
+            self::update_best_achievement( $speed_demons[0]->driver_id, 'speed_demon', $speed_demons[0]->fl_count, null, 'max', null, $championship_id );
+        }
+
+        // Season Dominator (Most wins in a season)
+        $season_winners = $wpdb->get_results( "
+            SELECT driver_id, COUNT(*) as win_count
+            FROM {$wpdb->prefix}srl_results r
+            JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+            WHERE s.event_id IN ($event_ids_str) AND s.session_type = 'Race' AND r.position = 1 AND r.is_disqualified = 0 AND r.is_nc = 0
+            GROUP BY driver_id
+            ORDER BY win_count DESC
+        " );
+
+        if ( !empty($season_winners) && $season_winners[0]->win_count > 0 ) {
+            self::update_best_achievement( $season_winners[0]->driver_id, 'season_dominator', $season_winners[0]->win_count, null, 'max', null, $championship_id );
+        }
+
+        // Saturday King (Most poles in a season)
+        $season_polemans = $wpdb->get_results( "
+            SELECT driver_id, SUM(has_pole) as pole_count
+            FROM {$wpdb->prefix}srl_results r
+            JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
+            WHERE s.event_id IN ($event_ids_str) AND s.session_type = 'Race'
+            GROUP BY driver_id
+            ORDER BY pole_count DESC
+        " );
+
+        if ( !empty($season_polemans) && $season_polemans[0]->pole_count > 0 ) {
+            self::update_best_achievement( $season_polemans[0]->driver_id, 'saturday_king', $season_polemans[0]->pole_count, null, 'max', null, $championship_id );
+        }
+
+        // Championship Margins (Closest & Biggest for completed championships)
+        $status = get_post_meta( $championship_id, '_srl_status', true );
+        if ( $status === 'completed' && function_exists( 'srl_calculate_championship_standings' ) ) {
+            $standings = srl_calculate_championship_standings( $championship_id );
+            if ( count( $standings ) >= 2 ) {
+                $driver_ids = array_keys( $standings );
+                $champion_id = (int)$driver_ids[0];
+                $runner_up_id = (int)$driver_ids[1];
+                $diff = abs( (float)$standings[$champion_id]['points'] - (float)$standings[$runner_up_id]['points'] );
+
+                self::update_best_achievement( $champion_id, 'nail_biter_championship', $diff, null, 'min', $runner_up_id, $championship_id );
+                self::update_best_achievement( $champion_id, 'dominant_championship', $diff, null, 'max', $runner_up_id, $championship_id );
+            }
         }
 
         // Clean Sweep (Win every race)
@@ -322,8 +366,8 @@ class SRL_Achievement_Manager {
         $current = $wpdb->get_row( $wpdb->prepare( "SELECT id, record_value FROM $table WHERE driver_id = %d AND achievement_key = %s", $driver_id, $key ) );
         $is_better = false;
         if ( ! $current ) { $is_better = true; } else {
-            if ( $mode === 'max' && $value > $current->record_value ) $is_better = true;
-            if ( $mode === 'min' && $value < $current->record_value ) $is_better = true;
+            if ( $mode === 'max' && (float)$value > (float)$current->record_value ) $is_better = true;
+            if ( $mode === 'min' && (float)$value < (float)$current->record_value ) $is_better = true;
         }
         if ( $is_better ) { self::save_achievement( $driver_id, $key, $value, $event_id, $championship_id, $opponent_id ); }
     }
@@ -332,8 +376,8 @@ class SRL_Achievement_Manager {
         global $wpdb;
         $table = $wpdb->prefix . 'srl_achievements';
         $id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE driver_id = %d AND achievement_key = %s", $driver_id, $key ) );
-        // Si es por campeonato, permitimos múltiples (uno por campeonato)
-        if ($championship_id && $key !== 'speed_demon') {
+        // Si es por campeonato, permitimos múltiples (uno por campeonato) solo para clean_sweep
+        if ( $championship_id && $key === 'clean_sweep' ) {
             $id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE driver_id = %d AND achievement_key = %s AND championship_id = %d", $driver_id, $key, $championship_id ) );
         }
         $data = [ 'achievement_key' => $key, 'driver_id' => $driver_id, 'record_value' => $value, 'event_id' => $event_id, 'championship_id' => $championship_id, 'opponent_id' => $opponent_id, 'updated_at' => current_time( 'mysql' ) ];
