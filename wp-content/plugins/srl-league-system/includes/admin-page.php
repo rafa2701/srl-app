@@ -138,36 +138,51 @@ function srl_render_admin_page() {
         </div>
 
         <div id="achievements" class="srl-tab-content">
-            <div id="srl-achievements-settings-wrapper" style="max-width: 800px;">
+            <div id="srl-achievements-settings-wrapper" style="max-width: 850px;">
                 <h2>Configuración de Hitos (Logros)</h2>
                 <form method="post" action="options.php">
                     <?php
                     settings_fields( 'srl_settings_group' );
+                    $definitions = SRL_Achievement_Manager::get_achievement_definitions();
                     $labels = SRL_Achievement_Manager::get_achievement_keys();
-                    if ( ! is_array( $labels ) ) {
-                        $labels = [];
-                    }
                     $settings = get_option( 'srl_achievement_settings', [] );
                     if ( ! is_array( $settings ) ) {
                         $settings = [];
                     }
+                    $show_curiosities = get_option( 'srl_show_curiosities_section', 1 );
                     ?>
-                    <table class="wp-list-table widefat fixed striped">
+
+                    <div style="background: #fff; border: 1px solid #ccd0d4; padding: 15px 20px; border-radius: 4px; margin-bottom: 25px; box-shadow: 0 1px 1px rgba(0,0,0,.04);">
+                        <h3 style="margin-top: 0; margin-bottom: 8px;">Visibilidad de Estadísticas Curiosas en la Web</h3>
+                        <p class="description" style="margin-bottom: 12px;">Activa o desactiva la visualización de la sección "Estadísticas Curiosas & Datos Insólitos" en la página pública de hitos (<code>/hitos/</code>).</p>
+                        <label class="switch" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="hidden" name="srl_show_curiosities_section" value="0">
+                            <input type="checkbox" name="srl_show_curiosities_section" value="1" <?php checked( (int)$show_curiosities, 1 ); ?>>
+                            Mostrar sección de Estadísticas Curiosas en el frontend
+                        </label>
+                    </div>
+
+                    <h3 style="margin-top: 20px; display: flex; align-items: center; gap: 6px;">
+                        <span>🏆</span> Hitos Históricos (Salón de la Fama)
+                    </h3>
+                    <table class="wp-list-table widefat fixed striped" style="margin-bottom: 30px;">
                         <thead>
                             <tr>
-                                <th>Clave</th>
-                                <th>Etiqueta (Español)</th>
-                                <th style="width: 100px;">Estado</th>
+                                <th style="width: 25%;">Clave</th>
+                                <th style="width: 55%;">Etiqueta (Español)</th>
+                                <th style="width: 20%;">Estado</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ( $labels as $key => $label ) :
+                            <?php foreach ( $definitions as $key => $def ) :
+                                if ( ( $def['section'] ?? 'hall_of_fame' ) !== 'hall_of_fame' ) continue;
+                                $label = $labels[$key] ?? $def['label'];
                                 $is_enabled = isset( $settings[$key]['enabled'] ) ? (bool) $settings[$key]['enabled'] : true;
                             ?>
                                 <tr>
                                     <td><code><?php echo esc_html( $key ); ?></code></td>
                                     <td>
-                                        <input type="text" name="srl_achievement_labels[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $label ); ?>" class="regular-text">
+                                        <input type="text" name="srl_achievement_labels[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $label ); ?>" class="regular-text" style="width: 100%;">
                                     </td>
                                     <td>
                                         <label class="switch">
@@ -180,6 +195,41 @@ function srl_render_admin_page() {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+
+                    <h3 style="margin-top: 25px; display: flex; align-items: center; gap: 6px;">
+                        <span>⏱️</span> Estadísticas Curiosas & Datos Insólitos
+                    </h3>
+                    <table class="wp-list-table widefat fixed striped" style="margin-bottom: 20px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">Clave</th>
+                                <th style="width: 55%;">Etiqueta (Español)</th>
+                                <th style="width: 20%;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $definitions as $key => $def ) :
+                                if ( ( $def['section'] ?? '' ) !== 'curiosities' ) continue;
+                                $label = $labels[$key] ?? $def['label'];
+                                $is_enabled = isset( $settings[$key]['enabled'] ) ? (bool) $settings[$key]['enabled'] : true;
+                            ?>
+                                <tr>
+                                    <td><code><?php echo esc_html( $key ); ?></code></td>
+                                    <td>
+                                        <input type="text" name="srl_achievement_labels[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $label ); ?>" class="regular-text" style="width: 100%;">
+                                    </td>
+                                    <td>
+                                        <label class="switch">
+                                            <input type="hidden" name="srl_achievement_settings[<?php echo esc_attr( $key ); ?>][enabled]" value="0">
+                                            <input type="checkbox" name="srl_achievement_settings[<?php echo esc_attr( $key ); ?>][enabled]" value="1" <?php checked( $is_enabled ); ?>>
+                                            Habilitado
+                                        </label>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
                     <?php submit_button(); ?>
                 </form>
             </div>

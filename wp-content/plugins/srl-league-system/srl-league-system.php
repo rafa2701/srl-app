@@ -267,6 +267,7 @@ function srl_register_settings() {
     register_setting( 'srl_settings_group', 'srl_championship_default_order' );
     register_setting( 'srl_settings_group', 'srl_achievement_labels' );
     register_setting( 'srl_settings_group', 'srl_achievement_settings' );
+    register_setting( 'srl_settings_group', 'srl_show_curiosities_section' );
     register_setting( 'srl_settings_group', 'srl_force_auto_update' );
     register_setting( 'srl_settings_group', 'srl_rulebook_markdown' );
     register_setting( 'srl_settings_group', 'srl_rulebook_updated_at' );
