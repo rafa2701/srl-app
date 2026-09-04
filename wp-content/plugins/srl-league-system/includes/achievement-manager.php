@@ -16,7 +16,7 @@ class SRL_Achievement_Manager {
         global $wpdb;
 
         $results = $wpdb->get_results( $wpdb->prepare( "
-            SELECT r.position, r.points_awarded, r.is_disqualified, r.is_nc, r.is_dnf, r.laps_completed, r.session_id, s.event_id
+            SELECT r.position, r.points_awarded, r.is_disqualified, r.is_nc, r.is_dnf, r.has_pole, r.laps_completed, r.session_id, s.event_id
             FROM {$wpdb->prefix}srl_results r
             JOIN {$wpdb->prefix}srl_sessions s ON r.session_id = s.id
             JOIN {$wpdb->prefix}posts p ON s.event_id = p.ID
@@ -31,6 +31,10 @@ class SRL_Achievement_Manager {
         $max_points_streak = 0; $current_points_streak = 0;
         $max_iron_man = 0; $current_iron_man = 0;
         $max_swiss_watch = 0; $current_swiss_watch = 0;
+        $max_dnf_streak = 0; $current_dnf_streak = 0;
+
+        $win_indices = [];
+        $pole_indices = [];
 
         // Pre-fetch winner laps for all relevant sessions to avoid N+1 queries
         $session_ids = array_unique(array_column($results, 'session_id'));
@@ -43,11 +47,16 @@ class SRL_Achievement_Manager {
             }
         }
 
-        foreach ( $results as $res ) {
+        foreach ( $results as $index => $res ) {
             $is_win = ( $res->position == 1 && ! $res->is_disqualified && ! $res->is_nc );
             $is_podium = ( $res->position <= 3 && ! $res->is_disqualified && ! $res->is_nc );
             $is_points = ( $res->points_awarded > 0 );
             $is_finished = ( ! $res->is_dnf );
+            $is_dnf = (bool)$res->is_dnf;
+            $has_pole = (bool)$res->has_pole;
+
+            if ( $is_win ) $win_indices[] = $index;
+            if ( $has_pole ) $pole_indices[] = $index;
 
             // Swiss Watch Calculation (Lead Lap)
             $winner_laps = $winner_laps_map[$res->session_id] ?? 0;
@@ -68,6 +77,9 @@ class SRL_Achievement_Manager {
 
             $current_swiss_watch = $on_lead_lap ? $current_swiss_watch + 1 : 0;
             if ($current_swiss_watch > $max_swiss_watch) $max_swiss_watch = $current_swiss_watch;
+
+            $current_dnf_streak = $is_dnf ? $current_dnf_streak + 1 : 0;
+            if ($current_dnf_streak > $max_dnf_streak) $max_dnf_streak = $current_dnf_streak;
         }
 
         self::save_achievement( $driver_id, 'max_win_streak', $max_win_streak );
@@ -75,6 +87,41 @@ class SRL_Achievement_Manager {
         self::save_achievement( $driver_id, 'point_stalker', $max_points_streak );
         self::save_achievement( $driver_id, 'iron_man', $max_iron_man );
         self::save_achievement( $driver_id, 'swiss_watch', $max_swiss_watch );
+        self::save_achievement( $driver_id, 'dnf_streak', $max_dnf_streak );
+
+        // Dry Streaks (Victorias)
+        if ( ! empty( $win_indices ) ) {
+            $first_win_wait = $win_indices[0] + 1;
+            self::save_achievement( $driver_id, 'first_win_wait', $first_win_wait );
+
+            if ( count( $win_indices ) >= 2 ) {
+                $max_win_drought = 0;
+                for ( $i = 1; $i < count( $win_indices ); $i++ ) {
+                    $gap = $win_indices[$i] - $win_indices[$i - 1] - 1;
+                    if ( $gap > $max_win_drought ) $max_win_drought = $gap;
+                }
+                if ( $max_win_drought > 0 ) {
+                    self::save_achievement( $driver_id, 'longest_win_drought', $max_win_drought );
+                }
+            }
+        }
+
+        // Dry Streaks (Poles)
+        if ( ! empty( $pole_indices ) ) {
+            $first_pole_wait = $pole_indices[0] + 1;
+            self::save_achievement( $driver_id, 'first_pole_wait', $first_pole_wait );
+
+            if ( count( $pole_indices ) >= 2 ) {
+                $max_pole_drought = 0;
+                for ( $i = 1; $i < count( $pole_indices ); $i++ ) {
+                    $gap = $pole_indices[$i] - $pole_indices[$i - 1] - 1;
+                    if ( $gap > $max_pole_drought ) $max_pole_drought = $gap;
+                }
+                if ( $max_pole_drought > 0 ) {
+                    self::save_achievement( $driver_id, 'longest_pole_drought', $max_pole_drought );
+                }
+            }
+        }
     }
 
     /**
@@ -111,6 +158,19 @@ class SRL_Achievement_Manager {
         self::save_achievement( $driver_id, 'qualifying_ace', round( $stats->avg_grid, 2 ) );
         self::save_achievement( $driver_id, 'sunday_driver', round( $sunday_diff, 2 ) );
         self::save_achievement( $driver_id, 'old_guard', $stats->total_races );
+
+        // Estadísticas curiosas para pilotos con >= 10 carreras sin victoria / sin pole
+        if ( (int)$stats->wins === 0 ) {
+            self::save_achievement( $driver_id, 'most_races_without_win', $stats->total_races );
+        } else {
+            self::delete_achievement( $driver_id, 'most_races_without_win' );
+        }
+
+        if ( (int)$stats->poles === 0 ) {
+            self::save_achievement( $driver_id, 'most_races_without_pole', $stats->total_races );
+        } else {
+            self::delete_achievement( $driver_id, 'most_races_without_pole' );
+        }
     }
 
     /**
