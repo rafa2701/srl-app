@@ -345,30 +345,232 @@ class SRL_Achievement_Manager {
         $wpdb->delete( $wpdb->prefix . 'srl_achievements', [ 'driver_id' => $driver_id, 'achievement_key' => $key ] );
     }
 
-    public static function get_achievement_keys() {
-        $defaults = [
-            'max_win_streak'             => 'Racha de Victorias',
-            'max_podium_streak'          => 'Racha de Podios',
-            'point_stalker'              => 'Cazapuntos (Racha de Puntos)',
-            'win_efficiency'             => 'Efectividad de Victorias (%)',
-            'podium_efficiency'          => 'Efectividad de Podios (%)',
-            'pole_efficiency'            => 'Efectividad de Poles (%)',
-            'iron_man'                   => 'Iron Man (Carreras sin DNF)',
-            'swiss_watch'                => 'Reloj Suizo (Vueltas en el líder)',
-            'hat_trick_total'            => 'Hat-tricks (Total)',
-            'grand_slam'                 => 'Grand Slam (Hattrick + Lideró todo) (2024 en adelante)',
-            'qualifying_ace'             => 'As de la Clasificación (Parrilla Media)',
-            'sunday_driver'              => 'Especialista en Carrera (Remontada Media)',
-            'win_from_farthest_back'     => 'Victoria desde más atrás',
-            'hard_charger'               => 'Remontada histórica (Posiciones)',
-            'nerves_of_steel'            => 'Nervios de Acero (Photo Finish)',
-            'one_lap_wonder'             => 'Maravilla a una Vuelta (Pole Gap)',
-            'speed_demon'                => 'Demonio de la Velocidad (Más FL en una temporada)',
-            'clean_sweep'                => 'Pleno (Ganar todo un campeonato)',
-            'old_guard'                  => 'La Vieja Guardia (Total de carreras)',
-            'giant_killer'               => 'Matagigantes (Derrotar leyendas)',
-            'closer'                     => 'The Closer (Adelantamientos al final)',
+    public static function get_achievement_definitions() {
+        return [
+            // --- HALL OF FAME ---
+            'max_win_streak' => [
+                'label'   => 'Racha de Victorias',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+            ],
+            'max_podium_streak' => [
+                'label'   => 'Racha de Podios',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+            ],
+            'point_stalker' => [
+                'label'   => 'Cazapuntos (Racha de Puntos)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+            ],
+            'win_efficiency' => [
+                'label'   => 'Efectividad de Victorias (%)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'percentage',
+                'note'    => '* Mínimo 10 carreras',
+            ],
+            'podium_efficiency' => [
+                'label'   => 'Efectividad de Podios (%)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'percentage',
+                'note'    => '* Mínimo 10 carreras',
+            ],
+            'pole_efficiency' => [
+                'label'   => 'Efectividad de Poles (%)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'percentage',
+                'note'    => '* Mínimo 10 carreras',
+            ],
+            'iron_man' => [
+                'label'   => 'Iron Man (Carreras sin DNF)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+            ],
+            'swiss_watch' => [
+                'label'   => 'Reloj Suizo (Vueltas en el líder)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+            ],
+            'hat_trick_total' => [
+                'label'   => 'Hat-tricks (Total)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'count',
+            ],
+            'grand_slam' => [
+                'label'   => 'Grand Slam (Hattrick + Lideró todo) (2024 en adelante)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'count',
+                'note'    => '* Resultados desde 2025',
+            ],
+            'qualifying_ace' => [
+                'label'   => 'As de la Clasificación (Parrilla Media)',
+                'section' => 'hall_of_fame',
+                'order'   => 'ASC',
+                'unit'    => 'decimal',
+                'note'    => '* Mínimo 10 carreras',
+            ],
+            'sunday_driver' => [
+                'label'   => 'Especialista en Carrera (Remontada Media)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'decimal',
+                'note'    => '* Mínimo 10 carreras',
+            ],
+            'win_from_farthest_back' => [
+                'label'   => 'Victoria desde más atrás',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'position',
+            ],
+            'hard_charger' => [
+                'label'   => 'Remontada histórica (Posiciones)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'positions_gained',
+            ],
+            'nerves_of_steel' => [
+                'label'   => 'Nervios de Acero (Photo Finish)',
+                'section' => 'hall_of_fame',
+                'order'   => 'ASC',
+                'unit'    => 'time',
+            ],
+            'runaway_victory' => [
+                'label'   => 'Paseo Triunfal (Mayor gap de victoria)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'time',
+            ],
+            'one_lap_wonder' => [
+                'label'   => 'Maravilla a una Vuelta (Pole Gap)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'time',
+            ],
+            'speed_demon' => [
+                'label'   => 'Demonio de la Velocidad (Más FL en una temporada)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'fl',
+            ],
+            'clean_sweep' => [
+                'label'   => 'Pleno (Ganar todo un campeonato)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'count',
+            ],
+            'season_dominator' => [
+                'label'   => 'El Rey de la Temporada (Más victorias en una temporada)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'wins',
+            ],
+            'saturday_king' => [
+                'label'   => 'Señor de los Sábados (Más poles en una temporada)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'poles',
+            ],
+            'nail_biter_championship' => [
+                'label'   => 'Final de Infarto (Menor margen de puntos en título)',
+                'section' => 'hall_of_fame',
+                'order'   => 'ASC',
+                'unit'    => 'points',
+                'note'    => '* Campeonatos finalizados',
+            ],
+            'dominant_championship' => [
+                'label'   => 'Tiranía del Título (Mayor ventaja de puntos en título)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'points',
+                'note'    => '* Campeonatos finalizados',
+            ],
+            'old_guard' => [
+                'label'   => 'La Vieja Guardia (Total de carreras)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+            ],
+            'giant_killer' => [
+                'label'   => 'Matagigantes (Derrotar leyendas)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'count',
+            ],
+            'closer' => [
+                'label'   => 'The Closer (Adelantamientos al final)',
+                'section' => 'hall_of_fame',
+                'order'   => 'DESC',
+                'unit'    => 'count',
+            ],
+
+            // --- CURIOSITIES ---
+            'first_win_wait' => [
+                'label'   => 'Gloria Tardía (Espera 1ª Victoria)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+                'note'    => '* Carreras disputadas hasta su 1ª victoria',
+            ],
+            'first_pole_wait' => [
+                'label'   => 'La Larga Espera (Espera 1ª Pole)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+                'note'    => '* Participaciones hasta su 1ª pole',
+            ],
+            'longest_win_drought' => [
+                'label'   => 'Travesía en el Desierto (Sequía entre Victorias)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+                'note'    => '* Mayor intervalo de carreras entre victorias',
+            ],
+            'longest_pole_drought' => [
+                'label'   => 'Travesía en el Desierto (Sequía entre Poles)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+                'note'    => '* Mayor intervalo de eventos entre poles',
+            ],
+            'most_races_without_win' => [
+                'label'   => 'El Eterno Aspirante (Más carreras sin victoria)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+                'note'    => '* Mínimo 10 carreras disputadas',
+            ],
+            'most_races_without_pole' => [
+                'label'   => 'Cazador Sin Pole (Más carreras sin pole)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'races',
+                'note'    => '* Mínimo 10 carreras disputadas',
+            ],
+            'dnf_streak' => [
+                'label'   => 'Imán de Grúas (Racha de DNF)',
+                'section' => 'curiosities',
+                'order'   => 'DESC',
+                'unit'    => 'dnf',
+            ],
         ];
+    }
+
+    public static function get_achievement_keys() {
+        $definitions = self::get_achievement_definitions();
+        $defaults = array_map( function( $def ) {
+            return $def['label'];
+        }, $definitions );
+
         $custom_labels = get_option( 'srl_achievement_labels', [] );
         if ( ! is_array( $custom_labels ) ) {
             $custom_labels = [];
