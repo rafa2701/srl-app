@@ -4,6 +4,14 @@
 - [ ] Implement Commissary Visibility Controls (admin only/public)
 
 ## Completed
+- [x] Expansión de Hitos Históricos y Sección de Estadísticas Curiosas
+  - [x] Task 1: Centralized Achievement Definitions & Keys in `SRL_Achievement_Manager`
+  - [x] Task 2: Calculate Timing Records & Championship Records
+  - [x] Task 3: Calculate Streaks, DNF Streaks, Dry Streaks & Efficiency
+  - [x] Task 4: Update Leaderboard Queries in `SRL_Achievement_Manager`
+  - [x] Task 5: Admin Panel: Global Curiosity Toggle & Grouped Settings
+  - [x] Task 6: Frontend Template & Formatting in Shortcode (`/hitos/`)
+  - [x] Task 7: Verification, Documentation & Spec Archiving
 - [x] Incident Protest Frontend Template & Multi-Admin Collaborative Voting System
   - [x] Task 1: CPT `srl_protest` Public Queryable Routing & Automatic Naming Scheme
   - [x] Task 2: AI Steward User Provisioning & Voting/Quorum Administration Settings

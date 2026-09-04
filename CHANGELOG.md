@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- **Expansión de Hitos Históricos & Salón de la Fama**:
+  - `runaway_victory`: *Paseo Triunfal* (mayor gap de victoria en carrera en ms, orden DESC).
+  - `season_dominator`: *El Rey de la Temporada* (más victorias en una temporada de campeonato).
+  - `saturday_king`: *Señor de los Sábados* (más pole positions en una temporada de campeonato).
+  - `nail_biter_championship`: *Final de Infarto* (menor margen de puntos entre campeón y subcampeón en campeonatos completados, orden ASC).
+  - `dominant_championship`: *Tiranía del Título* (mayor margen de puntos en campeonatos completados, orden DESC).
+- **Nueva Sección: Estadísticas Curiosas & Datos Insólitos**:
+  - `first_win_wait`: *Gloria Tardía* (carreras disputadas hasta lograr la 1ª victoria).
+  - `first_pole_wait`: *La Larga Espera* (participaciones hasta lograr la 1ª pole position).
+  - `longest_win_drought`: *Travesía en el Desierto (Victorias)* (mayor intervalo de carreras consecutivas entre dos triunfos).
+  - `longest_pole_drought`: *Travesía en el Desierto (Poles)* (mayor intervalo de eventos consecutivos entre dos poles).
+  - `most_races_without_win`: *El Eterno Aspirante* (más carreras disputadas en la liga sin haber ganado nunca, con mínimo 10 carreras).
+  - `most_races_without_pole`: *Cazador Sin Pole* (más carreras disputadas en la liga sin haber hecho pole jamás, con mínimo 10 carreras).
+  - `dnf_streak`: *Imán de Grúas* (mayor racha de abandonos consecutivos).
+- **Control de Visibilidad y Agrupación en Panel de Administración**:
+  - Nuevo switch global `srl_show_curiosities_section` en Gestión SRL para activar/desactivar la visualización pública de la sección de curiosidades en `/hitos/`.
+  - División de la configuración de hitos en el admin en dos tablas limpias: *Salón de la Fama* y *Estadísticas Curiosas*, con edición de etiquetas y toggles individuales.
+- **Renderizado Dinámico y Formateo en Frontend (`[srl_achievements_leaderboard]`)**:
+  - Formateo inteligente por unidad (`time`, `points`, `wins`, `poles`, `races`, `dnf`, `percentage`).
+  - Renderizado en dos bloques visualmente independientes con íconos temáticos (`🏆` para Salón de la Fama y `⏱️` con acento ámbar para Curiosidades).
+  - Notas al pie dinámicas por tarjeta (ej: `* Mínimo 10 carreras disputadas`, `* Campeonatos finalizados`).
 
 ## [1.14.1] - 2026-09-03
 ### Fixed
