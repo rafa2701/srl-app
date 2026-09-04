@@ -190,6 +190,12 @@ if ( ! function_exists( 'srl_init_theme_updater' ) ) {
      * Initialize Automatic Updates for SRL Theme via GitHub Releases
      */
     function srl_init_theme_updater() {
+        static $initialized = false;
+        if ( $initialized ) {
+            return;
+        }
+        $initialized = true;
+
         if ( ! class_exists( 'YahnisElsts\PluginUpdateChecker\v5\PucFactory' ) ) {
             return;
         }

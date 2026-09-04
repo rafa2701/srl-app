@@ -46,6 +46,12 @@ if ( ! function_exists( 'srl_init_theme_updater' ) ) {
      * Initialize theme updater for srl-theme from GitHub releases
      */
     function srl_init_theme_updater() {
+        static $initialized = false;
+        if ( $initialized ) {
+            return;
+        }
+        $initialized = true;
+
         if ( ! class_exists( 'YahnisElsts\PluginUpdateChecker\v5\PucFactory' ) ) {
             return;
         }

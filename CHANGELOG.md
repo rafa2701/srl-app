@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-09-03
+### Fixed
+- Fixed fatal error `Cannot redeclare srl_init_theme_updater()` by adding `function_exists` guards in both `updater.php` and `srl-theme/functions.php`.
+- Fixed rewrite rule caching for `/reclamo/` permalinks and removed `is_singular('srl_protest')` from `srl_restrict_commissary_access` to allow individual protest pages to render their dedicated template.
+- Fixed AI verdict data extraction in frontend protest template (`single-srl_protest.php`) supporting direct unnested consensus verdicts, proportional fault bar rendering, and conditional persona breakdowns.
+- Bumped `srl-theme` version to `1.1.1` and `srl-league-system` to `1.14.1`.
+
 ## [1.14.0] - 2026-09-02
 ### Added
 - **Dedicated Frontend Protest Single Template (`single-srl_protest.php`)**:
