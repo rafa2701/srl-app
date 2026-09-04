@@ -726,91 +726,168 @@ function srl_format_time( $ms, $is_total_time = false ) {
  * Shortcode para mostrar el salón de la fama / tabla de récords de hitos.
  */
 function srl_achievements_leaderboard_shortcode() {
-    $leaderboard = SRL_Achievement_Manager::get_achievements_leaderboard();
+    $hall_of_fame = SRL_Achievement_Manager::get_achievements_leaderboard( 'hall_of_fame' );
+    $show_curiosities = (int) get_option( 'srl_show_curiosities_section', 1 );
+    $curiosities = $show_curiosities ? SRL_Achievement_Manager::get_achievements_leaderboard( 'curiosities' ) : [];
 
-    if ( empty( $leaderboard ) ) {
+    if ( empty( $hall_of_fame ) && empty( $curiosities ) ) {
         return '<div class="srl-achievements-empty">Aún no hay hitos registrados.</div>';
     }
+
+    $format_record_value = function( $val, $unit ) {
+        switch ( $unit ) {
+            case 'percentage':
+                return $val . '%';
+            case 'time':
+                return function_exists( 'srl_format_time' ) ? srl_format_time( $val ) : $val;
+            case 'points':
+                return $val . ( (float)$val == 1 ? ' pt' : ' pts' );
+            case 'wins':
+                return $val . ( (int)$val == 1 ? ' victoria' : ' victorias' );
+            case 'poles':
+                return $val . ( (int)$val == 1 ? ' pole' : ' poles' );
+            case 'races':
+                return $val . ( (int)$val == 1 ? ' carrera' : ' carreras' );
+            case 'dnf':
+                return $val . ( (int)$val == 1 ? ' abandono' : ' abandonos' );
+            case 'positions_gained':
+                return '+' . $val . ' pos';
+            case 'position':
+                return 'P' . $val;
+            case 'decimal':
+            case 'count':
+            default:
+                return $val;
+        }
+    };
+
+    $profile_page = get_page_by_path( 'pilotos' );
+    $base_driver_url = $profile_page ? get_permalink( $profile_page->ID ) : home_url( '/pilotos/' );
 
     ob_start();
     ?>
     <div class="srl-achievements-hall-of-fame">
-        <h2 class="srl-section-title">Hitos Históricos</h2>
-        <div class="srl-achievements-grid">
-            <?php foreach ( $leaderboard as $key => $data ) : ?>
-                <div class="srl-achievement-card">
-                    <div class="srl-achievement-header">
-                        <span class="srl-achievement-icon">🏆</span>
-                        <h3 class="srl-achievement-label"><?php echo esc_html( $data['label'] ); ?></h3>
-                    </div>
-                    <table class="srl-achievement-table">
-                        <tbody>
-                            <?php
-                            $rank = 1;
-                            foreach ( $data['records'] as $record ) :
-                                $value = $record->record_value;
-                                // Formatear valores según la clave
-                                if ( strpos($key, 'efficiency') !== false ) {
-                                    $value .= '%';
-                                } elseif ( strpos($key, 'margin') !== false || strpos($key, 'gap') !== false || $key === 'nerves_of_steel' || $key === 'one_lap_wonder' ) {
-                                    $value = srl_format_time($value);
-                                }
-                            ?>
-                                <tr class="rank-<?php echo $rank; ?>">
-                                    <td class="rank-col">#<?php echo $rank; ?></td>
-                                    <td class="driver-col">
-                                        <a href="<?php
-                                            // Enlace al perfil individual en la misma página de pilotos
-                                            $profile_page = get_page_by_path('pilotos');
-                                            $base_url = $profile_page ? get_permalink($profile_page->ID) : home_url('/pilotos/');
-
-                                            // Preferimos steam_id si está disponible en el registro del hito (si lo añadimos al query)
-                                            // pero por simplicidad usamos driver_id
-                                            echo esc_url( add_query_arg('driver_id', $record->driver_id, $base_url) );
-                                        ?>">
-                                            <?php echo esc_html( $record->full_name ); ?>
-                                        </a>
-                                    </td>
-                                    <td class="value-col">
-                                        <?php echo esc_html( $value ); ?>
-                                        <?php if ( $key === 'nerves_of_steel' && $record->opponent_name ) : ?>
-                                            <br><small style="color: #888; font-weight: normal;">vs <?php echo esc_html($record->opponent_name); ?></small>
-                                        <?php endif; ?>
-                                        <?php if ( $record->championship_name ) : ?>
-                                            <br><small style="color: #888; font-weight: normal;"><?php echo esc_html($record->championship_name); ?></small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="event-col">
-                                        <?php if ( $record->event_id ) : ?>
-                                            <a href="<?php echo esc_url( get_permalink( $record->event_id ) ); ?>" title="Ver Evento">
-                                                📅
-                                            </a>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php $rank++; endforeach; ?>
-                        </tbody>
-                    </table>
-                    <?php if ( strpos($key, 'efficiency') !== false ) : ?>
-                        <div class="srl-achievement-note">* Mínimo 10 carreras</div>
-                    <?php endif; ?>
-                    <?php if ( strpos($key, 'grand_slam') !== false ) : ?>
-                        <div class="srl-achievement-note">* Resultados desde 2025</div>
-                    <?php endif; ?>
-                    <?php if ( $key === 'largest_pole_gap' ) : ?>
-                        <div class="srl-achievement-note">* Pendiente de implementación completa</div>
-                    <?php endif; ?>
+        <?php if ( ! empty( $hall_of_fame ) ) : ?>
+            <div class="srl-achievements-section srl-section-hall-of-fame">
+                <h2 class="srl-section-title"><span>🏆</span> Hitos Históricos</h2>
+                <div class="srl-achievements-grid">
+                    <?php foreach ( $hall_of_fame as $key => $data ) : ?>
+                        <div class="srl-achievement-card srl-card-hof">
+                            <div class="srl-achievement-header">
+                                <span class="srl-achievement-icon">🏆</span>
+                                <h3 class="srl-achievement-label"><?php echo esc_html( $data['label'] ); ?></h3>
+                            </div>
+                            <table class="srl-achievement-table">
+                                <tbody>
+                                    <?php
+                                    $rank = 1;
+                                    foreach ( $data['records'] as $record ) :
+                                        $display_val = $format_record_value( $record->record_value, $data['unit'] ?? '' );
+                                    ?>
+                                        <tr class="rank-<?php echo $rank; ?>">
+                                            <td class="rank-col">#<?php echo $rank; ?></td>
+                                            <td class="driver-col">
+                                                <a href="<?php echo esc_url( add_query_arg( 'driver_id', $record->driver_id, $base_driver_url ) ); ?>">
+                                                    <?php echo esc_html( $record->full_name ); ?>
+                                                </a>
+                                            </td>
+                                            <td class="value-col">
+                                                <?php echo esc_html( $display_val ); ?>
+                                                <?php if ( $record->opponent_name ) : ?>
+                                                    <br><small style="color: #888; font-weight: normal;">vs <?php echo esc_html( $record->opponent_name ); ?></small>
+                                                <?php endif; ?>
+                                                <?php if ( $record->championship_name ) : ?>
+                                                    <br><small style="color: #888; font-weight: normal;"><?php echo esc_html( $record->championship_name ); ?></small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="event-col">
+                                                <?php if ( $record->event_id ) : ?>
+                                                    <a href="<?php echo esc_url( get_permalink( $record->event_id ) ); ?>" title="Ver Evento">
+                                                        📅
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php $rank++; endforeach; ?>
+                                </tbody>
+                            </table>
+                            <?php if ( ! empty( $data['note'] ) ) : ?>
+                                <div class="srl-achievement-note"><?php echo esc_html( $data['note'] ); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
-        </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ( $show_curiosities && ! empty( $curiosities ) ) : ?>
+            <div class="srl-achievements-section srl-section-curiosities" style="margin-top: 50px;">
+                <div class="srl-curiosities-header" style="margin-bottom: 20px;">
+                    <h2 class="srl-section-title" style="margin-bottom: 5px;"><span>⏱️</span> Estadísticas Curiosas & Datos Insólitos</h2>
+                    <p class="srl-section-subtitle" style="color: #888; font-size: 0.95rem; margin: 0;">Curiosidades estadísticas, intervalos de sequía y trayectorias singulares en la historia de la liga.</p>
+                </div>
+                <div class="srl-achievements-grid">
+                    <?php foreach ( $curiosities as $key => $data ) : ?>
+                        <div class="srl-achievement-card srl-card-curiosity">
+                            <div class="srl-achievement-header srl-header-curiosity">
+                                <span class="srl-achievement-icon">⏱️</span>
+                                <h3 class="srl-achievement-label"><?php echo esc_html( $data['label'] ); ?></h3>
+                            </div>
+                            <table class="srl-achievement-table">
+                                <tbody>
+                                    <?php
+                                    $rank = 1;
+                                    foreach ( $data['records'] as $record ) :
+                                        $display_val = $format_record_value( $record->record_value, $data['unit'] ?? '' );
+                                    ?>
+                                        <tr class="rank-<?php echo $rank; ?>">
+                                            <td class="rank-col">#<?php echo $rank; ?></td>
+                                            <td class="driver-col">
+                                                <a href="<?php echo esc_url( add_query_arg( 'driver_id', $record->driver_id, $base_driver_url ) ); ?>">
+                                                    <?php echo esc_html( $record->full_name ); ?>
+                                                </a>
+                                            </td>
+                                            <td class="value-col">
+                                                <?php echo esc_html( $display_val ); ?>
+                                                <?php if ( $record->opponent_name ) : ?>
+                                                    <br><small style="color: #888; font-weight: normal;">vs <?php echo esc_html( $record->opponent_name ); ?></small>
+                                                <?php endif; ?>
+                                                <?php if ( $record->championship_name ) : ?>
+                                                    <br><small style="color: #888; font-weight: normal;"><?php echo esc_html( $record->championship_name ); ?></small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="event-col">
+                                                <?php if ( $record->event_id ) : ?>
+                                                    <a href="<?php echo esc_url( get_permalink( $record->event_id ) ); ?>" title="Ver Evento">
+                                                        📅
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php $rank++; endforeach; ?>
+                                </tbody>
+                            </table>
+                            <?php if ( ! empty( $data['note'] ) ) : ?>
+                                <div class="srl-achievement-note"><?php echo esc_html( $data['note'] ); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
     <style>
         .srl-achievements-hall-of-fame { margin-top: 30px; }
+        .srl-section-title { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 8px; }
         .srl-achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .srl-achievement-card { background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 8px; }
+        .srl-achievement-card { background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 8px; transition: transform 0.2s ease, border-color 0.2s ease; }
+        .srl-achievement-card:hover { border-color: #555; }
+        .srl-card-curiosity { border-color: #2a2a2a; }
         .srl-achievement-header { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e60000; padding-bottom: 10px; }
+        .srl-header-curiosity { border-bottom-color: #d97706; }
+        .srl-card-curiosity .value-col { color: #f59e0b; }
         .srl-achievement-icon { font-size: 24px; margin-right: 10px; }
-        .srl-achievement-label { margin: 0; font-size: 1.1rem; color: #fff; }
+        .srl-achievement-label { margin: 0; font-size: 1.05rem; color: #fff; line-height: 1.3; }
         .srl-achievement-table { width: 100%; border-collapse: collapse; }
         .srl-achievement-table td { padding: 8px 5px; border-bottom: 1px solid #222; font-size: 0.9rem; color: #ccc; }
         .rank-col { width: 30px; color: #888; font-weight: bold; }
@@ -819,7 +896,7 @@ function srl_achievements_leaderboard_shortcode() {
         .rank-1 .driver-col a { color: #ffd700 !important; font-weight: bold; }
         .srl-achievement-table a { color: #fff; text-decoration: none; }
         .srl-achievement-table a:hover { color: #e60000; }
-        .srl-achievement-note { font-size: 0.75rem; color: #666; margin-top: 10px; font-style: italic; }
+        .srl-achievement-note { font-size: 0.75rem; color: #888; margin-top: 10px; font-style: italic; }
     </style>
     <?php
     return ob_get_clean();
