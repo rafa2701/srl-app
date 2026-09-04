@@ -388,33 +388,48 @@ class SRL_Achievement_Manager {
         }
     }
 
-    public static function get_achievements_leaderboard() {
+    public static function get_achievements_leaderboard( $section = null ) {
         global $wpdb;
         $table = $wpdb->prefix . 'srl_achievements';
         $drivers_table = $wpdb->prefix . 'srl_drivers';
 
+        $definitions = self::get_achievement_definitions();
         $keys = self::get_achievement_keys();
         $leaderboard = [];
 
         foreach ( $keys as $key => $label ) {
+            if ( $section !== null ) {
+                $ach_section = $definitions[$key]['section'] ?? 'hall_of_fame';
+                if ( $ach_section !== $section ) {
+                    continue;
+                }
+            }
+
             if ( ! self::is_achievement_enabled( $key ) ) continue;
             if ( $key === 'giant_killer' ) continue;
 
-            $order = 'DESC';
-            if ( in_array( $key, ['nerves_of_steel', 'qualifying_ace'] ) ) { $order = 'ASC'; }
+            $order = $definitions[$key]['order'] ?? ( in_array( $key, ['nerves_of_steel', 'qualifying_ace', 'nail_biter_championship'] ) ? 'ASC' : 'DESC' );
+
+            $where_value = ( $key === 'nail_biter_championship' ) ? "a.record_value >= 0" : "a.record_value > 0";
 
             $results = $wpdb->get_results( $wpdb->prepare( "
                 SELECT a.*, d.full_name, (SELECT full_name FROM $drivers_table WHERE id = a.opponent_id) as opponent_name,
                 (SELECT post_title FROM {$wpdb->posts} WHERE ID = a.championship_id) as championship_name
                 FROM $table a
                 JOIN $drivers_table d ON a.driver_id = d.id
-                WHERE a.achievement_key = %s AND a.record_value > 0
+                WHERE a.achievement_key = %s AND $where_value
                 ORDER BY CAST(a.record_value AS DECIMAL(10,3)) $order
                 LIMIT 5
             ", $key ) );
 
             if ( ! empty( $results ) ) {
-                $leaderboard[$key] = [ 'label' => $label, 'records' => $results ];
+                $leaderboard[$key] = [
+                    'label'   => $label,
+                    'section' => $definitions[$key]['section'] ?? 'hall_of_fame',
+                    'unit'    => $definitions[$key]['unit'] ?? 'count',
+                    'note'    => $definitions[$key]['note'] ?? '',
+                    'records' => $results,
+                ];
             }
         }
         return $leaderboard;
